@@ -36,7 +36,6 @@
 - `cli/UnityCli.Cli`: user-facing CLI
 - `cli/UnityCli.Protocol`: protocol models shared by the CLI and Unity package
 - `unity-package/com.puc.bridge`: UPM package
-- `samples/MinimalURPProject`: minimal public Unity sample project
 - `tools/skills/unity-cli-operator`: Codex skill
 
 ## Current Limits

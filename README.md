@@ -20,7 +20,6 @@ This repository is organized into three parts.
 
 - Live IPC and batch fallback are both working.
 - Asset find/create/move/delete and prefab create/inspect/patch are supported.
-- A minimal public sample project is available in `samples/MinimalURPProject`.
 - Release validation is currently focused on `macOS arm64`.
 
 ## Quick Start
@@ -56,7 +55,7 @@ The package already includes `Editor/Plugins/Newtonsoft.Json.dll`, so you do not
 ### 3. Basic Smoke Test
 
 ```bash
-PROJECT_ROOT="$(pwd -P)/samples/MinimalURPProject"
+PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli status --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli refresh --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --json
@@ -72,16 +71,6 @@ Prefab authoring smoke test:
   --force \
   --json
 ```
-
-## Sample Project
-
-The minimal public Unity sample lives here.
-
-```text
-samples/MinimalURPProject
-```
-
-It only includes `Assets`, `Packages`, and `ProjectSettings`. `Library`, `Temp`, `Logs`, and `UserSettings` are intentionally excluded from the repository.
 
 ## Documentation
 
