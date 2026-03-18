@@ -10,6 +10,22 @@
 - Asset and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create` and `prefab create/inspect/patch`.
 - The Codex skill keeps the workflow consistent: choose the command, perform the work, then verify the logs.
 
+## What You Can Do With PUC
+
+- Check editor state from the terminal with `status`, `refresh`, `compile`, and `run-tests`.
+- Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, and `read-console`.
+- Query and manage assets with `asset find`, `asset info`, `asset create`, `asset move`, `asset rename`, `asset reimport`, and `asset delete`.
+- Generate common Unity assets directly from the CLI, including materials, scenes, prefabs, animation clips, controllers, render textures, volume profiles, and ScriptableObjects.
+- Create project-specific assets through extension providers instead of routing everything through one-off editor scripts.
+- Author prefabs structurally from JSON with `prefab create`, inspect serialized paths with `prefab inspect`, and apply deterministic changes with `prefab patch`.
+
+## Typical Workflows
+
+- AI-assisted editor automation: let an agent create assets or patch prefabs, then verify the console through the same CLI.
+- Local multi-project work: keep multiple Unity projects open and target the right editor without port juggling.
+- Editor-off automation: use batch fallback for commands such as `refresh`, `asset info`, `asset create`, and prefab operations when no live editor is running.
+- Data-heavy gameplay work: generate ScriptableObjects and custom asset types from repeatable command flows instead of custom menus.
+
 This repository is organized into three parts.
 
 - `cli/`: the `unity-cli` executable and shared protocol
@@ -21,6 +37,12 @@ This repository is organized into three parts.
 - Live IPC and batch fallback are both working.
 - Asset find/create/move/delete and prefab create/inspect/patch are supported.
 - Release validation is currently focused on `macOS arm64`.
+
+Current command surface, at a glance:
+
+- Editor control: `status`, `refresh`, `compile`, `run-tests`, `play`, `pause`, `stop`, `execute-menu`, `read-console`
+- Asset workflows: `asset find`, `asset types`, `asset info`, `asset reimport`, `asset mkdir`, `asset move`, `asset rename`, `asset delete`, `asset create`
+- Prefab workflows: `prefab inspect`, `prefab create`, `prefab patch`
 
 ## Quick Start
 

@@ -16,6 +16,13 @@
 - Prefab commands: `inspect`, `create`, `patch`
 - The same command handlers reused through batch fallback when the Editor is not running
 
+In practice, this means the package can expose Unity as a project-aware automation surface instead of a manually managed editor plugin session.
+
+- It removes the need to keep a custom bridge server running.
+- It removes per-project port configuration when several editors are open.
+- It keeps live editor work and batch fallback on the same protocol and command model.
+- It gives the CLI direct access to asset and prefab workflows instead of relying only on menu execution.
+
 ## Install
 
 This package lives inside the PUC mono-repo.
