@@ -1,0 +1,25 @@
+.DS_Store
+
+# Build outputs
+dist/
+cli/**/bin/
+cli/**/obj/
+tests/**/bin/
+tests/**/obj/
+
+# Local Unity working project
+My project/
+
+# Sample project generated state
+samples/**/Library/
+samples/**/Logs/
+samples/**/Temp/
+samples/**/UserSettings/
+samples/**/MemoryCaptures/
+samples/**/obj/
+samples/**/.vs/
+samples/**/*.csproj
+samples/**/*.sln
+
+# Editor noise
+*.swp

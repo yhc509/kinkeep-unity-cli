@@ -1,0 +1,10 @@
+{
+  "name": "com.puc.bridge",
+  "displayName": "PUC",
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "Project-aware Unity Editor bridge for CLI control without manual servers or per-project ports.",
+  "author": {
+    "name": "yhjang"
+  }
+}

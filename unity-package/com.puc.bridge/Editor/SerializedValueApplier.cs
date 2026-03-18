@@ -1,0 +1,746 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
+using UnityEditor;
+using UnityEngine;
+
+namespace PUC.Editor
+{
+    internal static class SerializedValueApplier
+    {
+        private static readonly HashSet<string> SkippedPropertyPaths = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "m_Script",
+            "m_GameObject",
+            "m_ObjectHideFlags",
+            "m_CorrespondingSourceObject",
+            "m_PrefabInstance",
+            "m_PrefabAsset",
+        };
+
+        public static void Apply(Component component, JObject values)
+        {
+            if (component == null)
+            {
+                throw new ArgumentNullException(nameof(component));
+            }
+
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            var serializedObject = new SerializedObject(component);
+            serializedObject.Update();
+
+            foreach (JProperty property in values.Properties())
+            {
+                SerializedProperty serializedProperty = serializedObject.FindProperty(property.Name);
+                if (serializedProperty == null)
+                {
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "serialized field를 찾지 못했습니다: " + property.Name);
+                }
+
+                ApplyToken(serializedProperty, property.Value, property.Name);
+            }
+
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        public static JObject BuildInspectableValues(Component component)
+        {
+            var values = new JObject();
+            var serializedObject = new SerializedObject(component);
+            SerializedProperty iterator = serializedObject.GetIterator();
+            if (!iterator.NextVisible(true))
+            {
+                return values;
+            }
+
+            do
+            {
+                SerializedProperty property = iterator.Copy();
+                if (ShouldSkipProperty(property))
+                {
+                    continue;
+                }
+
+                if (TrySerializeProperty(property, out JToken token))
+                {
+                    values[property.propertyPath] = token;
+                }
+            }
+            while (iterator.NextVisible(false));
+
+            return values;
+        }
+
+        private static bool ShouldSkipProperty(SerializedProperty property)
+        {
+            return !property.editable
+                || SkippedPropertyPaths.Contains(property.propertyPath)
+                || property.propertyPath.StartsWith("m_GameObject.", StringComparison.Ordinal);
+        }
+
+        private static void ApplyToken(SerializedProperty property, JToken token, string propertyPath)
+        {
+            if (property.propertyType == SerializedPropertyType.ManagedReference)
+            {
+                throw new CommandFailureException("PREFAB_FIELD_INVALID", "managed reference는 아직 지원하지 않습니다: " + propertyPath);
+            }
+
+            if (property.isArray && property.propertyType != SerializedPropertyType.String)
+            {
+                ApplyArray(property, token, propertyPath);
+                return;
+            }
+
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    property.longValue = ReadLong(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Boolean:
+                    property.boolValue = ReadBool(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Float:
+                    property.doubleValue = ReadDouble(token, propertyPath);
+                    break;
+                case SerializedPropertyType.String:
+                    property.stringValue = token.Type == JTokenType.Null ? string.Empty : ReadString(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Color:
+                    property.colorValue = ReadColor(token, propertyPath);
+                    break;
+                case SerializedPropertyType.ObjectReference:
+                    property.objectReferenceValue = ResolveObjectReference(property, token, propertyPath);
+                    break;
+                case SerializedPropertyType.LayerMask:
+                    property.intValue = ReadInt(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Enum:
+                    property.enumValueIndex = ResolveEnumIndex(property, token, propertyPath);
+                    break;
+                case SerializedPropertyType.Vector2:
+                    property.vector2Value = ReadVector2(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Vector3:
+                    property.vector3Value = ReadVector3(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Vector4:
+                    property.vector4Value = ReadVector4(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Rect:
+                    property.rectValue = ReadRect(token, propertyPath);
+                    break;
+                case SerializedPropertyType.ArraySize:
+                    property.intValue = ReadInt(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Character:
+                    property.intValue = ReadChar(token, propertyPath);
+                    break;
+                case SerializedPropertyType.AnimationCurve:
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "AnimationCurve는 아직 지원하지 않습니다: " + propertyPath);
+                case SerializedPropertyType.Bounds:
+                    property.boundsValue = ReadBounds(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Quaternion:
+                    property.quaternionValue = ReadQuaternion(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Vector2Int:
+                    property.vector2IntValue = ReadVector2Int(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Vector3Int:
+                    property.vector3IntValue = ReadVector3Int(token, propertyPath);
+                    break;
+                case SerializedPropertyType.RectInt:
+                    property.rectIntValue = ReadRectInt(token, propertyPath);
+                    break;
+                case SerializedPropertyType.BoundsInt:
+                    property.boundsIntValue = ReadBoundsInt(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Generic:
+                    ApplyObject(property, token, propertyPath);
+                    break;
+                default:
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "지원하지 않는 serialized field 타입입니다: " + propertyPath + " (" + property.propertyType + ")");
+            }
+        }
+
+        private static void ApplyArray(SerializedProperty property, JToken token, string propertyPath)
+        {
+            if (token.Type != JTokenType.Array)
+            {
+                throw new CommandFailureException("PREFAB_FIELD_INVALID", "배열 값은 JSON array여야 합니다: " + propertyPath);
+            }
+
+            JArray array = (JArray)token;
+            property.arraySize = array.Count;
+            for (int index = 0; index < array.Count; index++)
+            {
+                ApplyToken(property.GetArrayElementAtIndex(index), array[index], propertyPath + "[" + index + "]");
+            }
+        }
+
+        private static void ApplyObject(SerializedProperty property, JToken token, string propertyPath)
+        {
+            if (token.Type != JTokenType.Object)
+            {
+                throw new CommandFailureException("PREFAB_FIELD_INVALID", "객체 값은 JSON object여야 합니다: " + propertyPath);
+            }
+
+            JObject jobject = (JObject)token;
+            foreach (JProperty child in jobject.Properties())
+            {
+                SerializedProperty childProperty = property.FindPropertyRelative(child.Name);
+                if (childProperty == null)
+                {
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "serialized field를 찾지 못했습니다: " + propertyPath + "." + child.Name);
+                }
+
+                ApplyToken(childProperty, child.Value, propertyPath + "." + child.Name);
+            }
+        }
+
+        private static bool TrySerializeProperty(SerializedProperty property, out JToken token)
+        {
+            token = null;
+
+            if (property.propertyType == SerializedPropertyType.ManagedReference)
+            {
+                return false;
+            }
+
+            if (property.isArray && property.propertyType != SerializedPropertyType.String)
+            {
+                var array = new JArray();
+                for (int index = 0; index < property.arraySize; index++)
+                {
+                    if (TrySerializeProperty(property.GetArrayElementAtIndex(index), out JToken itemToken))
+                    {
+                        array.Add(itemToken);
+                    }
+                    else
+                    {
+                        array.Add(JValue.CreateNull());
+                    }
+                }
+
+                token = array;
+                return true;
+            }
+
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Integer:
+                    token = property.longValue;
+                    return true;
+                case SerializedPropertyType.Boolean:
+                    token = property.boolValue;
+                    return true;
+                case SerializedPropertyType.Float:
+                    token = property.doubleValue;
+                    return true;
+                case SerializedPropertyType.String:
+                    token = property.stringValue;
+                    return true;
+                case SerializedPropertyType.Color:
+                    token = new JObject
+                    {
+                        ["r"] = property.colorValue.r,
+                        ["g"] = property.colorValue.g,
+                        ["b"] = property.colorValue.b,
+                        ["a"] = property.colorValue.a,
+                    };
+                    return true;
+                case SerializedPropertyType.ObjectReference:
+                    return TrySerializeObjectReference(property, out token);
+                case SerializedPropertyType.LayerMask:
+                    token = property.intValue;
+                    return true;
+                case SerializedPropertyType.Enum:
+                    if (property.enumValueIndex < 0 || property.enumValueIndex >= property.enumNames.Length)
+                    {
+                        return false;
+                    }
+
+                    token = property.enumNames[property.enumValueIndex];
+                    return true;
+                case SerializedPropertyType.Vector2:
+                    token = new JObject
+                    {
+                        ["x"] = property.vector2Value.x,
+                        ["y"] = property.vector2Value.y,
+                    };
+                    return true;
+                case SerializedPropertyType.Vector3:
+                    token = new JObject
+                    {
+                        ["x"] = property.vector3Value.x,
+                        ["y"] = property.vector3Value.y,
+                        ["z"] = property.vector3Value.z,
+                    };
+                    return true;
+                case SerializedPropertyType.Vector4:
+                    token = new JObject
+                    {
+                        ["x"] = property.vector4Value.x,
+                        ["y"] = property.vector4Value.y,
+                        ["z"] = property.vector4Value.z,
+                        ["w"] = property.vector4Value.w,
+                    };
+                    return true;
+                case SerializedPropertyType.Rect:
+                    token = new JObject
+                    {
+                        ["x"] = property.rectValue.x,
+                        ["y"] = property.rectValue.y,
+                        ["width"] = property.rectValue.width,
+                        ["height"] = property.rectValue.height,
+                    };
+                    return true;
+                case SerializedPropertyType.ArraySize:
+                    token = property.intValue;
+                    return true;
+                case SerializedPropertyType.Character:
+                    token = Convert.ToChar(property.intValue).ToString();
+                    return true;
+                case SerializedPropertyType.Bounds:
+                    token = new JObject
+                    {
+                        ["center"] = new JObject
+                        {
+                            ["x"] = property.boundsValue.center.x,
+                            ["y"] = property.boundsValue.center.y,
+                            ["z"] = property.boundsValue.center.z,
+                        },
+                        ["size"] = new JObject
+                        {
+                            ["x"] = property.boundsValue.size.x,
+                            ["y"] = property.boundsValue.size.y,
+                            ["z"] = property.boundsValue.size.z,
+                        },
+                    };
+                    return true;
+                case SerializedPropertyType.Quaternion:
+                    token = new JObject
+                    {
+                        ["x"] = property.quaternionValue.x,
+                        ["y"] = property.quaternionValue.y,
+                        ["z"] = property.quaternionValue.z,
+                        ["w"] = property.quaternionValue.w,
+                    };
+                    return true;
+                case SerializedPropertyType.Vector2Int:
+                    token = new JObject
+                    {
+                        ["x"] = property.vector2IntValue.x,
+                        ["y"] = property.vector2IntValue.y,
+                    };
+                    return true;
+                case SerializedPropertyType.Vector3Int:
+                    token = new JObject
+                    {
+                        ["x"] = property.vector3IntValue.x,
+                        ["y"] = property.vector3IntValue.y,
+                        ["z"] = property.vector3IntValue.z,
+                    };
+                    return true;
+                case SerializedPropertyType.RectInt:
+                    token = new JObject
+                    {
+                        ["x"] = property.rectIntValue.x,
+                        ["y"] = property.rectIntValue.y,
+                        ["width"] = property.rectIntValue.width,
+                        ["height"] = property.rectIntValue.height,
+                    };
+                    return true;
+                case SerializedPropertyType.BoundsInt:
+                    token = new JObject
+                    {
+                        ["position"] = new JObject
+                        {
+                            ["x"] = property.boundsIntValue.position.x,
+                            ["y"] = property.boundsIntValue.position.y,
+                            ["z"] = property.boundsIntValue.position.z,
+                        },
+                        ["size"] = new JObject
+                        {
+                            ["x"] = property.boundsIntValue.size.x,
+                            ["y"] = property.boundsIntValue.size.y,
+                            ["z"] = property.boundsIntValue.size.z,
+                        },
+                    };
+                    return true;
+                case SerializedPropertyType.Generic:
+                    var jobject = new JObject();
+                    foreach (SerializedProperty child in EnumerateDirectChildren(property))
+                    {
+                        if (ShouldSkipProperty(child))
+                        {
+                            continue;
+                        }
+
+                        if (TrySerializeProperty(child, out JToken childToken))
+                        {
+                            jobject[child.name] = childToken;
+                        }
+                    }
+
+                    token = jobject;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static IEnumerable<SerializedProperty> EnumerateDirectChildren(SerializedProperty property)
+        {
+            SerializedProperty iterator = property.Copy();
+            SerializedProperty end = iterator.GetEndProperty();
+            bool enterChildren = true;
+            while (iterator.NextVisible(enterChildren) && !SerializedProperty.EqualContents(iterator, end))
+            {
+                enterChildren = false;
+                if (iterator.depth == property.depth + 1)
+                {
+                    yield return iterator.Copy();
+                }
+            }
+        }
+
+        private static bool TrySerializeObjectReference(SerializedProperty property, out JToken token)
+        {
+            token = null;
+            UnityEngine.Object referenced = property.objectReferenceValue;
+            if (referenced == null)
+            {
+                token = JValue.CreateNull();
+                return true;
+            }
+
+            string assetPath = AssetDatabase.GetAssetPath(referenced);
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                return false;
+            }
+
+            token = new JObject
+            {
+                ["assetPath"] = assetPath,
+                ["guid"] = AssetDatabase.AssetPathToGUID(assetPath),
+            };
+            return true;
+        }
+
+        private static UnityEngine.Object ResolveObjectReference(SerializedProperty property, JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Null)
+            {
+                return null;
+            }
+
+            string assetPath = null;
+            string guid = null;
+            if (token.Type == JTokenType.String)
+            {
+                assetPath = token.Value<string>();
+            }
+            else if (token.Type == JTokenType.Object)
+            {
+                JObject referenceObject = (JObject)token;
+                assetPath = referenceObject.Value<string>("assetPath");
+                guid = referenceObject.Value<string>("guid");
+            }
+            else
+            {
+                throw new CommandFailureException("PREFAB_REFERENCE_INVALID", "object reference는 null, string, 또는 {assetPath/guid} object여야 합니다: " + propertyPath);
+            }
+
+            if (string.IsNullOrWhiteSpace(assetPath) && !string.IsNullOrWhiteSpace(guid))
+            {
+                assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            }
+
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                throw new CommandFailureException("PREFAB_REFERENCE_INVALID", "assetPath 또는 guid를 찾지 못했습니다: " + propertyPath);
+            }
+
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+            if (assets == null || assets.Length == 0)
+            {
+                throw new CommandFailureException("PREFAB_REFERENCE_INVALID", "참조 asset을 찾지 못했습니다: " + assetPath);
+            }
+
+            string expectedTypeName = ExtractObjectReferenceTypeName(property);
+            UnityEngine.Object match = assets
+                .Where(asset => asset != null)
+                .FirstOrDefault(asset => string.IsNullOrWhiteSpace(expectedTypeName) || string.Equals(asset.GetType().Name, expectedTypeName, StringComparison.Ordinal));
+
+            if (match == null)
+            {
+                match = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            }
+
+            if (match == null)
+            {
+                throw new CommandFailureException("PREFAB_REFERENCE_INVALID", "참조 asset을 로드하지 못했습니다: " + assetPath);
+            }
+
+            return match;
+        }
+
+        private static string ExtractObjectReferenceTypeName(SerializedProperty property)
+        {
+            string typeName = property.type ?? string.Empty;
+            if (typeName.StartsWith("PPtr<", StringComparison.Ordinal) && typeName.EndsWith(">", StringComparison.Ordinal))
+            {
+                typeName = typeName.Substring(5, typeName.Length - 6);
+            }
+
+            if (typeName.StartsWith("$", StringComparison.Ordinal))
+            {
+                typeName = typeName.Substring(1);
+            }
+
+            return typeName;
+        }
+
+        private static int ResolveEnumIndex(SerializedProperty property, JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Integer)
+            {
+                int index = token.Value<int>();
+                if (index < 0 || index >= property.enumNames.Length)
+                {
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "enum index 범위를 벗어났습니다: " + propertyPath);
+                }
+
+                return index;
+            }
+
+            string enumName = ReadString(token, propertyPath);
+            int nameIndex = Array.FindIndex(property.enumNames, value => string.Equals(value, enumName, StringComparison.Ordinal));
+            if (nameIndex >= 0)
+            {
+                return nameIndex;
+            }
+
+            int displayIndex = Array.FindIndex(property.enumDisplayNames, value => string.Equals(value, enumName, StringComparison.Ordinal));
+            if (displayIndex >= 0)
+            {
+                return displayIndex;
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "enum 값을 찾지 못했습니다: " + propertyPath + " (" + enumName + ")");
+        }
+
+        private static long ReadLong(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Integer)
+            {
+                return token.Value<long>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "정수 값이 필요합니다: " + propertyPath);
+        }
+
+        private static int ReadInt(JToken token, string propertyPath)
+        {
+            return checked((int)ReadLong(token, propertyPath));
+        }
+
+        private static double ReadDouble(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Integer || token.Type == JTokenType.Float)
+            {
+                return token.Value<double>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "숫자 값이 필요합니다: " + propertyPath);
+        }
+
+        private static bool ReadBool(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Boolean)
+            {
+                return token.Value<bool>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "bool 값이 필요합니다: " + propertyPath);
+        }
+
+        private static string ReadString(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.String)
+            {
+                return token.Value<string>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "string 값이 필요합니다: " + propertyPath);
+        }
+
+        private static int ReadChar(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.String)
+            {
+                string value = token.Value<string>();
+                if (!string.IsNullOrEmpty(value))
+                {
+                    return value[0];
+                }
+            }
+
+            if (token.Type == JTokenType.Integer)
+            {
+                return token.Value<int>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "char 값이 필요합니다: " + propertyPath);
+        }
+
+        private static JObject ReadObject(JToken token, string propertyPath)
+        {
+            if (token.Type == JTokenType.Object)
+            {
+                return (JObject)token;
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "object 값이 필요합니다: " + propertyPath);
+        }
+
+        private static float ReadFloatMember(JObject obj, string memberName, string propertyPath, float fallback = 0f)
+        {
+            JToken member = obj[memberName];
+            if (member == null)
+            {
+                return fallback;
+            }
+
+            if (member.Type == JTokenType.Integer || member.Type == JTokenType.Float)
+            {
+                return member.Value<float>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "숫자 값이 필요합니다: " + propertyPath + "." + memberName);
+        }
+
+        private static int ReadIntMember(JObject obj, string memberName, string propertyPath, int fallback = 0)
+        {
+            JToken member = obj[memberName];
+            if (member == null)
+            {
+                return fallback;
+            }
+
+            if (member.Type == JTokenType.Integer)
+            {
+                return member.Value<int>();
+            }
+
+            throw new CommandFailureException("PREFAB_FIELD_INVALID", "정수 값이 필요합니다: " + propertyPath + "." + memberName);
+        }
+
+        private static Color ReadColor(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Color(
+                ReadFloatMember(obj, "r", propertyPath),
+                ReadFloatMember(obj, "g", propertyPath),
+                ReadFloatMember(obj, "b", propertyPath),
+                ReadFloatMember(obj, "a", propertyPath, 1f));
+        }
+
+        private static Vector2 ReadVector2(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Vector2(
+                ReadFloatMember(obj, "x", propertyPath),
+                ReadFloatMember(obj, "y", propertyPath));
+        }
+
+        private static Vector3 ReadVector3(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Vector3(
+                ReadFloatMember(obj, "x", propertyPath),
+                ReadFloatMember(obj, "y", propertyPath),
+                ReadFloatMember(obj, "z", propertyPath));
+        }
+
+        private static Vector4 ReadVector4(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Vector4(
+                ReadFloatMember(obj, "x", propertyPath),
+                ReadFloatMember(obj, "y", propertyPath),
+                ReadFloatMember(obj, "z", propertyPath),
+                ReadFloatMember(obj, "w", propertyPath));
+        }
+
+        private static Rect ReadRect(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Rect(
+                ReadFloatMember(obj, "x", propertyPath),
+                ReadFloatMember(obj, "y", propertyPath),
+                ReadFloatMember(obj, "width", propertyPath),
+                ReadFloatMember(obj, "height", propertyPath));
+        }
+
+        private static Bounds ReadBounds(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Bounds(
+                ReadVector3(obj["center"], propertyPath + ".center"),
+                ReadVector3(obj["size"], propertyPath + ".size"));
+        }
+
+        private static Quaternion ReadQuaternion(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Quaternion(
+                ReadFloatMember(obj, "x", propertyPath),
+                ReadFloatMember(obj, "y", propertyPath),
+                ReadFloatMember(obj, "z", propertyPath),
+                ReadFloatMember(obj, "w", propertyPath));
+        }
+
+        private static Vector2Int ReadVector2Int(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Vector2Int(
+                ReadIntMember(obj, "x", propertyPath),
+                ReadIntMember(obj, "y", propertyPath));
+        }
+
+        private static Vector3Int ReadVector3Int(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new Vector3Int(
+                ReadIntMember(obj, "x", propertyPath),
+                ReadIntMember(obj, "y", propertyPath),
+                ReadIntMember(obj, "z", propertyPath));
+        }
+
+        private static RectInt ReadRectInt(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new RectInt(
+                ReadIntMember(obj, "x", propertyPath),
+                ReadIntMember(obj, "y", propertyPath),
+                ReadIntMember(obj, "width", propertyPath),
+                ReadIntMember(obj, "height", propertyPath));
+        }
+
+        private static BoundsInt ReadBoundsInt(JToken token, string propertyPath)
+        {
+            JObject obj = ReadObject(token, propertyPath);
+            return new BoundsInt(
+                ReadVector3Int(obj["position"], propertyPath + ".position"),
+                ReadVector3Int(obj["size"], propertyPath + ".size"));
+        }
+    }
+}

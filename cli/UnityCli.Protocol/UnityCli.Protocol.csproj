@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="*.cs" />
+    <Compile Include="..\..\unity-package\com.puc.bridge\Runtime\Protocol\*.cs"
+             Link="Protocol\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

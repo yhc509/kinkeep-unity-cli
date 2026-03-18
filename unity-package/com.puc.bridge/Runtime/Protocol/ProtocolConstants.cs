@@ -1,0 +1,124 @@
+#nullable enable
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace UnityCli.Protocol
+{
+    public static class ProtocolConstants
+    {
+        public const string AppName = "unity-cli";
+        public const int DefaultLiveTimeoutMs = 30_000;
+        public const int DefaultBatchTimeoutMs = 10 * 60 * 1000;
+        public const int DefaultTimeoutMs = DefaultLiveTimeoutMs;
+        public const int DefaultConsoleLimit = 50;
+        public const int DefaultAssetFindLimit = 50;
+        public const int RegistryHeartbeatSeconds = 2;
+        public const string BusyErrorCode = "BUSY";
+        public const string StatusSuccess = "success";
+        public const string StatusError = "error";
+        public const string TransportLive = "live";
+        public const string TransportBatch = "batch";
+        public const string CommandPing = "ping";
+        public const string CommandStatus = "status";
+        public const string CommandRefresh = "refresh";
+        public const string CommandCompile = "compile";
+        public const string CommandPlay = "play";
+        public const string CommandPause = "pause";
+        public const string CommandStop = "stop";
+        public const string CommandExecuteMenu = "execute-menu";
+        public const string CommandReadConsole = "read-console";
+        public const string CommandRunTests = "run-tests";
+        public const string CommandAssetFind = "asset-find";
+        public const string CommandAssetTypes = "asset-types";
+        public const string CommandAssetInfo = "asset-info";
+        public const string CommandAssetReimport = "asset-reimport";
+        public const string CommandAssetMkdir = "asset-mkdir";
+        public const string CommandAssetMove = "asset-move";
+        public const string CommandAssetRename = "asset-rename";
+        public const string CommandAssetDelete = "asset-delete";
+        public const string CommandAssetCreate = "asset-create";
+        public const string CommandPrefabInspect = "prefab-inspect";
+        public const string CommandPrefabCreate = "prefab-create";
+        public const string CommandPrefabPatch = "prefab-patch";
+
+        public static string ComputeProjectHash(string projectRoot)
+        {
+            var normalized = GetCanonicalPath(projectRoot)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Replace('\\', '/')
+                .ToLowerInvariant();
+
+            using (var sha = SHA256.Create())
+            {
+                byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(normalized));
+                var builder = new StringBuilder(bytes.Length * 2);
+                for (int index = 0; index < bytes.Length; index++)
+                {
+                    builder.Append(bytes[index].ToString("x2"));
+                }
+
+                return builder.ToString().Substring(0, 12);
+            }
+        }
+
+        public static string GetCanonicalPath(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var realPath = TryResolveRealPath(fullPath);
+            return (string.IsNullOrWhiteSpace(realPath) ? fullPath : realPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        public static string BuildPipeName(string projectHash)
+        {
+            if (Path.DirectorySeparatorChar == '\\')
+            {
+                return $"unity-cli-{projectHash}";
+            }
+
+            return Path.Combine(Path.GetTempPath(), $"unity-cli-{projectHash}.sock");
+        }
+
+        private static string? TryResolveRealPath(string fullPath)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath))
+            {
+                return null;
+            }
+
+            if (Path.DirectorySeparatorChar == '\\')
+            {
+                return null;
+            }
+
+            if (!Directory.Exists(fullPath) && !File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            IntPtr resolvedPointer = RealPath(fullPath, IntPtr.Zero);
+            if (resolvedPointer == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            try
+            {
+                return Marshal.PtrToStringAnsi(resolvedPointer);
+            }
+            finally
+            {
+                Free(resolvedPointer);
+            }
+        }
+
+        [DllImport("libc", EntryPoint = "realpath", SetLastError = true)]
+        private static extern IntPtr RealPath(string path, IntPtr buffer);
+
+        [DllImport("libc", EntryPoint = "free")]
+        private static extern void Free(IntPtr pointer);
+    }
+}
