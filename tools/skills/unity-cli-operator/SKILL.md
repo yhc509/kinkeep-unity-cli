@@ -43,7 +43,7 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 
 ## What To Read Next
 
-- 일반 운용, 에셋 생성, scene inspect/patch, batch 가능 범위: `references/command-flows.md`
-- prefab create/inspect/patch와 spec 작성: `references/prefab-workflows.md`
-- stale instance, busy, liveReachable, 로그 확인: `references/troubleshooting.md`
+- 일반 운용, 에셋 생성, scene inspect/patch, batch 가능 범위: [references/command-flows.md](references/command-flows.md)
+- prefab create/inspect/patch와 spec 작성: [references/prefab-workflows.md](references/prefab-workflows.md)
+- stale instance, busy, liveReachable, 로그 확인: [references/troubleshooting.md](references/troubleshooting.md)
 - 빠르게 시작할 JSON 템플릿: `assets/`
