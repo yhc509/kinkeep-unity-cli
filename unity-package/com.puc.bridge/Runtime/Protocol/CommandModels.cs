@@ -64,6 +64,53 @@ namespace UnityCli.Protocol
     }
 
     [Serializable]
+    public sealed class ScreenshotArgs
+    {
+        public string? view;
+        public string? camera;
+        public string? outputPath;
+        public int width;
+        public int height;
+    }
+
+    [Serializable]
+    public sealed class ScreenshotPayload
+    {
+        public string savedPath = string.Empty;
+        public int width;
+        public int height;
+        public long fileSizeBytes;
+    }
+
+    [Serializable]
+    public sealed class ExecuteCodeArgs
+    {
+        public string code = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class ExecuteCodePayload
+    {
+        public string output = string.Empty;
+        public bool success;
+        public string? error;
+    }
+
+    [Serializable]
+    public sealed class CustomCommandArgs
+    {
+        public string commandName = string.Empty;
+        public string argumentsJson = "{}";
+    }
+
+    [Serializable]
+    public sealed class CustomCommandPayload
+    {
+        public string commandName = string.Empty;
+        public string resultJson = "{}";
+    }
+
+    [Serializable]
     public sealed class ReadConsoleArgs
     {
         public int limit = ProtocolConstants.DefaultConsoleLimit;
@@ -74,6 +121,96 @@ namespace UnityCli.Protocol
     public sealed class ReadConsolePayload
     {
         public ConsoleLogEntry[] entries = Array.Empty<ConsoleLogEntry>();
+    }
+
+    [Serializable]
+    public sealed class PackageAddArgs
+    {
+        public string name = string.Empty;
+        public string? version;
+    }
+
+    [Serializable]
+    public sealed class PackageRemoveArgs
+    {
+        public string name = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class PackageSearchArgs
+    {
+        public string query = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class PackageRecord
+    {
+        public string name = string.Empty;
+        public string version = string.Empty;
+        public string displayName = string.Empty;
+        public string source = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class PackageListPayload
+    {
+        public PackageRecord[] packages = Array.Empty<PackageRecord>();
+    }
+
+    [Serializable]
+    public sealed class PackageMutationPayload
+    {
+        public string name = string.Empty;
+        public string version = string.Empty;
+        public bool added;
+        public bool removed;
+    }
+
+    [Serializable]
+    public sealed class PackageSearchPayload
+    {
+        public PackageRecord[] results = Array.Empty<PackageRecord>();
+    }
+
+    [Serializable]
+    public sealed class MaterialInfoArgs
+    {
+        public string path = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class MaterialSetArgs
+    {
+        public string path = string.Empty;
+        public string? property;
+        public string? value;
+        public string? texture;
+        public string? textureAsset;
+    }
+
+    [Serializable]
+    public sealed class MaterialPropertyRecord
+    {
+        public string name = string.Empty;
+        public string type = string.Empty;
+        public string value = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class MaterialInfoPayload
+    {
+        public string path = string.Empty;
+        public string shader = string.Empty;
+        public MaterialPropertyRecord[] properties = Array.Empty<MaterialPropertyRecord>();
+    }
+
+    [Serializable]
+    public sealed class MaterialSetPayload
+    {
+        public string path = string.Empty;
+        public string property = string.Empty;
+        public string previousValue = string.Empty;
+        public string newValue = string.Empty;
     }
 
     [Serializable]
@@ -133,6 +270,28 @@ namespace UnityCli.Protocol
     }
 
     [Serializable]
+    public sealed class SceneOpenArgs
+    {
+        public string path = string.Empty;
+        public bool force;
+    }
+
+    [Serializable]
+    public sealed class SceneInspectArgs
+    {
+        public string path = string.Empty;
+        public bool withValues;
+    }
+
+    [Serializable]
+    public sealed class ScenePatchArgs
+    {
+        public string path = string.Empty;
+        public bool force;
+        public string specJson = string.Empty;
+    }
+
+    [Serializable]
     public sealed class PrefabInspectArgs
     {
         public string path = string.Empty;
@@ -164,6 +323,8 @@ namespace UnityCli.Protocol
         public bool supportsDataPatch;
         public string[] requiredOptions = Array.Empty<string>();
         public string[] optionalOptions = Array.Empty<string>();
+        public string[] aliases = Array.Empty<string>();
+        public string[] notes = Array.Empty<string>();
     }
 
     [Serializable]
@@ -200,6 +361,22 @@ namespace UnityCli.Protocol
         public AssetRecord asset = new AssetRecord();
         public string createdType = string.Empty;
         public bool overwritten;
+    }
+
+    [Serializable]
+    public sealed class SceneOpenPayload
+    {
+        public AssetRecord asset = new AssetRecord();
+        public string activeScenePath = string.Empty;
+        public bool opened;
+    }
+
+    [Serializable]
+    public sealed class SceneMutationPayload
+    {
+        public AssetRecord asset = new AssetRecord();
+        public string activeScenePath = string.Empty;
+        public bool patched;
     }
 
     [Serializable]

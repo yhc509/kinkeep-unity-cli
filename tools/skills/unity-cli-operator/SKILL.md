@@ -1,6 +1,6 @@
 ---
 name: unity-cli-operator
-description: "Use when the user wants to operate Unity through `unity-cli`, including live or batch command selection, asset commands, prefab create/inspect/patch flows, console-log verification, or Unity CLI Bridge troubleshooting."
+description: "Use when the user wants to operate Unity through `unity-cli`, including live or batch command selection, asset commands, scene/prefab inspect/patch flows, console-log verification, or Unity CLI Bridge troubleshooting."
 ---
 
 # Unity CLI Operator
@@ -21,7 +21,7 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 - 먼저 `status --json`으로 live 연결, busy 상태, 현재 프로젝트가 맞는지 확인한다.
 
 4. 작업 종류에 맞는 흐름을 고른다.
-- 일반 명령과 에셋 작업은 `references/command-flows.md`
+- 일반 명령, 에셋 작업, scene inspect/patch는 `references/command-flows.md`
 - 프리팹 조립과 patch spec은 `references/prefab-workflows.md`
 - 문제 해결은 `references/troubleshooting.md`
 
@@ -34,14 +34,16 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 
 - 모든 asset 경로는 `Assets/...` 형식으로 다룬다.
 - 파괴 연산과 덮어쓰기는 `--force`가 있을 때만 허용된다고 가정한다.
+- `scene patch` 전에는 가능하면 `scene inspect --with-values`를 먼저 실행해서 GameObject path와 field 이름을 확인한다.
 - `prefab patch` 전에는 가능하면 `prefab inspect --with-values`를 먼저 실행해서 path와 field 이름을 확인한다.
 - `SerializedProperty.propertyPath`는 추측하지 말고 inspect 결과를 기준으로 쓴다.
 - live 편집 명령이 compile/update 중이면 읽기 전용 명령만 남기고 나머지는 재시도 흐름으로 본다.
+- scene path는 `/Root[0]/Child[0]` 형식으로 쓰고 `/`는 virtual scene root로 본다.
 - root prefab 이름은 Unity 저장 규칙 때문에 파일 이름으로 정규화된다고 가정한다.
 
 ## What To Read Next
 
-- 일반 운용, 에셋 생성, batch 가능 범위: `references/command-flows.md`
+- 일반 운용, 에셋 생성, scene inspect/patch, batch 가능 범위: `references/command-flows.md`
 - prefab create/inspect/patch와 spec 작성: `references/prefab-workflows.md`
 - stale instance, busy, liveReachable, 로그 확인: `references/troubleshooting.md`
 - 빠르게 시작할 JSON 템플릿: `assets/`

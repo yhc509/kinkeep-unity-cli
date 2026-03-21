@@ -282,21 +282,7 @@ public static class CliApp
 
     private static bool IsBatchCapable(CommandKind kind)
     {
-        return kind is CommandKind.Compile
-            or CommandKind.Refresh
-            or CommandKind.RunTests
-            or CommandKind.AssetFind
-            or CommandKind.AssetTypes
-            or CommandKind.AssetInfo
-            or CommandKind.AssetReimport
-            or CommandKind.AssetMkdir
-            or CommandKind.AssetMove
-            or CommandKind.AssetRename
-            or CommandKind.AssetDelete
-            or CommandKind.AssetCreate
-            or CommandKind.PrefabInspect
-            or CommandKind.PrefabCreate
-            or CommandKind.PrefabPatch;
+        return CliCommandMetadata.SupportsBatch(kind);
     }
 
     private static async Task<ResponseEnvelope> RunBatchCommandAsync(ParsedCommand parsed, string projectRoot, string? fallbackReason = null)

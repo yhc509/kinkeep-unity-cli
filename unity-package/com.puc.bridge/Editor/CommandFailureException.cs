@@ -12,6 +12,11 @@ namespace PUC.Editor
             Retryable = retryable;
         }
 
+        public CommandFailureException(string errorCode, string message, bool retryable, string details = null)
+            : this(errorCode, message, details, retryable)
+        {
+        }
+
         public string ErrorCode { get; private set; }
         public string Details { get; private set; }
         public bool Retryable { get; private set; }

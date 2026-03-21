@@ -159,6 +159,13 @@ namespace PUC.Editor
                 : descriptor.origin.Trim().ToLowerInvariant();
             descriptor.requiredOptions = descriptor.requiredOptions ?? Array.Empty<string>();
             descriptor.optionalOptions = descriptor.optionalOptions ?? Array.Empty<string>();
+            descriptor.aliases = descriptor.aliases ?? Array.Empty<string>();
+            descriptor.notes = descriptor.notes ?? Array.Empty<string>();
+            descriptor.aliases = descriptor.aliases
+                .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                .Select(alias => alias.Trim().ToLowerInvariant())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             return descriptor;
         }
     }

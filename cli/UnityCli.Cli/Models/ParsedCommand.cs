@@ -26,6 +26,13 @@ public enum CommandKind
     AssetRename,
     AssetDelete,
     AssetCreate,
+    SceneOpen,
+    SceneInspect,
+    ScenePatch,
+    SceneAddObject,
+    SceneSetTransform,
+    SceneAddComponent,
+    SceneRemoveComponent,
     PrefabInspect,
     PrefabCreate,
     PrefabPatch,
@@ -33,6 +40,15 @@ public enum CommandKind
     InstancesUse,
     Doctor,
     Raw,
+    Screenshot,
+    PackageList,
+    PackageAdd,
+    PackageRemove,
+    PackageSearch,
+    ExecuteCode,
+    Custom,
+    MaterialInfo,
+    MaterialSet,
 }
 
 public sealed class ParsedCommand
@@ -52,6 +68,23 @@ public sealed class ParsedCommand
     public string? MenuPath { get; set; }
     public string? InstanceTarget { get; set; }
     public string? RawJson { get; set; }
+    public string? ScreenshotView { get; set; }
+    public string? ScreenshotCamera { get; set; }
+    public string? ScreenshotPath { get; set; }
+    public int? ScreenshotWidth { get; set; }
+    public int? ScreenshotHeight { get; set; }
+    public string? PackageName { get; set; }
+    public string? PackageVersion { get; set; }
+    public string? PackageQuery { get; set; }
+    public string? ExecuteCodeSnippet { get; set; }
+    public string? ExecuteCodeFile { get; set; }
+    public string? CustomCommandName { get; set; }
+    public string? CustomArgsJson { get; set; }
+    public string? MaterialPath { get; set; }
+    public string? MaterialProperty { get; set; }
+    public string? MaterialValue { get; set; }
+    public string? MaterialTexture { get; set; }
+    public string? MaterialTextureAsset { get; set; }
     public string? AssetName { get; set; }
     public string? AssetType { get; set; }
     public string? AssetFolder { get; set; }
@@ -74,6 +107,19 @@ public sealed class ParsedCommand
     public int? AssetHeight { get; set; }
     public int? AssetDepth { get; set; }
     public Dictionary<string, object?> AssetCustomOptions { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public string? ScenePath { get; set; }
+    public string? SceneSpecFile { get; set; }
+    public string? SceneSpecJson { get; set; }
+    public bool SceneWithValues { get; set; }
+    public string? SceneTarget { get; set; }
+    public string? SceneParent { get; set; }
+    public string? SceneObjectName { get; set; }
+    public string? SceneComponents { get; set; }
+    public string? SceneComponentType { get; set; }
+    public string? SceneComponentValues { get; set; }
+    public string? ScenePosition { get; set; }
+    public string? SceneRotation { get; set; }
+    public string? SceneScale { get; set; }
     public string? PrefabPath { get; set; }
     public string? PrefabSpecFile { get; set; }
     public string? PrefabSpecJson { get; set; }
@@ -116,6 +162,15 @@ public sealed class ParsedCommand
                 CommandKind.Pause => "pause",
                 CommandKind.Stop => "stop",
                 CommandKind.ExecuteMenu => "execute-menu",
+                CommandKind.Screenshot => ProtocolConstants.CommandScreenshot,
+                CommandKind.PackageList => ProtocolConstants.CommandPackageList,
+                CommandKind.PackageAdd => ProtocolConstants.CommandPackageAdd,
+                CommandKind.PackageRemove => ProtocolConstants.CommandPackageRemove,
+                CommandKind.PackageSearch => ProtocolConstants.CommandPackageSearch,
+                CommandKind.ExecuteCode => ProtocolConstants.CommandExecuteCode,
+                CommandKind.Custom => ProtocolConstants.CommandCustom,
+                CommandKind.MaterialInfo => ProtocolConstants.CommandMaterialInfo,
+                CommandKind.MaterialSet => ProtocolConstants.CommandMaterialSet,
                 CommandKind.AssetFind => ProtocolConstants.CommandAssetFind,
                 CommandKind.AssetTypes => ProtocolConstants.CommandAssetTypes,
                 CommandKind.AssetInfo => ProtocolConstants.CommandAssetInfo,
@@ -125,6 +180,13 @@ public sealed class ParsedCommand
                 CommandKind.AssetRename => ProtocolConstants.CommandAssetRename,
                 CommandKind.AssetDelete => ProtocolConstants.CommandAssetDelete,
                 CommandKind.AssetCreate => ProtocolConstants.CommandAssetCreate,
+                CommandKind.SceneOpen => ProtocolConstants.CommandSceneOpen,
+                CommandKind.SceneInspect => ProtocolConstants.CommandSceneInspect,
+                CommandKind.ScenePatch => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneAddObject => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneSetTransform => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneAddComponent => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneRemoveComponent => ProtocolConstants.CommandScenePatch,
                 CommandKind.PrefabInspect => ProtocolConstants.CommandPrefabInspect,
                 CommandKind.PrefabCreate => ProtocolConstants.CommandPrefabCreate,
                 CommandKind.PrefabPatch => ProtocolConstants.CommandPrefabPatch,
@@ -148,6 +210,49 @@ public sealed class ParsedCommand
             CommandKind.ExecuteMenu => new
             {
                 path = MenuPath,
+            },
+            CommandKind.Screenshot => new ScreenshotArgs
+            {
+                view = ScreenshotView,
+                camera = ScreenshotCamera,
+                outputPath = ScreenshotPath,
+                width = ScreenshotWidth ?? 0,
+                height = ScreenshotHeight ?? 0,
+            },
+            CommandKind.PackageList => new { },
+            CommandKind.PackageAdd => new PackageAddArgs
+            {
+                name = PackageName ?? string.Empty,
+                version = PackageVersion,
+            },
+            CommandKind.PackageRemove => new PackageRemoveArgs
+            {
+                name = PackageName ?? string.Empty,
+            },
+            CommandKind.PackageSearch => new PackageSearchArgs
+            {
+                query = PackageQuery ?? string.Empty,
+            },
+            CommandKind.ExecuteCode => new ExecuteCodeArgs
+            {
+                code = ResolveExecuteCode(),
+            },
+            CommandKind.Custom => new CustomCommandArgs
+            {
+                commandName = CustomCommandName ?? string.Empty,
+                argumentsJson = CustomArgsJson ?? "{}",
+            },
+            CommandKind.MaterialInfo => new MaterialInfoArgs
+            {
+                path = MaterialPath ?? string.Empty,
+            },
+            CommandKind.MaterialSet => new MaterialSetArgs
+            {
+                path = MaterialPath ?? string.Empty,
+                property = MaterialProperty,
+                value = MaterialValue,
+                texture = MaterialTexture,
+                textureAsset = MaterialTextureAsset,
             },
             CommandKind.AssetFind => new AssetFindArgs
             {
@@ -195,6 +300,46 @@ public sealed class ParsedCommand
                 typeName = AssetTypeName,
                 dataJson = AssetDataJson,
                 optionsJson = BuildAssetCreateOptionsJson(),
+            },
+            CommandKind.SceneOpen => new SceneOpenArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+            },
+            CommandKind.SceneInspect => new SceneInspectArgs
+            {
+                path = ScenePath ?? string.Empty,
+                withValues = SceneWithValues,
+            },
+            CommandKind.ScenePatch => new ScenePatchArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+                specJson = ResolveSceneSpecJson(),
+            },
+            CommandKind.SceneAddObject => new ScenePatchArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+                specJson = BuildAddObjectSpec(),
+            },
+            CommandKind.SceneSetTransform => new ScenePatchArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+                specJson = BuildSetTransformSpec(),
+            },
+            CommandKind.SceneAddComponent => new ScenePatchArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+                specJson = BuildAddComponentSpec(),
+            },
+            CommandKind.SceneRemoveComponent => new ScenePatchArgs
+            {
+                path = ScenePath ?? string.Empty,
+                force = Force,
+                specJson = BuildRemoveComponentSpec(),
             },
             CommandKind.PrefabInspect => new PrefabInspectArgs
             {
@@ -264,12 +409,197 @@ public sealed class ParsedCommand
         return options.Count == 0 ? null : JsonSerializer.Serialize(options, ProtocolJson.Default);
     }
 
+    private string ResolveExecuteCode()
+    {
+        if (!string.IsNullOrWhiteSpace(ExecuteCodeFile))
+        {
+            string filePath = Path.GetFullPath(ExecuteCodeFile);
+            if (!File.Exists(filePath))
+            {
+                throw new CliUsageException("코드 파일을 찾지 못했습니다: " + filePath);
+            }
+
+            return File.ReadAllText(filePath);
+        }
+
+        return ExecuteCodeSnippet ?? string.Empty;
+    }
+
     private string ResolvePrefabSpecJson()
     {
-        string? specJson = PrefabSpecJson;
-        if (!string.IsNullOrWhiteSpace(PrefabSpecFile))
+        return ResolveSpecJson(PrefabSpecJson, PrefabSpecFile, "prefab");
+    }
+
+    public string ResolveSceneSpecJson()
+    {
+        return ResolveSpecJson(SceneSpecJson, SceneSpecFile, "scene");
+    }
+
+    private string BuildAddObjectSpec()
+    {
+        var node = new Dictionary<string, object?>
         {
-            string filePath = Path.GetFullPath(PrefabSpecFile);
+            ["name"] = SceneObjectName ?? "GameObject",
+        };
+
+        if (!string.IsNullOrWhiteSpace(SceneComponents))
+        {
+            string[] components = SceneComponents.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var componentList = new List<object>();
+            foreach (string component in components)
+            {
+                componentList.Add(new Dictionary<string, object?>
+                {
+                    ["type"] = component,
+                });
+            }
+
+            node["components"] = componentList;
+        }
+
+        var op = new Dictionary<string, object?>
+        {
+            ["op"] = "add-gameobject",
+            ["parent"] = SceneParent ?? "/",
+            ["node"] = node,
+        };
+
+        var spec = new Dictionary<string, object?>
+        {
+            ["version"] = 1,
+            ["operations"] = new[] { op },
+        };
+
+        return JsonSerializer.Serialize(spec, ProtocolJson.Default);
+    }
+
+    private string BuildSetTransformSpec()
+    {
+        var transform = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(ScenePosition))
+        {
+            transform["localPosition"] = ParseVector3(ScenePosition!, "--position");
+        }
+
+        if (!string.IsNullOrWhiteSpace(SceneRotation))
+        {
+            transform["localRotationEuler"] = ParseVector3(SceneRotation!, "--rotation");
+        }
+
+        if (!string.IsNullOrWhiteSpace(SceneScale))
+        {
+            transform["localScale"] = ParseVector3(SceneScale!, "--scale");
+        }
+
+        var values = new Dictionary<string, object?>
+        {
+            ["transform"] = transform,
+        };
+
+        var op = new Dictionary<string, object?>
+        {
+            ["op"] = "modify-gameobject",
+            ["target"] = SceneTarget ?? string.Empty,
+            ["values"] = values,
+        };
+
+        var spec = new Dictionary<string, object?>
+        {
+            ["version"] = 1,
+            ["operations"] = new[] { op },
+        };
+
+        return JsonSerializer.Serialize(spec, ProtocolJson.Default);
+    }
+
+    private string BuildAddComponentSpec()
+    {
+        var op = new Dictionary<string, object?>
+        {
+            ["op"] = "add-component",
+            ["target"] = SceneTarget ?? string.Empty,
+            ["component"] = BuildComponentSpec(),
+        };
+
+        var spec = new Dictionary<string, object?>
+        {
+            ["version"] = 1,
+            ["operations"] = new[] { op },
+        };
+
+        return JsonSerializer.Serialize(spec, ProtocolJson.Default);
+    }
+
+    private string BuildRemoveComponentSpec()
+    {
+        var op = new Dictionary<string, object?>
+        {
+            ["op"] = "remove-component",
+            ["target"] = SceneTarget ?? string.Empty,
+            ["componentType"] = SceneComponentType ?? string.Empty,
+        };
+
+        var spec = new Dictionary<string, object?>
+        {
+            ["version"] = 1,
+            ["operations"] = new[] { op },
+        };
+
+        return JsonSerializer.Serialize(spec, ProtocolJson.Default);
+    }
+
+    private Dictionary<string, object?> BuildComponentSpec()
+    {
+        var component = new Dictionary<string, object?>
+        {
+            ["type"] = SceneComponentType ?? string.Empty,
+        };
+
+        if (!string.IsNullOrWhiteSpace(SceneComponentValues))
+        {
+            component["values"] = ParseSceneComponentValues();
+        }
+
+        return component;
+    }
+
+    private object? ParseSceneComponentValues()
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, object?>>(SceneComponentValues!, ProtocolJson.Default);
+        }
+        catch (JsonException exception)
+        {
+            throw new CliUsageException("`--values`는 object 형태의 JSON이어야 합니다. " + exception.Message);
+        }
+    }
+
+    private static Dictionary<string, object?> ParseVector3(string csv, string option)
+    {
+        string[] parts = csv.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 3
+            || !float.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
+            || !float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y)
+            || !float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z))
+        {
+            throw new CliUsageException($"{option} 값은 `x,y,z` 형식이어야 합니다.");
+        }
+
+        return new Dictionary<string, object?>
+        {
+            ["x"] = x,
+            ["y"] = y,
+            ["z"] = z,
+        };
+    }
+
+    private static string ResolveSpecJson(string? inlineJson, string? specFile, string label)
+    {
+        string? specJson = inlineJson;
+        if (!string.IsNullOrWhiteSpace(specFile))
+        {
+            string filePath = Path.GetFullPath(specFile);
             if (!File.Exists(filePath))
             {
                 throw new CliUsageException("spec 파일을 찾지 못했습니다: " + filePath);
@@ -280,7 +610,7 @@ public sealed class ParsedCommand
 
         if (string.IsNullOrWhiteSpace(specJson))
         {
-            throw new CliUsageException("prefab spec이 비어 있습니다.");
+            throw new CliUsageException(label + " spec이 비어 있습니다.");
         }
 
         return specJson;

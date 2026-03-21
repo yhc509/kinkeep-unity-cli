@@ -11,8 +11,11 @@
 
 - A local bridge that starts automatically when the Editor opens
 - Per-project instance registration and automatic selection
-- Live editor control: `status`, `refresh`, `play`, `pause`, `stop`, `execute-menu`, `read-console`
+- Live editor control: `status`, `refresh`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `read-console`
 - Asset commands: `find`, `types`, `info`, `reimport`, `mkdir`, `move`, `rename`, `delete`, `create`
+- Material commands: `info`, `set`
+- Package commands: `list`, `add`, `remove`, `search`
+- Scene commands: `open`, `inspect`, `patch`
 - Prefab commands: `inspect`, `create`, `patch`
 - The same command handlers reused through batch fallback when the Editor is not running
 
@@ -21,7 +24,7 @@ In practice, this means the package can expose Unity as a project-aware automati
 - It removes the need to keep a custom bridge server running.
 - It removes per-project port configuration when several editors are open.
 - It keeps live editor work and batch fallback on the same protocol and command model.
-- It gives the CLI direct access to asset and prefab workflows instead of relying only on menu execution.
+- It gives the CLI direct access to asset, material, package, and prefab workflows instead of relying only on menu execution.
 
 ## Install
 
@@ -46,8 +49,14 @@ The CLI executable and Codex skill are not included in the UPM package payload. 
 
 ## Notes
 
-- This package includes `Newtonsoft.Json.dll` in `Editor/Plugins` for prefab spec parsing.
+- This package includes `Newtonsoft.Json.dll` in `Editor/Plugins` for scene/prefab spec parsing.
 - `input-actions` assets are created as JSON files that Unity's Input System importer reads.
+- `scene inspect --with-values` is meant to be used as the source of truth when authoring `scene patch` specs.
+- `scene patch` uses `/Root[0]/Child[0]` paths, treats `/` as the virtual scene root, and requires `--force` for destructive ops.
+- `execute` is live-only and always requires `--force` because it runs arbitrary C# in the editor context.
+- `custom` is live-only and invokes project-defined static methods marked with `[PucCommand("name")]`.
+- if the target scene is already loaded, `scene inspect` and `scene patch` expect it to be clean before they run.
+- `scene open` requires `--force` if the currently loaded scenes have unsaved changes that should be discarded.
 - `prefab patch` values are applied through `SerializedProperty.propertyPath`.
 - `prefab inspect --with-values` is meant to be used as the source of truth when authoring patch specs.
 - The root prefab object name is normalized to the prefab file name after save.

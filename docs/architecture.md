@@ -29,6 +29,7 @@
 - Multi-project selection is based on the project root hash and the active instance in the registry.
 - On macOS, hashes are computed from the real path instead of a symlink path.
 - Destructive operations and overwrite behavior require `--force`.
+- Scene editing is split into `scene open`, `scene inspect`, and `scene patch`, and scene node paths use `/Root[0]/Child[0]` with `/` as the virtual scene root.
 - Prefab editing is split into `prefab create`, `prefab inspect`, and `prefab patch`, and field patching is based on `SerializedProperty.propertyPath`.
 
 ## Repository Layout
@@ -41,5 +42,6 @@
 ## Current Limits
 
 - CLI release validation is currently centered on `macOS arm64`.
+- Scene editing is currently limited to saved `Assets/...unity` assets; multi-scene orchestration and generalized scene object references are not covered yet.
 - Advanced editing of prefab-internal object references and nested prefab variants is not generalized yet.
 - The root prefab object name is normalized to the prefab file name after save.

@@ -7,23 +7,27 @@
 - No manual server startup. The bridge starts automatically when the Editor opens.
 - No per-project port management. The correct Editor instance is selected from the project path and registry.
 - One command surface for live and batch. If the Editor is running, commands go through live IPC. If it is not, supported commands fall back to batchmode.
-- Asset and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create` and `prefab create/inspect/patch`.
+- Scene, asset, material, package, and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create`, `material info/set`, `package list/add/remove/search`, `scene open/inspect/patch`, scene object shortcuts like `scene add-object` and `scene set-transform`, and `prefab create/inspect/patch`.
+- Project-defined live commands can be exposed through a lightweight `[PucCommand]` extension API instead of adding one-off transport code.
 - The Codex skill keeps the workflow consistent: choose the command, perform the work, then verify the logs.
 
 ## What You Can Do With PUC
 
 - Check editor state from the terminal with `status`, `refresh`, `compile`, and `run-tests`.
-- Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, and `read-console`.
+- Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, and `read-console`.
 - Query and manage assets with `asset find`, `asset info`, `asset create`, `asset move`, `asset rename`, `asset reimport`, and `asset delete`.
+- Inspect and update material shader properties with `material info` and `material set`.
+- Inspect and manage Unity packages with `package list`, `package add`, `package remove`, and `package search`.
 - Generate common Unity assets directly from the CLI, including materials, scenes, prefabs, animation clips, controllers, render textures, volume profiles, and ScriptableObjects.
+- Open saved scenes, inspect scene hierarchies, and apply deterministic scene edits with `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, and `scene remove-component`.
 - Create project-specific assets through extension providers instead of routing everything through one-off editor scripts.
 - Author prefabs structurally from JSON with `prefab create`, inspect serialized paths with `prefab inspect`, and apply deterministic changes with `prefab patch`.
 
 ## Typical Workflows
 
-- AI-assisted editor automation: let an agent create assets or patch prefabs, then verify the console through the same CLI.
+- AI-assisted editor automation: let an agent create assets or patch scenes/prefabs, then verify the console through the same CLI.
 - Local multi-project work: keep multiple Unity projects open and target the right editor without port juggling.
-- Editor-off automation: use batch fallback for commands such as `refresh`, `asset info`, `asset create`, and prefab operations when no live editor is running.
+- Editor-off automation: use batch fallback for commands such as `refresh`, `asset info`, `asset create`, `material info`, `material set`, `package list/search`, and prefab operations when no live editor is running.
 - Data-heavy gameplay work: generate ScriptableObjects and custom asset types from repeatable command flows instead of custom menus.
 
 This repository is organized into three parts.
@@ -35,13 +39,16 @@ This repository is organized into three parts.
 ## Current Status
 
 - Live IPC and batch fallback are both working.
-- Asset find/create/move/delete and prefab create/inspect/patch are supported.
+- Asset find/create/move/delete, material info/set, package list/add/remove/search, scene open/inspect/patch plus scene convenience shortcuts, and prefab create/inspect/patch are supported.
 - Release validation is currently focused on `macOS arm64`.
 
 Current command surface, at a glance:
 
-- Editor control: `status`, `refresh`, `compile`, `run-tests`, `play`, `pause`, `stop`, `execute-menu`, `read-console`
+- Editor control: `status`, `refresh`, `compile`, `run-tests`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, `read-console`
 - Asset workflows: `asset find`, `asset types`, `asset info`, `asset reimport`, `asset mkdir`, `asset move`, `asset rename`, `asset delete`, `asset create`
+- Material workflows: `material info`, `material set`
+- Package management: `package list`, `package add`, `package remove`, `package search`
+- Scene workflows: `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`
 - Prefab workflows: `prefab inspect`, `prefab create`, `prefab patch`
 
 ## Quick Start
@@ -81,6 +88,62 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli status --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli refresh --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --json
+./dist/unity-cli/UnityCli.Cli material info --project "$PROJECT_ROOT" --path Assets/Materials/Wood.mat --json
+./dist/unity-cli/UnityCli.Cli package list --project "$PROJECT_ROOT" --json
+./dist/unity-cli/UnityCli.Cli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --json
+./dist/unity-cli/UnityCli.Cli screenshot --project "$PROJECT_ROOT" --view game --path /tmp/game-view.png --json
+./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"PUC smoke\");" --force --json
+```
+
+Custom command smoke test:
+
+```csharp
+using UnityCli.Protocol;
+
+public static class TerrainCommands
+{
+    [PucCommand("terrain-setup")]
+    public static string SetupTerrain(string argumentsJson)
+    {
+        return "{\"ok\":true}";
+    }
+}
+```
+
+```bash
+./dist/unity-cli/UnityCli.Cli --json \
+  --project "$PROJECT_ROOT" \
+  custom terrain-setup \
+  --json '{"size":1000}'
+```
+
+Scene patch smoke test:
+
+```bash
+./dist/unity-cli/UnityCli.Cli scene patch \
+  --project "$PROJECT_ROOT" \
+  --path Assets/Scenes/SampleScene.unity \
+  --spec-file ./tools/skills/unity-cli-operator/assets/scene-patch-basic.json \
+  --json
+```
+
+Scene convenience shortcut smoke tests:
+
+```bash
+./dist/unity-cli/UnityCli.Cli scene add-object \
+  --project "$PROJECT_ROOT" \
+  --path Assets/Scenes/SampleScene.unity \
+  --parent /Root[0] \
+  --name SpawnPoint \
+  --components "BoxCollider" \
+  --json
+
+./dist/unity-cli/UnityCli.Cli scene set-transform \
+  --project "$PROJECT_ROOT" \
+  --path Assets/Scenes/SampleScene.unity \
+  --target /Root[0]/SpawnPoint[0] \
+  --position 0,1,0 \
+  --json
 ```
 
 Prefab authoring smoke test:
@@ -94,16 +157,42 @@ Prefab authoring smoke test:
   --json
 ```
 
+Material mutation smoke tests:
+
+```bash
+./dist/unity-cli/UnityCli.Cli material set \
+  --project "$PROJECT_ROOT" \
+  --path Assets/Materials/Wood.mat \
+  --property _Color \
+  --value 1,0,0,1 \
+  --json
+
+./dist/unity-cli/UnityCli.Cli material set \
+  --project "$PROJECT_ROOT" \
+  --path Assets/Materials/Wood.mat \
+  --texture _MainTex \
+  --asset Assets/Textures/wood.png \
+  --json
+```
+
 ## Documentation
 
+- CLI reference (generated): [`docs/cli-reference.md`](docs/cli-reference.md)
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
+- Scene spec: [`docs/scene-spec.md`](docs/scene-spec.md)
 - Prefab spec: [`docs/prefab-spec.md`](docs/prefab-spec.md)
 - Unity package usage: [`unity-package/com.puc.bridge/README.md`](unity-package/com.puc.bridge/README.md)
 - Third-party notices: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 
+Regenerate the CLI reference after command-surface changes:
+
+```bash
+dotnet run --project cli/UnityCli.DocGen -- --write
+```
+
 ## Codex Skill
 
-The `unity-cli-operator` skill bundles command selection, live-vs-batch decisions, prefab patch authoring, and post-task `read-console` verification into one repeatable workflow.
+The `unity-cli-operator` skill bundles command selection, live-vs-batch decisions, scene/prefab patch authoring, and post-task `read-console` verification into one repeatable workflow.
 
 The skill is part of the mono-repo, not part of the Unity package payload. Installing the package through a Git URL gives Unity only `unity-package/com.puc.bridge`, so the Codex skill still needs the repository itself.
 
@@ -126,16 +215,18 @@ CLI and tests:
 ```bash
 dotnet build PUC.sln -c Debug
 /opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test PUC.sln
+dotnet run --project cli/UnityCli.DocGen -- --check
 ```
 
 Unity integration:
 
-- Live: `status`, `refresh`, `asset create`, `prefab create`, `prefab inspect`, `prefab patch`
-- Batch: `refresh`, `asset info`, `asset create`, `prefab create`, `prefab inspect`, `prefab patch`
+- Live: `status`, `refresh`, `execute`, `custom`, `screenshot`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
+- Batch: `refresh`, `asset info`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
 - After live work, always check `read-console --type error` and `read-console --type warning`.
 
 ## Current Limits
 
 - Release automation is still centered on `macOS arm64`.
+- Scene patching currently targets saved `Assets/...unity` scenes. Multi-scene orchestration and generalized scene object references are still out of scope.
 - Advanced editing for prefab-internal object references and nested prefab variants is still out of scope.
 - The root prefab object name is normalized to the prefab file name when saved by Unity.

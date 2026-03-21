@@ -40,7 +40,13 @@ namespace PUC.Editor
         private readonly string _pipeName;
         private readonly string _registryFilePath;
         private readonly AssetCommandHandler _assetCommandHandler;
+        private readonly SceneCommandHandler _sceneCommandHandler;
         private readonly PrefabCommandHandler _prefabCommandHandler;
+        private readonly ScreenshotCommandHandler _screenshotCommandHandler;
+        private readonly ExecuteCodeHandler _executeCodeHandler;
+        private readonly CustomCommandHandler _customCommandHandler;
+        private readonly PackageCommandHandler _packageCommandHandler;
+        private readonly MaterialCommandHandler _materialCommandHandler;
         private Socket _unixListener;
         private double _lastHeartbeatTime;
         private bool _started;
@@ -55,7 +61,13 @@ namespace PUC.Editor
             _registryFilePath = RegistryPathUtility.GetRegistryFilePath();
             _capabilities = ProtocolHelpers.GetSupportedCommands();
             _assetCommandHandler = new AssetCommandHandler();
+            _sceneCommandHandler = new SceneCommandHandler();
             _prefabCommandHandler = new PrefabCommandHandler();
+            _screenshotCommandHandler = new ScreenshotCommandHandler();
+            _executeCodeHandler = new ExecuteCodeHandler();
+            _customCommandHandler = new CustomCommandHandler();
+            _packageCommandHandler = new PackageCommandHandler();
+            _materialCommandHandler = new MaterialCommandHandler();
         }
 
         public void Start()
@@ -299,9 +311,33 @@ namespace PUC.Editor
                 {
                     dataJson = _assetCommandHandler.Handle(command.command, command.argumentsJson);
                 }
+                else if (_sceneCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _sceneCommandHandler.Handle(command.command, command.argumentsJson);
+                }
                 else if (_prefabCommandHandler.CanHandle(command.command))
                 {
                     dataJson = _prefabCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_screenshotCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _screenshotCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_executeCodeHandler.CanHandle(command.command))
+                {
+                    dataJson = _executeCodeHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_customCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _customCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_materialCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _materialCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_packageCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _packageCommandHandler.Handle(command.command, command.argumentsJson);
                 }
                 else
                 {

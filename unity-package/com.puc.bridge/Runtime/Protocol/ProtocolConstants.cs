@@ -29,6 +29,15 @@ namespace UnityCli.Protocol
         public const string CommandPause = "pause";
         public const string CommandStop = "stop";
         public const string CommandExecuteMenu = "execute-menu";
+        public const string CommandScreenshot = "screenshot";
+        public const string CommandExecuteCode = "execute-code";
+        public const string CommandCustom = "custom";
+        public const string CommandPackageList = "package-list";
+        public const string CommandPackageAdd = "package-add";
+        public const string CommandPackageRemove = "package-remove";
+        public const string CommandPackageSearch = "package-search";
+        public const string CommandMaterialInfo = "material-info";
+        public const string CommandMaterialSet = "material-set";
         public const string CommandReadConsole = "read-console";
         public const string CommandRunTests = "run-tests";
         public const string CommandAssetFind = "asset-find";
@@ -40,6 +49,9 @@ namespace UnityCli.Protocol
         public const string CommandAssetRename = "asset-rename";
         public const string CommandAssetDelete = "asset-delete";
         public const string CommandAssetCreate = "asset-create";
+        public const string CommandSceneOpen = "scene-open";
+        public const string CommandSceneInspect = "scene-inspect";
+        public const string CommandScenePatch = "scene-patch";
         public const string CommandPrefabInspect = "prefab-inspect";
         public const string CommandPrefabCreate = "prefab-create";
         public const string CommandPrefabPatch = "prefab-patch";

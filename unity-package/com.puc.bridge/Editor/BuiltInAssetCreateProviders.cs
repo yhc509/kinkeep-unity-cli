@@ -38,14 +38,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "material",
-                    displayName = "Material",
-                    defaultExtension = ".mat",
-                    origin = "builtin",
-                    optionalOptions = new[] { "--shader" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("material");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -67,13 +60,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "physics-material",
-                    displayName = "Physics Material",
-                    defaultExtension = ".physicMaterial",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("physics-material");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -89,13 +76,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "physics-material-2d",
-                    displayName = "Physics Material 2D",
-                    defaultExtension = ".physicsMaterial2D",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("physics-material-2d");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -111,13 +92,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "animator-controller",
-                    displayName = "Animator Controller",
-                    defaultExtension = ".controller",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("animator-controller");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -132,14 +107,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "animator-override-controller",
-                    displayName = "Animator Override Controller",
-                    defaultExtension = ".overrideController",
-                    origin = "builtin",
-                    requiredOptions = new[] { "--base-controller" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("animator-override-controller");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -173,14 +141,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "animation-clip",
-                    displayName = "Animation Clip",
-                    defaultExtension = ".anim",
-                    origin = "builtin",
-                    optionalOptions = new[] { "--legacy" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("animation-clip");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -202,14 +163,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "input-actions",
-                    displayName = "Input Actions",
-                    defaultExtension = ".inputactions",
-                    origin = "builtin",
-                    optionalOptions = new[] { "--initial-map" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("input-actions");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -268,13 +222,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "scene",
-                    displayName = "Scene",
-                    defaultExtension = ".unity",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("scene");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -312,14 +260,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "prefab",
-                    displayName = "Prefab",
-                    defaultExtension = ".prefab",
-                    origin = "builtin",
-                    optionalOptions = new[] { "--root-name" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("prefab");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -359,14 +300,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "render-texture",
-                    displayName = "Render Texture",
-                    defaultExtension = ".renderTexture",
-                    origin = "builtin",
-                    optionalOptions = new[] { "--width", "--height", "--depth" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("render-texture");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -391,13 +325,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "avatar-mask",
-                    displayName = "Avatar Mask",
-                    defaultExtension = ".mask",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("avatar-mask");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -417,13 +345,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "volume-profile",
-                    displayName = "Volume Profile",
-                    defaultExtension = ".asset",
-                    origin = "builtin",
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("volume-profile");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
@@ -450,15 +372,7 @@ namespace PUC.Editor
         {
             public AssetCreateTypeDescriptor Describe()
             {
-                return new AssetCreateTypeDescriptor
-                {
-                    typeId = "scriptable-object",
-                    displayName = "ScriptableObject",
-                    defaultExtension = ".asset",
-                    origin = "builtin",
-                    supportsDataPatch = true,
-                    optionalOptions = new[] { "--script", "--type-name", "--data-json" },
-                };
+                return BuiltInAssetCreateCatalog.GetDescriptor("scriptable-object");
             }
 
             public AssetCreateArtifact Create(AssetCreateRequest request)

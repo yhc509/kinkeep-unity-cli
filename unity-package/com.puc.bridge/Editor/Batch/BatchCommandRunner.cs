@@ -8,7 +8,10 @@ namespace PUC.Editor.Batch
     public static class BatchCommandRunner
     {
         private static readonly AssetCommandHandler AssetCommandHandler = new AssetCommandHandler();
+        private static readonly SceneCommandHandler SceneCommandHandler = new SceneCommandHandler();
         private static readonly PrefabCommandHandler PrefabCommandHandler = new PrefabCommandHandler();
+        private static readonly PackageCommandHandler PackageCommandHandler = new PackageCommandHandler();
+        private static readonly MaterialCommandHandler MaterialCommandHandler = new MaterialCommandHandler();
 
         public static void Refresh()
         {
@@ -109,9 +112,21 @@ namespace PUC.Editor.Batch
                 {
                     dataJson = AssetCommandHandler.Handle(command.command, command.argumentsJson);
                 }
+                else if (SceneCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = SceneCommandHandler.Handle(command.command, command.argumentsJson);
+                }
                 else if (PrefabCommandHandler.CanHandle(command.command))
                 {
                     dataJson = PrefabCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (PackageCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = PackageCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (MaterialCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = MaterialCommandHandler.Handle(command.command, command.argumentsJson);
                 }
                 else
                 {

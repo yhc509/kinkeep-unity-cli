@@ -1,0 +1,48 @@
+using UnityCli.Protocol;
+
+namespace UnityCli.Cli.Tests;
+
+public sealed class ProtocolHelpersTests
+{
+    [Fact]
+    public void GetSupportedCommands_IncludesSceneCommands()
+    {
+        string[] commands = ProtocolHelpers.GetSupportedCommands();
+
+        Assert.Contains(ProtocolConstants.CommandExecuteCode, commands);
+        Assert.Contains(ProtocolConstants.CommandCustom, commands);
+        Assert.Contains(ProtocolConstants.CommandSceneOpen, commands);
+        Assert.Contains(ProtocolConstants.CommandSceneInspect, commands);
+        Assert.Contains(ProtocolConstants.CommandScenePatch, commands);
+    }
+
+    [Fact]
+    public void IsSceneCommand_RecognizesSceneSurface()
+    {
+        Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneOpen));
+        Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneInspect));
+        Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandScenePatch));
+        Assert.False(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandPrefabPatch));
+    }
+
+    [Fact]
+    public void BuiltInAssetCreateCatalog_NormalizesAliases()
+    {
+        Assert.True(BuiltInAssetCreateCatalog.TryNormalizeTypeId("controller", out string animatorController));
+        Assert.True(BuiltInAssetCreateCatalog.TryNormalizeTypeId("rendertexture", out string renderTexture));
+        Assert.True(BuiltInAssetCreateCatalog.TryNormalizeTypeId("scriptableobject", out string scriptableObject));
+
+        Assert.Equal("animator-controller", animatorController);
+        Assert.Equal("render-texture", renderTexture);
+        Assert.Equal("scriptable-object", scriptableObject);
+    }
+
+    [Fact]
+    public void BuiltInAssetCreateCatalog_DescriptorsIncludeSceneAndPrefab()
+    {
+        AssetCreateTypeDescriptor[] descriptors = BuiltInAssetCreateCatalog.GetDescriptors();
+
+        Assert.Contains(descriptors, descriptor => descriptor.typeId == "scene");
+        Assert.Contains(descriptors, descriptor => descriptor.typeId == "prefab");
+    }
+}
