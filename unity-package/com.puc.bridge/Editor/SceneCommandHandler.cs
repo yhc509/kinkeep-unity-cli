@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -188,7 +189,7 @@ namespace PUC.Editor
             }
         }
 
-        private static T DeserializeSpec<T>(string specJson, string commandName) where T : class
+        private static T DeserializeSpec<T>(string? specJson, string commandName) where T : class
         {
             if (string.IsNullOrWhiteSpace(specJson))
             {
@@ -232,7 +233,7 @@ namespace PUC.Editor
                     || string.Equals(operation.op, "remove-component", StringComparison.OrdinalIgnoreCase)));
         }
 
-        private static string ResolveScenePath(string path)
+        private static string ResolveScenePath(string? path)
         {
             string normalizedPath;
             try
@@ -258,7 +259,7 @@ namespace PUC.Editor
             return normalizedPath;
         }
 
-        private static string RequireExistingScenePath(string path, string commandName)
+        private static string RequireExistingScenePath(string? path, string commandName)
         {
             string scenePath = ResolveScenePath(path);
             if (!AssetCommandSupport.AssetExists(scenePath))
@@ -266,7 +267,7 @@ namespace PUC.Editor
                 throw new CommandFailureException("SCENE_PATH_INVALID", commandName + " 대상 scene이 없습니다: " + scenePath);
             }
 
-            Type mainType = AssetDatabase.GetMainAssetTypeAtPath(scenePath);
+            Type? mainType = AssetDatabase.GetMainAssetTypeAtPath(scenePath);
             if (mainType != typeof(SceneAsset))
             {
                 throw new CommandFailureException("SCENE_PATH_INVALID", "scene asset이 아닙니다: " + scenePath);
@@ -288,7 +289,7 @@ namespace PUC.Editor
                 {
                     case "add-gameobject":
                     {
-                        Transform parent = ResolveParent(scene, operation.parent, "add-gameobject");
+                        Transform? parent = ResolveParent(scene, operation.parent, "add-gameobject");
                         if (operation.node == null)
                         {
                             throw new CommandFailureException("SCENE_SPEC_INVALID", "`add-gameobject`에는 `node`가 필요합니다.");
@@ -300,7 +301,7 @@ namespace PUC.Editor
                     case "modify-gameobject":
                     {
                         GameObject target = ResolveNode(scene, operation.target, "modify-gameobject");
-                        SceneNodeMutationSpec values = operation.values == null
+                        SceneNodeMutationSpec? values = operation.values == null
                             ? null
                             : operation.values.ToObject<SceneNodeMutationSpec>(Serializer);
                         if (values == null)
@@ -358,7 +359,7 @@ namespace PUC.Editor
             }
         }
 
-        private static void AddNodes(Scene scene, Transform parent, SceneNodeSpec[] children, string commandName)
+        private static void AddNodes(Scene scene, Transform? parent, SceneNodeSpec[]? children, string commandName)
         {
             if (children == null)
             {
@@ -381,7 +382,7 @@ namespace PUC.Editor
             }
         }
 
-        private static void AddComponents(GameObject target, SceneComponentSpec[] components, string commandName)
+        private static void AddComponents(GameObject target, SceneComponentSpec[]? components, string commandName)
         {
             if (components == null)
             {
@@ -394,7 +395,7 @@ namespace PUC.Editor
             }
         }
 
-        private static Component AddComponent(GameObject target, SceneComponentSpec componentSpec, string commandName)
+        private static Component AddComponent(GameObject target, SceneComponentSpec? componentSpec, string commandName)
         {
             if (componentSpec == null || string.IsNullOrWhiteSpace(componentSpec.type))
             {
@@ -425,7 +426,7 @@ namespace PUC.Editor
             return component;
         }
 
-        private static Component ResolveComponent(GameObject target, string componentTypeName, int? componentIndex, string commandName)
+        private static Component ResolveComponent(GameObject target, string? componentTypeName, int? componentIndex, string commandName)
         {
             Type componentType = ResolveComponentType(componentTypeName, commandName);
             Component[] matches = target.GetComponents<Component>()
@@ -445,7 +446,7 @@ namespace PUC.Editor
             return matches[index];
         }
 
-        private static Type ResolveComponentType(string typeName, string commandName)
+        private static Type ResolveComponentType(string? typeName, string commandName)
         {
             string normalized = string.IsNullOrWhiteSpace(typeName) ? string.Empty : typeName.Trim();
             if (string.IsNullOrWhiteSpace(normalized))
@@ -509,7 +510,7 @@ namespace PUC.Editor
             return results;
         }
 
-        private static Transform ResolveParent(Scene scene, string path, string commandName)
+        private static Transform? ResolveParent(Scene scene, string? path, string commandName)
         {
             string normalizedPath = string.IsNullOrWhiteSpace(path) ? "/" : path.Trim();
             if (normalizedPath == "/")
@@ -520,7 +521,7 @@ namespace PUC.Editor
             return ResolveNode(scene, normalizedPath, commandName).transform;
         }
 
-        private static GameObject ResolveNode(Scene scene, string path, string commandName)
+        private static GameObject ResolveNode(Scene scene, string? path, string commandName)
         {
             string normalizedPath = string.IsNullOrWhiteSpace(path) ? "/" : path.Trim();
             if (normalizedPath == "/")
@@ -599,7 +600,7 @@ namespace PUC.Editor
             return (segment, 0);
         }
 
-        private static void ApplyNodeState(GameObject target, SceneNodeSpec spec, string defaultName, bool allowMissingName)
+        private static void ApplyNodeState(GameObject target, SceneNodeSpec? spec, string defaultName, bool allowMissingName)
         {
             if (spec == null)
             {
@@ -614,7 +615,7 @@ namespace PUC.Editor
             ApplyNodeStateCore(target, spec.active, spec.tag, spec.layer, spec.transform);
         }
 
-        private static void ApplyNodeState(GameObject target, SceneNodeMutationSpec spec)
+        private static void ApplyNodeState(GameObject target, SceneNodeMutationSpec? spec)
         {
             if (spec == null)
             {
@@ -629,7 +630,7 @@ namespace PUC.Editor
             ApplyNodeStateCore(target, spec.active, spec.tag, spec.layer, spec.transform);
         }
 
-        private static void ApplyNodeStateCore(GameObject target, bool? active, string tag, JToken layer, SceneTransformSpec transformSpec)
+        private static void ApplyNodeStateCore(GameObject target, bool? active, string? tag, JToken? layer, SceneTransformSpec? transformSpec)
         {
             if (active.HasValue)
             {
@@ -658,7 +659,7 @@ namespace PUC.Editor
             }
         }
 
-        private static string RequireNodeName(string name, string commandName)
+        private static string RequireNodeName(string? name, string commandName)
         {
             string normalized = string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
             if (string.IsNullOrWhiteSpace(normalized))
@@ -687,7 +688,12 @@ namespace PUC.Editor
                 throw new CommandFailureException("SCENE_NODE_INVALID", "layer는 string 또는 int여야 합니다.");
             }
 
-            string layerName = token.Value<string>();
+            string? layerName = token.Value<string>();
+            if (string.IsNullOrWhiteSpace(layerName))
+            {
+                throw new CommandFailureException("SCENE_NODE_INVALID", "layer string이 비어 있습니다.");
+            }
+
             if (int.TryParse(layerName, out int numericLayer))
             {
                 return ResolveLayer(new JValue(numericLayer));
@@ -886,11 +892,11 @@ namespace PUC.Editor
         [Serializable]
         private sealed class SceneNodeSpec
         {
-            public string name;
+            public string? name;
             public bool? active;
-            public string tag;
-            public JToken layer;
-            public SceneTransformSpec transform;
+            public string? tag;
+            public JToken? layer;
+            public SceneTransformSpec? transform;
             public SceneComponentSpec[] components = Array.Empty<SceneComponentSpec>();
             public SceneNodeSpec[] children = Array.Empty<SceneNodeSpec>();
         }
@@ -898,19 +904,19 @@ namespace PUC.Editor
         [Serializable]
         private sealed class SceneNodeMutationSpec
         {
-            public string name;
+            public string? name;
             public bool? active;
-            public string tag;
-            public JToken layer;
-            public SceneTransformSpec transform;
+            public string? tag;
+            public JToken? layer;
+            public SceneTransformSpec? transform;
         }
 
         [Serializable]
         private sealed class SceneTransformSpec
         {
-            public SceneVector3Spec localPosition;
-            public SceneVector3Spec localRotationEuler;
-            public SceneVector3Spec localScale;
+            public SceneVector3Spec? localPosition;
+            public SceneVector3Spec? localRotationEuler;
+            public SceneVector3Spec? localScale;
         }
 
         [Serializable]
@@ -924,20 +930,20 @@ namespace PUC.Editor
         [Serializable]
         private sealed class SceneComponentSpec
         {
-            public string type;
-            public JObject values;
+            public string type = string.Empty;
+            public JObject? values;
         }
 
         [Serializable]
         private sealed class ScenePatchOperationSpec
         {
-            public string op;
-            public string parent;
-            public string target;
-            public SceneNodeSpec node;
-            public JToken values;
-            public SceneComponentSpec component;
-            public string componentType;
+            public string op = string.Empty;
+            public string? parent;
+            public string? target;
+            public SceneNodeSpec? node;
+            public JToken? values;
+            public SceneComponentSpec? component;
+            public string? componentType;
             public int? componentIndex;
         }
     }

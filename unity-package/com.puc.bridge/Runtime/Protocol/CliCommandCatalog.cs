@@ -181,7 +181,7 @@ namespace UnityCli.Protocol
                 supportsLive: true,
                 supportsBatch: false,
                 allowedWhileBusy: false,
-                notes: new[] { "Live-only.", "Always requires --force as a safety gate." }),
+                notes: new[] { "Live-only.", "Always requires --force as a safety gate.", "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한)." }),
             new CliCommandDescriptor(
                 "custom",
                 "custom <command-name> [--json <args>]",
@@ -415,7 +415,8 @@ namespace UnityCli.Protocol
                 supportsLocal: false,
                 supportsLive: true,
                 supportsBatch: true,
-                allowedWhileBusy: false),
+                allowedWhileBusy: false,
+                notes: new[] { "패키지 작업 중 Editor가 일시 정지될 수 있습니다." }),
             new CliCommandDescriptor(
                 "package remove",
                 "package remove --name <package> --force",
@@ -426,7 +427,7 @@ namespace UnityCli.Protocol
                 supportsLive: true,
                 supportsBatch: true,
                 allowedWhileBusy: false,
-                notes: new[] { "Removal is always gated by --force." }),
+                notes: new[] { "Removal is always gated by --force.", "패키지 작업 중 Editor가 일시 정지될 수 있습니다." }),
             new CliCommandDescriptor(
                 "package search",
                 "package search --query <text>",

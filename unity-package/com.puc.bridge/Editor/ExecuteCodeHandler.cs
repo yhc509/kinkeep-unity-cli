@@ -22,25 +22,25 @@ using UnityEngine;
 using UnityEditor;
 
 public static class PucExecuteWrapper
-{{
+{
     public static string Execute()
-    {{
+    {
         var __sb = new System.Text.StringBuilder();
         var __origOut = System.Console.Out;
         var __writer = new System.IO.StringWriter(__sb);
         System.Console.SetOut(__writer);
         try
-        {{
-            {0}
-        }}
+        {
+            /*__PUC_USER_CODE__*/
+        }
         finally
-        {{
+        {
             System.Console.SetOut(__origOut);
-        }}
+        }
 
         return __sb.ToString();
-    }}
-}}";
+    }
+}";
 
         public bool CanHandle(string command)
         {
@@ -57,7 +57,7 @@ public static class PucExecuteWrapper
 
             try
             {
-                string wrappedCode = string.Format(WrapperTemplate, args.code);
+                string wrappedCode = WrapperTemplate.Replace("/*__PUC_USER_CODE__*/", args.code);
                 Assembly assembly = CompileCode(wrappedCode);
                 Type? wrapperType = assembly.GetType("PucExecuteWrapper");
                 if (wrapperType == null)

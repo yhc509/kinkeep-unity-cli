@@ -48,6 +48,11 @@ namespace PUC.Editor
                     Directory.CreateDirectory(directory!);
                 }
 
+                if (File.Exists(resolvedPath))
+                {
+                    File.Delete(resolvedPath);
+                }
+
                 File.Move(outputPath, resolvedPath);
             }
 
@@ -65,13 +70,35 @@ namespace PUC.Editor
         private (string path, int width, int height) CaptureView(string view, int requestedWidth, int requestedHeight)
         {
             string tempPath = Path.Combine(Path.GetTempPath(), $"puc-screenshot-{Guid.NewGuid():N}.png");
-            int superSize = 1;
 
             if (string.Equals(view, "game", StringComparison.OrdinalIgnoreCase))
             {
-                ScreenCapture.CaptureScreenshot(tempPath, superSize);
+                Camera? camera = Camera.main;
+                if (camera == null && Camera.allCameras.Length > 0)
+                {
+                    camera = Camera.allCameras[0];
+                }
+
+                if (camera == null)
+                {
+                    throw new CommandFailureException("SCREENSHOT_FAILED", "Game View 캡처를 위한 카메라가 없습니다.", false, null);
+                }
+
                 var gameView = GetMainGameViewSize();
-                return (tempPath, gameView.width, gameView.height);
+                int width = requestedWidth > 0 ? requestedWidth : camera.pixelWidth;
+                int height = requestedHeight > 0 ? requestedHeight : camera.pixelHeight;
+                if (width <= 0)
+                {
+                    width = gameView.width;
+                }
+
+                if (height <= 0)
+                {
+                    height = gameView.height;
+                }
+
+                CaptureCameraToPath(camera, width, height, tempPath);
+                return (tempPath, width, height);
             }
 
             if (string.Equals(view, "scene", StringComparison.OrdinalIgnoreCase))
@@ -85,23 +112,13 @@ namespace PUC.Editor
                 int width = requestedWidth > 0 ? requestedWidth : (int)sceneView.position.width;
                 int height = requestedHeight > 0 ? requestedHeight : (int)sceneView.position.height;
 
-                var camera = sceneView.camera;
-                var renderTexture = new RenderTexture(width, height, 24);
-                camera.targetTexture = renderTexture;
-                camera.Render();
-                camera.targetTexture = null;
+                Camera? camera = sceneView.camera;
+                if (camera == null)
+                {
+                    throw new CommandFailureException("SCREENSHOT_FAILED", "Scene View 캡처를 위한 카메라가 없습니다.", false, null);
+                }
 
-                RenderTexture.active = renderTexture;
-                var texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply();
-                RenderTexture.active = null;
-
-                byte[] pngBytes = texture.EncodeToPNG();
-                UnityEngine.Object.DestroyImmediate(texture);
-                UnityEngine.Object.DestroyImmediate(renderTexture);
-
-                File.WriteAllBytes(tempPath, pngBytes);
+                CaptureCameraToPath(camera, width, height, tempPath);
                 return (tempPath, width, height);
             }
 
@@ -118,26 +135,54 @@ namespace PUC.Editor
 
             int width = requestedWidth > 0 ? requestedWidth : camera.pixelWidth;
             int height = requestedHeight > 0 ? requestedHeight : camera.pixelHeight;
+            var gameView = GetMainGameViewSize();
+            if (width <= 0)
+            {
+                width = gameView.width;
+            }
 
-            var renderTexture = new RenderTexture(width, height, 24);
-            var previousTarget = camera.targetTexture;
-            camera.targetTexture = renderTexture;
-            camera.Render();
-            camera.targetTexture = previousTarget;
-
-            RenderTexture.active = renderTexture;
-            var texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-            texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-            texture.Apply();
-            RenderTexture.active = null;
+            if (height <= 0)
+            {
+                height = gameView.height;
+            }
 
             string tempPath = Path.Combine(Path.GetTempPath(), $"puc-screenshot-{Guid.NewGuid():N}.png");
-            byte[] pngBytes = texture.EncodeToPNG();
-            UnityEngine.Object.DestroyImmediate(texture);
-            UnityEngine.Object.DestroyImmediate(renderTexture);
-
-            File.WriteAllBytes(tempPath, pngBytes);
+            CaptureCameraToPath(camera, width, height, tempPath);
             return (tempPath, width, height);
+        }
+
+        private static void CaptureCameraToPath(Camera camera, int width, int height, string path)
+        {
+            var renderTexture = new RenderTexture(width, height, 24);
+            RenderTexture? previousActive = RenderTexture.active;
+            RenderTexture? previousTarget = camera.targetTexture;
+            Texture2D? texture = null;
+
+            try
+            {
+                camera.targetTexture = renderTexture;
+                camera.Render();
+
+                RenderTexture.active = renderTexture;
+                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                texture.Apply();
+
+                byte[] pngBytes = texture.EncodeToPNG();
+                File.WriteAllBytes(path, pngBytes);
+            }
+            finally
+            {
+                camera.targetTexture = previousTarget;
+                RenderTexture.active = previousActive;
+
+                if (texture != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(texture);
+                }
+
+                UnityEngine.Object.DestroyImmediate(renderTexture);
+            }
         }
 
         private static Camera? FindCamera(string name)
