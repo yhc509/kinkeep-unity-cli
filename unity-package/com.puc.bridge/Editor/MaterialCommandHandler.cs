@@ -230,21 +230,21 @@ namespace PUC.Editor
 
         private static Color ParseColor(string csv)
         {
-            string[] parts = csv.Split(',', StringSplitOptions.TrimEntries);
+            string[] parts = csv.Split(',');
             if (parts.Length < 3 || parts.Length > 4)
             {
                 throw new CommandFailureException("INVALID_VALUE", "Color는 `r,g,b` 또는 `r,g,b,a` 형식이어야 합니다.", false, null);
             }
 
-            if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float r)
-                || !float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float g)
-                || !float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float b))
+            if (!float.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float r)
+                || !float.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float g)
+                || !float.TryParse(parts[2].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float b))
             {
                 throw new CommandFailureException("INVALID_VALUE", "Color 값을 파싱할 수 없습니다.", false, null);
             }
 
             float a = 1f;
-            if (parts.Length == 4 && !float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out a))
+            if (parts.Length == 4 && !float.TryParse(parts[3].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out a))
             {
                 throw new CommandFailureException("INVALID_VALUE", "Color alpha 값을 파싱할 수 없습니다.", false, null);
             }
@@ -254,7 +254,7 @@ namespace PUC.Editor
 
         private static Vector4 ParseVector4(string csv)
         {
-            string[] parts = csv.Split(',', StringSplitOptions.TrimEntries);
+            string[] parts = csv.Split(',');
             if (parts.Length < 2 || parts.Length > 4)
             {
                 throw new CommandFailureException("INVALID_VALUE", "Vector는 `x,y[,z[,w]]` 형식이어야 합니다.", false, null);
@@ -263,9 +263,10 @@ namespace PUC.Editor
             float[] values = new float[4];
             for (int i = 0; i < parts.Length; i++)
             {
-                if (!float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]))
+                string component = parts[i].Trim();
+                if (!float.TryParse(component, NumberStyles.Float, CultureInfo.InvariantCulture, out values[i]))
                 {
-                    throw new CommandFailureException("INVALID_VALUE", $"Vector 컴포넌트를 파싱할 수 없습니다: {parts[i]}", false, null);
+                    throw new CommandFailureException("INVALID_VALUE", $"Vector 컴포넌트를 파싱할 수 없습니다: {component}", false, null);
                 }
             }
 
