@@ -4,7 +4,7 @@
 
 `PUC` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
 
-- `cli/`: the .NET CLI that receives user commands and routes them to live IPC or batch fallback
+- `cli/`: the .NET CLI that receives user commands and routes them to live IPC
 - `unity-package/com.puc.bridge/`: the bridge package that starts automatically inside the Unity Editor
 - `tools/skills/unity-cli-operator/`: the Codex skill that keeps `unity-cli` usage consistent
 
@@ -17,17 +17,16 @@
 3. The CLI finds the Unity project from the current working directory or `--project`, then attaches to the correct instance through the registry.
 4. Requests are executed on the Editor main thread over local IPC.
 
-### Batch Fallback
+### Live Target Unavailable
 
-1. If there is no live instance, or if the command supports batch execution, the CLI prepares a Unity batchmode run.
-2. The CLI creates request/result files and a per-project lock.
-3. Unity reads the request in batchmode and runs the same command handlers.
-4. The CLI reads the JSON response and returns the same envelope shape used by live mode.
+1. If there is no selected live instance, the CLI returns a live-unavailable error.
+2. If the registry points at an instance but the bridge is still importing or compiling, the CLI returns a live-unavailable error with guidance to retry.
 
 ## Core Behaviors
 
 - Multi-project selection is based on the project root hash and the active instance in the registry.
 - On macOS, hashes are computed from the real path instead of a symlink path.
+- When no running Editor with an active bridge is reachable, commands fail instead of trying any editor-off fallback.
 - Destructive operations and overwrite behavior require `--force`.
 - Scene editing is split into `scene open`, `scene inspect`, and `scene patch`, and scene node paths use `/Root[0]/Child[0]` with `/` as the virtual scene root.
 - Prefab editing is split into `prefab create`, `prefab inspect`, and `prefab patch`, and field patching is based on `SerializedProperty.propertyPath`.

@@ -16,11 +16,11 @@
 - registry는 `~/Library/Application Support/unity-cli/instances.json`에 있다.
 - 오래된 인스턴스가 보이면 에디터를 모두 닫고 다시 열기 전 이 파일 상태를 확인한다.
 
-## batch와 live 구분
+## live 연결 문제
 
-- 편집기 상태를 바꾸는 명령은 live가 우선이다.
-- 빌드성 명령과 일부 asset/prefab 명령은 batch fallback이 가능하다.
-- batch 성공 뒤에는 가능하면 `asset info`나 `prefab inspect`로 결과를 다시 본다.
+- 편집기 상태를 바꾸는 명령과 asset/material/package/scene/prefab 명령은 모두 live 연결이 필요하다.
+- `liveReachable: false`면 에디터를 열고 bridge import/compile이 끝날 때까지 기다린 뒤 다시 시도한다.
+- 프로젝트를 잘못 잡았을 수 있으니 `pwd -P`, `status --project ... --json`, `instances use`를 다시 확인한다.
 
 ## 로그 확인
 

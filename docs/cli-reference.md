@@ -12,20 +12,18 @@ Project-specific extension providers can still add more `asset create` types at 
 
 ## Transport Modes
 
-- `local`: resolved inside the CLI without Unity IPC or batchmode.
+- `local`: resolved inside the CLI without Unity IPC.
 - `live`: executed against a running Unity Editor over local IPC.
-- `batch`: executed through Unity batchmode when supported.
 
 ## Editor Control
 
-Commands for editor state, compilation, test execution, play state, menus, arbitrary code execution, project-defined custom commands, and console access.
+Commands for editor state, compilation, play state, menus, arbitrary code execution, project-defined custom commands, and console access.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
 | `status` | `status` | local, live | Reports the selected project and live editor state when a running bridge is reachable, with a local fallback when it is not. |
-| `compile` | `compile` | live, batch | Triggers a script compile in the running editor or through batch fallback. |
-| `refresh` | `refresh` | live, batch | Refreshes the AssetDatabase live or in batch. |
-| `run-tests` | `run-tests --mode edit\|play` | batch | Runs edit mode or play mode Unity tests through batchmode. |
+| `compile` | `compile` | live | Triggers a script compile in the running editor. |
+| `refresh` | `refresh` | live | Refreshes the AssetDatabase in the running editor. |
 | `read-console` | `read-console [--limit N] [--type log\|warning\|error]` | live | Reads recent editor console entries from a running editor. |
 | `play` | `play` | live | Starts Play Mode in a running editor. |
 | `pause` | `pause` | live | Pauses Play Mode in a running editor. |
@@ -41,15 +39,15 @@ Commands for querying, mutating, and creating assets under `Assets/...`.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `asset find` | `asset find --name <term> [--type <type>] [--folder <Assets/...>] [--limit N]` | live, batch | Finds assets by name, optional type, and optional folder. |
-| `asset types` | `asset types` | live, batch | Lists built-in and project extension asset-create type descriptors available to the target project. |
-| `asset info` | `asset info (--path <Assets/...> \| --guid <guid>)` | live, batch | Reads asset metadata by path or GUID. |
-| `asset reimport` | `asset reimport --path <Assets/...>` | live, batch | Reimports an existing asset. |
-| `asset mkdir` | `asset mkdir --path <Assets/...>` | live, batch | Creates missing folders under `Assets/...`. |
-| `asset move` | `asset move --from <Assets/...> --to <Assets/...> [--force]` | live, batch | Moves an asset to a new path; overwriting the destination requires --force. |
-| `asset rename` | `asset rename --path <Assets/...> --name <newName> [--force]` | live, batch | Renames an asset in place; overwriting the destination requires --force. |
-| `asset delete` | `asset delete --path <Assets/...> --force` | live, batch | Deletes an asset and always requires --force. |
-| `asset create` | `asset create --type <kind> --path <Assets/...> [--data-json <json>] [options]` | live, batch | Creates a built-in or extension asset type; overwriting an existing asset requires --force. |
+| `asset find` | `asset find --name <term> [--type <type>] [--folder <Assets/...>] [--limit N]` | live | Finds assets by name, optional type, and optional folder. |
+| `asset types` | `asset types` | live | Lists built-in and project extension asset-create type descriptors available to the target project. |
+| `asset info` | `asset info (--path <Assets/...> \| --guid <guid>)` | live | Reads asset metadata by path or GUID. |
+| `asset reimport` | `asset reimport --path <Assets/...>` | live | Reimports an existing asset. |
+| `asset mkdir` | `asset mkdir --path <Assets/...>` | live | Creates missing folders under `Assets/...`. |
+| `asset move` | `asset move --from <Assets/...> --to <Assets/...> [--force]` | live | Moves an asset to a new path; overwriting the destination requires --force. |
+| `asset rename` | `asset rename --path <Assets/...> --name <newName> [--force]` | live | Renames an asset in place; overwriting the destination requires --force. |
+| `asset delete` | `asset delete --path <Assets/...> --force` | live | Deletes an asset and always requires --force. |
+| `asset create` | `asset create --type <kind> --path <Assets/...> [--data-json <json>] [options]` | live | Creates a built-in or extension asset type; overwriting an existing asset requires --force. |
 
 ## Scene Workflows
 
@@ -57,13 +55,13 @@ Commands for opening, inspecting, and patching saved scene assets.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `scene open` | `scene open --path <Assets/...> [--force]` | live, batch | Opens a saved scene asset; use --force to discard dirty loaded scenes. |
-| `scene inspect` | `scene inspect --path <Assets/...> [--with-values]` | live, batch | Inspects a saved scene hierarchy; use --with-values when authoring scene patch specs. |
-| `scene patch` | `scene patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live, batch | Applies a deterministic scene patch spec; destructive operations require --force. |
-| `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--components "Type1,Type2"]` | live, batch | Adds a new GameObject to a scene; shortcut for a single add-gameobject scene patch operation. |
-| `scene set-transform` | `scene set-transform --path <Assets/...> --target <scenePath> (--position x,y,z \| --rotation x,y,z \| --scale x,y,z)` | live, batch | Sets the transform of a GameObject; shortcut for a single modify-gameobject scene patch operation. |
-| `scene add-component` | `scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]` | live, batch | Adds a component to a GameObject; shortcut for a single add-component scene patch operation. |
-| `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> --force` | live, batch | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
+| `scene open` | `scene open --path <Assets/...> [--force]` | live | Opens a saved scene asset; use --force to discard dirty loaded scenes. |
+| `scene inspect` | `scene inspect --path <Assets/...> [--with-values]` | live | Inspects a saved scene hierarchy; use --with-values when authoring scene patch specs. |
+| `scene patch` | `scene patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Applies a deterministic scene patch spec; destructive operations require --force. |
+| `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--components "Type1,Type2"]` | live | Adds a new GameObject to a scene; shortcut for a single add-gameobject scene patch operation. |
+| `scene set-transform` | `scene set-transform --path <Assets/...> --target <scenePath> (--position x,y,z \| --rotation x,y,z \| --scale x,y,z)` | live | Sets the transform of a GameObject; shortcut for a single modify-gameobject scene patch operation. |
+| `scene add-component` | `scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a GameObject; shortcut for a single add-component scene patch operation. |
+| `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> --force` | live | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
 
 ## Prefab Workflows
 
@@ -71,9 +69,9 @@ Commands for inspecting, creating, and patching prefab assets.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values]` | live, batch | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs. |
-| `prefab create` | `prefab create --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live, batch | Creates a prefab from a JSON structure spec; use --force to overwrite an existing asset. |
-| `prefab patch` | `prefab patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>)` | live, batch | Applies a deterministic patch spec to an existing prefab. |
+| `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values]` | live | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs. |
+| `prefab create` | `prefab create --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Creates a prefab from a JSON structure spec; use --force to overwrite an existing asset. |
+| `prefab patch` | `prefab patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>)` | live | Applies a deterministic patch spec to an existing prefab. |
 
 ## Package Management
 
@@ -81,10 +79,10 @@ Commands for listing, adding, removing, and searching Unity packages.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `package list` | `package list` | live, batch | Lists all installed packages in the project. |
-| `package add` | `package add --name <package> [--version <version>]` | live, batch | Adds a package to the project; supports registry, git URL, and local paths. |
-| `package remove` | `package remove --name <package> --force` | live, batch | Removes a package from the project; always requires --force. |
-| `package search` | `package search --query <text>` | live, batch | Searches the Unity registry for packages matching the query. |
+| `package list` | `package list` | live | Lists all installed packages in the project. |
+| `package add` | `package add --name <package> [--version <version>]` | live | Adds a package to the project; supports registry, git URL, and local paths. |
+| `package remove` | `package remove --name <package> --force` | live | Removes a package from the project; always requires --force. |
+| `package search` | `package search --query <text>` | live | Searches the Unity registry for packages matching the query. |
 
 ## Material Workflows
 
@@ -92,8 +90,8 @@ Commands for inspecting and mutating material properties and texture slots.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `material info` | `material info --path <Assets/...mat>` | live, batch | Inspects a material's shader and property values. |
-| `material set` | `material set --path <Assets/...mat> (--property <name> --value <val> \| --texture <name> --asset <Assets/...>)` | live, batch | Sets a material property value or texture. |
+| `material info` | `material info --path <Assets/...mat>` | live | Inspects a material's shader and property values. |
+| `material set` | `material set --path <Assets/...mat> (--property <name> --value <val> \| --texture <name> --asset <Assets/...>)` | live | Sets a material property value or texture. |
 
 ## Instance Management
 

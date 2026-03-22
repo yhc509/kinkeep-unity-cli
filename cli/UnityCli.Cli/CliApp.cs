@@ -1,4 +1,3 @@
-using System.Text.Json;
 using UnityCli.Cli.Models;
 using UnityCli.Cli.Services;
 using UnityCli.Protocol;
@@ -224,95 +223,48 @@ public static class CliApp
         var registry = registryStore.Load();
         var target = ResolveTarget(registryStore, registry, projectRoot);
 
-        if (parsed.Kind == CommandKind.RunTests)
-        {
-            if (string.IsNullOrWhiteSpace(projectRoot))
-            {
-                return ResponseEnvelope.Failure(
-                    Guid.NewGuid().ToString("N"),
-                    null,
-                    "PROJECT_NOT_FOUND",
-                    "batch 테스트를 실행할 Unity 프로젝트 루트를 찾지 못했습니다.",
-                    retryable: false,
-                    transport: "batch");
-            }
-
-            return await RunBatchCommandAsync(parsed, projectRoot);
-        }
-
         if (target is not null)
         {
             try
             {
                 using var cts = new CancellationTokenSource(parsed.TimeoutMs);
-                var liveResponse = await new LocalIpcClient().SendAsync(target, parsed.ToEnvelope(), parsed.TimeoutMs, cts.Token);
-                return liveResponse;
+                return await new LocalIpcClient().SendAsync(target, parsed.ToEnvelope(), parsed.TimeoutMs, cts.Token);
             }
-            catch (Exception ex) when (IsBatchCapable(parsed.Kind) && !string.IsNullOrWhiteSpace(projectRoot))
+            catch (Exception ex)
             {
-                return await RunBatchCommandAsync(parsed, projectRoot!, ex.Message);
-            }
-            catch
-            {
-                return ResponseEnvelope.Failure(
-                    Guid.NewGuid().ToString("N"),
+                return CreateLiveUnavailableResponse(
                     target.projectHash,
-                    "LIVE_UNAVAILABLE",
-                    "실행 중인 Unity Editor는 보이지만 bridge가 아직 연결되지 않았습니다.",
-                    retryable: true,
-                    transport: "cli",
-                    details: "Unity가 로컬 패키지를 import/compile 중인지 확인하세요.");
+                    "Unity가 로컬 패키지를 import/compile 중인지 확인한 뒤 다시 시도하세요. 원인: " + ex.Message);
             }
         }
 
-        if (IsBatchCapable(parsed.Kind) && !string.IsNullOrWhiteSpace(projectRoot))
+        if (!string.IsNullOrWhiteSpace(projectRoot))
         {
-            return await RunBatchCommandAsync(parsed, projectRoot!);
+            return CreateLiveUnavailableResponse(
+                ProtocolConstants.ComputeProjectHash(projectRoot),
+                "Unity Editor를 열고 Bridge import/compile이 끝난 뒤 다시 시도하세요.");
         }
 
         return ResponseEnvelope.Failure(
             Guid.NewGuid().ToString("N"),
             target?.projectHash,
             "NO_TARGET",
-            "실행 중인 Unity Editor 대상이 없습니다.",
+            "Unity Editor가 실행 중이지 않거나 Bridge가 활성화되지 않았습니다.",
             retryable: false,
             transport: "cli",
             details: "Unity 프로젝트 루트에서 실행하거나 `unity-cli instances use <projectPath>`로 대상을 고정하세요.");
     }
 
-    private static bool IsBatchCapable(CommandKind kind)
+    private static ResponseEnvelope CreateLiveUnavailableResponse(string? projectHash, string? details)
     {
-        return CliCommandMetadata.SupportsBatch(kind);
-    }
-
-    private static async Task<ResponseEnvelope> RunBatchCommandAsync(ParsedCommand parsed, string projectRoot, string? fallbackReason = null)
-    {
-        var unityPath = UnityEditorLocator.TryResolve(projectRoot);
-        if (string.IsNullOrWhiteSpace(unityPath))
-        {
-            return ResponseEnvelope.Failure(
-                Guid.NewGuid().ToString("N"),
-                ProtocolConstants.ComputeProjectHash(projectRoot),
-                "UNITY_NOT_FOUND",
-                "이 프로젝트에 맞는 Unity Editor 경로를 찾지 못했습니다.",
-                retryable: false,
-                transport: "batch");
-        }
-
-        var runner = new BatchModeRunner();
-        return parsed.Kind switch
-            {
-                CommandKind.Compile => await runner.RunCompileAsync(projectRoot, unityPath, parsed.TimeoutMs, fallbackReason),
-                CommandKind.RunTests => await runner.RunTestsAsync(projectRoot, unityPath, parsed.TestMode ?? "edit", parsed.TimeoutMs, fallbackReason),
-                _ when IsBatchCapable(parsed.Kind) => await runner.RunRequestAsync(projectRoot, unityPath, parsed.ToEnvelope(), parsed.TimeoutMs, fallbackReason),
-                _ => ResponseEnvelope.Failure(
-                Guid.NewGuid().ToString("N"),
-                ProtocolConstants.ComputeProjectHash(projectRoot),
-                "UNSUPPORTED_BATCH",
-                "이 명령은 batch fallback을 지원하지 않습니다.",
-                retryable: false,
-                transport: "batch"),
-        };
+        return ResponseEnvelope.Failure(
+            Guid.NewGuid().ToString("N"),
+            projectHash,
+            "LIVE_UNAVAILABLE",
+            "Unity Editor가 실행 중이지 않거나 Bridge가 활성화되지 않았습니다.",
+            retryable: true,
+            transport: "cli",
+            details: details);
     }
 
     private static InstanceRecord? ResolveTarget(InstanceRegistryStore registryStore, InstanceRegistry registry, string? projectRoot)

@@ -49,7 +49,6 @@ public static class CliArgumentParser
             "status" => new ParsedCommand(CommandKind.Status),
             "compile" => new ParsedCommand(CommandKind.Compile),
             "refresh" => new ParsedCommand(CommandKind.Refresh),
-            "run-tests" => new ParsedCommand(CommandKind.RunTests),
             "read-console" => new ParsedCommand(CommandKind.ReadConsole),
             "play" => new ParsedCommand(CommandKind.Play),
             "pause" => new ParsedCommand(CommandKind.Pause),
@@ -212,8 +211,6 @@ public static class CliArgumentParser
 
     private static void ParseCommandOptions(ParsedCommand parsed, Queue<string> tokens)
     {
-        var timeoutExplicitlySet = false;
-
         while (tokens.Count > 0)
         {
             var token = tokens.Dequeue();
@@ -226,7 +223,6 @@ public static class CliArgumentParser
             if (token == "--timeout-ms")
             {
                 parsed.TimeoutMs = RequireInt(RequireValue(tokens, "--timeout-ms"), "--timeout-ms");
-                timeoutExplicitlySet = true;
                 continue;
             }
 
@@ -240,9 +236,6 @@ public static class CliArgumentParser
             {
                 case CommandKind.Raw when token == "--json":
                     parsed.RawJson = RequireValue(tokens, "--json");
-                    break;
-                case CommandKind.RunTests when token == "--mode":
-                    parsed.TestMode = RequireMode(RequireValue(tokens, "--mode"));
                     break;
                 case CommandKind.ReadConsole when token == "--limit":
                     parsed.ConsoleLimit = RequireInt(RequireValue(tokens, "--limit"), "--limit");
@@ -476,16 +469,6 @@ public static class CliArgumentParser
             }
         }
 
-        if (parsed.Kind == CommandKind.RunTests && string.IsNullOrWhiteSpace(parsed.TestMode))
-        {
-            parsed.TestMode = "edit";
-        }
-
-        if (!timeoutExplicitlySet && IsBatchCapable(parsed.Kind))
-        {
-            parsed.TimeoutMs = ProtocolConstants.DefaultBatchTimeoutMs;
-        }
-
         if (parsed.Kind == CommandKind.ExecuteMenu && string.IsNullOrWhiteSpace(parsed.MenuPath))
         {
             throw new CliUsageException("`execute-menu`에는 `--path`가 필요합니다.");
@@ -511,16 +494,6 @@ public static class CliArgumentParser
             "game" => "game",
             "scene" => "scene",
             _ => throw new CliUsageException("`--view`는 `game` 또는 `scene`만 지원합니다."),
-        };
-    }
-
-    private static string RequireMode(string mode)
-    {
-        return mode.ToLowerInvariant() switch
-        {
-            "edit" or "editmode" => "edit",
-            "play" or "playmode" => "play",
-            _ => throw new CliUsageException("`--mode`는 `edit` 또는 `play`만 지원합니다."),
         };
     }
 
@@ -883,8 +856,4 @@ public static class CliArgumentParser
         return builder.ToString();
     }
 
-    private static bool IsBatchCapable(CommandKind kind)
-    {
-        return CliCommandMetadata.SupportsBatch(kind);
-    }
 }

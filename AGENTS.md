@@ -14,8 +14,7 @@
 - Unity 연동 수정 후:
   - 실제 Unity 프로젝트에서 `status`, `refresh`, `asset info`, `asset find`, `asset create`를 live로 확인
   - 실제 Unity 프로젝트에서 `prefab create`, `prefab inspect`, `prefab patch`를 live로 확인
-  - Editor를 닫은 뒤 `refresh`, `asset info`, `asset mkdir`, `asset create`를 batch로 확인
-  - Editor를 닫은 뒤 `prefab create`, `prefab inspect`, `prefab patch`를 batch로 확인
+  - live IPC가 끊겼을 때 CLI가 즉시 오류를 반환하는지 확인
 
 ## 문서 동기화
 

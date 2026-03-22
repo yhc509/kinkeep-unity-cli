@@ -33,24 +33,13 @@ PROJECT_ROOT="$(pwd -P)"
 
 live 편집이 필요한 명령은 에디터가 켜져 있고 busy 상태가 아닐 때 우선 실행한다.
 
-## batch 우선 명령
+## live 연결 전제
 
-에디터가 없어도 아래 명령은 batch fallback을 먼저 고려한다.
+`instances list`, `instances use`, `doctor`를 제외한 명령은 실행 중인 Unity Editor와 bridge 연결이 필요하다.
 
-- `compile`
-- `refresh`
-- `run-tests`
-- `asset info`
-- `asset mkdir`
-- `asset create`
-- `scene open`
-- `scene inspect`
-- `scene patch`
-- `prefab create`
-- `prefab inspect`
-- `prefab patch`
-
-`play`, `pause`, `stop`, `read-console`, `execute-menu`는 live 전용으로 본다.
+- `status --json`에서 `liveReachable`이 false면 먼저 에디터를 열고 bridge import/compile 완료를 기다린다.
+- `compile`, `refresh`, asset/material/package/scene/prefab 명령은 모두 live IPC로 실행한다.
+- `play`, `pause`, `stop`, `read-console`, `execute-menu`, `execute`, `custom`, `screenshot`도 live 전용으로 본다.
 
 ## 에셋 작업 흐름
 

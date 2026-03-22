@@ -39,9 +39,8 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine();
         builder.AppendLine("## Transport Modes");
         builder.AppendLine();
-        builder.AppendLine("- `local`: resolved inside the CLI without Unity IPC or batchmode.");
+        builder.AppendLine("- `local`: resolved inside the CLI without Unity IPC.");
         builder.AppendLine("- `live`: executed against a running Unity Editor over local IPC.");
-        builder.AppendLine("- `batch`: executed through Unity batchmode when supported.");
         builder.AppendLine();
 
         foreach (CliCommandGroup group in CommandGroups)
@@ -165,7 +164,7 @@ public static class CliReferenceDocumentRenderer
     {
         return group switch
         {
-            CliCommandGroup.EditorControl => "Commands for editor state, compilation, test execution, play state, menus, arbitrary code execution, project-defined custom commands, and console access.",
+            CliCommandGroup.EditorControl => "Commands for editor state, compilation, play state, menus, arbitrary code execution, project-defined custom commands, and console access.",
             CliCommandGroup.AssetWorkflows => "Commands for querying, mutating, and creating assets under `Assets/...`.",
             CliCommandGroup.SceneWorkflows => "Commands for opening, inspecting, and patching saved scene assets.",
             CliCommandGroup.PrefabWorkflows => "Commands for inspecting, creating, and patching prefab assets.",
@@ -188,11 +187,6 @@ public static class CliReferenceDocumentRenderer
         if (command.supportsLive)
         {
             modes.Add("live");
-        }
-
-        if (command.supportsBatch)
-        {
-            modes.Add("batch");
         }
 
         return modes.Count == 0 ? "-" : string.Join(", ", modes);

@@ -27,7 +27,6 @@ namespace UnityCli.Protocol
             string? protocolCommand,
             bool supportsLocal,
             bool supportsLive,
-            bool supportsBatch,
             bool allowedWhileBusy,
             string[]? notes = null)
         {
@@ -38,7 +37,6 @@ namespace UnityCli.Protocol
             this.protocolCommand = protocolCommand;
             this.supportsLocal = supportsLocal;
             this.supportsLive = supportsLive;
-            this.supportsBatch = supportsBatch;
             this.allowedWhileBusy = allowedWhileBusy;
             this.notes = notes ?? Array.Empty<string>();
         }
@@ -56,9 +54,6 @@ namespace UnityCli.Protocol
         public bool supportsLocal { get; }
 
         public bool supportsLive { get; }
-
-        public bool supportsBatch { get; }
-
         public bool allowedWhileBusy { get; }
 
         public string[] notes { get; }
@@ -76,40 +71,26 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandStatus,
                 supportsLocal: true,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: true,
                 notes: new[] { "Falls back to local registry and Unity-path inspection when no live editor is reachable." }),
             new CliCommandDescriptor(
                 "compile",
                 "compile",
-                "Triggers a script compile in the running editor or through batch fallback.",
+                "Triggers a script compile in the running editor.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandCompile,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "refresh",
                 "refresh",
-                "Refreshes the AssetDatabase live or in batch.",
+                "Refreshes the AssetDatabase in the running editor.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandRefresh,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
-            new CliCommandDescriptor(
-                "run-tests",
-                "run-tests --mode edit|play",
-                "Runs edit mode or play mode Unity tests through batchmode.",
-                CliCommandGroup.EditorControl,
-                protocolCommand: null,
-                supportsLocal: false,
-                supportsLive: false,
-                supportsBatch: true,
-                allowedWhileBusy: false,
-                notes: new[] { "This command is batch-only." }),
             new CliCommandDescriptor(
                 "read-console",
                 "read-console [--limit N] [--type log|warning|error]",
@@ -118,7 +99,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandReadConsole,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "play",
@@ -128,7 +108,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPlay,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "pause",
@@ -138,7 +117,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPause,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "stop",
@@ -148,7 +126,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandStop,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "execute-menu",
@@ -158,7 +135,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandExecuteMenu,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "screenshot",
@@ -168,9 +144,8 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScreenshot,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false,
-                notes: new[] { "Live-only. Batch mode cannot render." }),
+                notes: new[] { "Live-only." }),
             new CliCommandDescriptor(
                 "execute",
                 "execute (--code <csharp> | --file <path>) --force",
@@ -179,7 +154,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandExecuteCode,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false,
                 notes: new[] { "Live-only.", "Always requires --force as a safety gate.", "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한)." }),
             new CliCommandDescriptor(
@@ -190,7 +164,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandCustom,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false,
                 notes: new[] { "Live-only.", "Custom commands are registered via [PucCommand(\"name\")] attribute on static methods." }),
             new CliCommandDescriptor(
@@ -201,7 +174,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetFind,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "asset types",
@@ -211,7 +183,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetTypes,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "asset info",
@@ -221,7 +192,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetInfo,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "asset reimport",
@@ -231,7 +201,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetReimport,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "asset mkdir",
@@ -241,7 +210,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetMkdir,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "asset move",
@@ -251,7 +219,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetMove,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Overwriting an existing target requires --force." }),
             new CliCommandDescriptor(
@@ -262,7 +229,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetRename,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Overwriting an existing target requires --force." }),
             new CliCommandDescriptor(
@@ -273,7 +239,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetDelete,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Deletion is always gated by --force." }),
             new CliCommandDescriptor(
@@ -284,7 +249,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandAssetCreate,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "This repo ships the built-in asset types documented below.", "Runtime extension providers can add more types." }),
             new CliCommandDescriptor(
@@ -295,7 +259,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandSceneOpen,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "scene inspect",
@@ -305,7 +268,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandSceneInspect,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Use --with-values before authoring a patch spec.", "Detailed scene patch rules live in docs/scene-spec.md." }),
             new CliCommandDescriptor(
@@ -316,7 +278,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScenePatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Detailed scene patch rules live in docs/scene-spec.md." }),
             new CliCommandDescriptor(
@@ -327,7 +288,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScenePatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Internally delegates to scene patch." }),
             new CliCommandDescriptor(
@@ -338,7 +298,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScenePatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Internally delegates to scene patch." }),
             new CliCommandDescriptor(
@@ -349,7 +308,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScenePatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Internally delegates to scene patch." }),
             new CliCommandDescriptor(
@@ -360,7 +318,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandScenePatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Always requires --force.", "Internally delegates to scene patch." }),
             new CliCommandDescriptor(
@@ -371,7 +328,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPrefabInspect,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true,
                 notes: new[] { "Use --with-values before authoring a patch spec.", "Detailed prefab patch rules live in docs/prefab-spec.md." }),
             new CliCommandDescriptor(
@@ -382,7 +338,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPrefabCreate,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Use this instead of asset create --type prefab for structured prefab authoring.", "Detailed prefab patch rules live in docs/prefab-spec.md." }),
             new CliCommandDescriptor(
@@ -393,7 +348,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPrefabPatch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Detailed prefab patch rules live in docs/prefab-spec.md." }),
             new CliCommandDescriptor(
@@ -404,7 +358,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPackageList,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "package add",
@@ -414,7 +367,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPackageAdd,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "패키지 작업 중 Editor가 일시 정지될 수 있습니다." }),
             new CliCommandDescriptor(
@@ -425,7 +377,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPackageRemove,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false,
                 notes: new[] { "Removal is always gated by --force.", "패키지 작업 중 Editor가 일시 정지될 수 있습니다." }),
             new CliCommandDescriptor(
@@ -436,7 +387,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandPackageSearch,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "material info",
@@ -446,7 +396,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandMaterialInfo,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: true),
             new CliCommandDescriptor(
                 "material set",
@@ -456,7 +405,6 @@ namespace UnityCli.Protocol
                 ProtocolConstants.CommandMaterialSet,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: true,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "instances list",
@@ -466,7 +414,6 @@ namespace UnityCli.Protocol
                 protocolCommand: null,
                 supportsLocal: true,
                 supportsLive: false,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "instances use",
@@ -476,7 +423,6 @@ namespace UnityCli.Protocol
                 protocolCommand: null,
                 supportsLocal: true,
                 supportsLive: false,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "doctor",
@@ -486,7 +432,6 @@ namespace UnityCli.Protocol
                 protocolCommand: null,
                 supportsLocal: true,
                 supportsLive: false,
-                supportsBatch: false,
                 allowedWhileBusy: false),
             new CliCommandDescriptor(
                 "raw",
@@ -496,9 +441,8 @@ namespace UnityCli.Protocol
                 protocolCommand: null,
                 supportsLocal: false,
                 supportsLive: true,
-                supportsBatch: false,
                 allowedWhileBusy: false,
-                notes: new[] { "This bypasses typed CLI validation and has no batch fallback." }),
+                notes: new[] { "This bypasses typed CLI validation." }),
         };
 
         public static CliCommandDescriptor[] GetCommands()

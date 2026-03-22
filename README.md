@@ -6,14 +6,14 @@
 
 - No manual server startup. The bridge starts automatically when the Editor opens.
 - No per-project port management. The correct Editor instance is selected from the project path and registry.
-- One command surface for live and batch. If the Editor is running, commands go through live IPC. If it is not, supported commands fall back to batchmode.
+- One live command surface. Commands run through local IPC against a running Unity Editor with the bridge active.
 - Scene, asset, material, package, and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create`, `material info/set`, `package list/add/remove/search`, `scene open/inspect/patch`, scene object shortcuts like `scene add-object` and `scene set-transform`, and `prefab create/inspect/patch`.
 - Project-defined live commands can be exposed through a lightweight `[PucCommand]` extension API instead of adding one-off transport code.
 - The Codex skill keeps the workflow consistent: choose the command, perform the work, then verify the logs.
 
 ## What You Can Do With PUC
 
-- Check editor state from the terminal with `status`, `refresh`, `compile`, and `run-tests`.
+- Check editor state from the terminal with `status`, `refresh`, and `compile`.
 - Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, and `read-console`.
 - Query and manage assets with `asset find`, `asset info`, `asset create`, `asset move`, `asset rename`, `asset reimport`, and `asset delete`.
 - Inspect and update material shader properties with `material info` and `material set`.
@@ -27,7 +27,7 @@
 
 - AI-assisted editor automation: let an agent create assets or patch scenes/prefabs, then verify the console through the same CLI.
 - Local multi-project work: keep multiple Unity projects open and target the right editor without port juggling.
-- Editor-off automation: use batch fallback for commands such as `refresh`, `asset info`, `asset create`, `material info`, `material set`, `package list/search`, and prefab operations when no live editor is running.
+- Live editor automation: keep the Editor open and drive asset, material, package, scene, and prefab workflows through the same IPC surface.
 - Data-heavy gameplay work: generate ScriptableObjects and custom asset types from repeatable command flows instead of custom menus.
 
 This repository is organized into three parts.
@@ -38,13 +38,13 @@ This repository is organized into three parts.
 
 ## Current Status
 
-- Live IPC and batch fallback are both working.
+- Live IPC is the only supported execution mode.
 - Asset find/create/move/delete, material info/set, package list/add/remove/search, scene open/inspect/patch plus scene convenience shortcuts, and prefab create/inspect/patch are supported.
 - Release validation is currently focused on `macOS arm64`.
 
 Current command surface, at a glance:
 
-- Editor control: `status`, `refresh`, `compile`, `run-tests`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, `read-console`
+- Editor control: `status`, `refresh`, `compile`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, `read-console`
 - Asset workflows: `asset find`, `asset types`, `asset info`, `asset reimport`, `asset mkdir`, `asset move`, `asset rename`, `asset delete`, `asset create`
 - Material workflows: `material info`, `material set`
 - Package management: `package list`, `package add`, `package remove`, `package search`
@@ -192,7 +192,7 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 
 ## Codex Skill
 
-The `unity-cli-operator` skill bundles command selection, live-vs-batch decisions, scene/prefab patch authoring, and post-task `read-console` verification into one repeatable workflow.
+The `unity-cli-operator` skill bundles command selection, scene/prefab patch authoring, and post-task `read-console` verification into one repeatable workflow.
 
 The skill is part of the mono-repo, not part of the Unity package payload. Installing the package through a Git URL gives Unity only `unity-package/com.puc.bridge`, so the Codex skill still needs the repository itself.
 
@@ -220,8 +220,8 @@ dotnet run --project cli/UnityCli.DocGen -- --check
 
 Unity integration:
 
-- Live: `status`, `refresh`, `execute`, `custom`, `screenshot`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
-- Batch: `refresh`, `asset info`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
+- Live: `status`, `refresh`, `compile`, `execute`, `custom`, `screenshot`, `asset find`, `asset info`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
+- Commands require a running Unity Editor with the bridge active. If live IPC is unavailable, the CLI returns an error instead of trying any editor-off fallback.
 - After live work, always check `read-console --type error` and `read-console --type warning`.
 
 ## Current Limits

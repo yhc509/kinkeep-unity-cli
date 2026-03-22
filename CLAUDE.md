@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PUC (Portless Unity CLI) — controls the Unity Editor from the command line without manual server startup. Mono-repo containing a .NET 9 CLI, a Unity UPM package (bridge), and shared protocol models.
 
-Two execution modes: **live IPC** (Editor running) and **batch fallback** (Editor closed). The CLI auto-selects mode based on Editor availability.
+The CLI is **live IPC only**. Unity commands require a running Editor with the bridge active.
 
 ## Build & Test Commands
 
@@ -34,14 +34,13 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 
 ```
 cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64)
-  ├── CliApp.cs              Entry point, routes to IPC or batch
+  ├── CliApp.cs              Entry point, routes to IPC
   ├── Services/
   │   ├── CliArgumentParser  Switch-based parser → ParsedCommand
   │   ├── CliCommandCatalog  CLI-side command metadata
   │   ├── LocalIpcClient     Live IPC to running Editor
-  │   ├── BatchModeRunner    Batch execution when Editor is closed
   │   └── InstanceRegistryStore  Per-project instance tracking
-  └── Models/ParsedCommand   38 CommandKind variants
+  └── Models/ParsedCommand   CommandKind variants + envelope builder
 
 cli/UnityCli.Protocol/       Shared protocol (symlinked from unity-package Runtime/Protocol/)
 
@@ -52,7 +51,6 @@ unity-package/com.puc.bridge/
   │   ├── SceneCommandHandler Scene open/inspect/patch
   │   ├── PrefabCommandHandler Prefab create/inspect/patch
   │   ├── SerializedValueApplier Applies values via SerializedProperty.propertyPath
-  │   └── Batch/BatchCommandRunner  Headless batch handler
   └── Runtime/Protocol/       Shared models (C# 11, nullable enabled)
       ├── CliCommandCatalog    Master command descriptor catalog
       ├── CommandModels        Request/response envelopes
@@ -78,4 +76,4 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 
 - CLI code changes → `dotnet build PUC.sln -c Debug`
 - Test changes → `dotnet test PUC.sln`
-- Unity integration changes → test both live and batch modes with an actual Unity project
+- Unity integration changes → test live IPC flows with an actual Unity project

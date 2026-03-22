@@ -87,7 +87,7 @@ Rules:
 - Vector, Color, Rect, and similar structs are passed as JSON objects
 - Asset references are written as `{ "assetPath": "Assets/..." }` or `{ "guid": "..." }`
 - Component type lookup prefers the full name. A short name is only allowed when it is unique.
-- Live and batch use the same spec format
+- The same JSON spec format is used by the live CLI and bridge command handlers
 
 ## Limits
 

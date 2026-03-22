@@ -11,7 +11,6 @@ public enum CommandKind
     Status,
     Compile,
     Refresh,
-    RunTests,
     ReadConsole,
     Play,
     Pause,
@@ -61,7 +60,6 @@ public sealed class ParsedCommand
     public CommandKind Kind { get; }
     public bool JsonOutput { get; set; }
     public string? ProjectOverride { get; set; }
-    public string? TestMode { get; set; }
     public int TimeoutMs { get; set; } = ProtocolConstants.DefaultLiveTimeoutMs;
     public int ConsoleLimit { get; set; } = ProtocolConstants.DefaultConsoleLimit;
     public string? ConsoleType { get; set; }

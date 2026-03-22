@@ -11,19 +11,19 @@
 
 - A local bridge that starts automatically when the Editor opens
 - Per-project instance registration and automatic selection
-- Live editor control: `status`, `refresh`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `read-console`
+- Live editor control: `status`, `refresh`, `compile`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, `read-console`
 - Asset commands: `find`, `types`, `info`, `reimport`, `mkdir`, `move`, `rename`, `delete`, `create`
 - Material commands: `info`, `set`
 - Package commands: `list`, `add`, `remove`, `search`
 - Scene commands: `open`, `inspect`, `patch`
 - Prefab commands: `inspect`, `create`, `patch`
-- The same command handlers reused through batch fallback when the Editor is not running
+- A single live IPC command surface for controlling the running Editor
 
 In practice, this means the package can expose Unity as a project-aware automation surface instead of a manually managed editor plugin session.
 
 - It removes the need to keep a custom bridge server running.
 - It removes per-project port configuration when several editors are open.
-- It keeps live editor work and batch fallback on the same protocol and command model.
+- It keeps project-aware live editor work on one protocol and command model.
 - It gives the CLI direct access to asset, material, package, and prefab workflows instead of relying only on menu execution.
 
 ## Install

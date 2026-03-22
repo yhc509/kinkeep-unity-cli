@@ -11,7 +11,6 @@ namespace UnityCli.Protocol
     {
         public const string AppName = "unity-cli";
         public const int DefaultLiveTimeoutMs = 30_000;
-        public const int DefaultBatchTimeoutMs = 10 * 60 * 1000;
         public const int DefaultTimeoutMs = DefaultLiveTimeoutMs;
         public const int DefaultConsoleLimit = 50;
         public const int DefaultAssetFindLimit = 50;
@@ -20,7 +19,6 @@ namespace UnityCli.Protocol
         public const string StatusSuccess = "success";
         public const string StatusError = "error";
         public const string TransportLive = "live";
-        public const string TransportBatch = "batch";
         public const string CommandPing = "ping";
         public const string CommandStatus = "status";
         public const string CommandRefresh = "refresh";
@@ -39,7 +37,6 @@ namespace UnityCli.Protocol
         public const string CommandMaterialInfo = "material-info";
         public const string CommandMaterialSet = "material-set";
         public const string CommandReadConsole = "read-console";
-        public const string CommandRunTests = "run-tests";
         public const string CommandAssetFind = "asset-find";
         public const string CommandAssetTypes = "asset-types";
         public const string CommandAssetInfo = "asset-info";

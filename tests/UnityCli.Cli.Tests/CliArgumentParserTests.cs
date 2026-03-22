@@ -7,14 +7,11 @@ namespace UnityCli.Cli.Tests;
 public sealed class CliArgumentParserTests
 {
     [Fact]
-    public void Parse_RunTestsModeAndGlobalJson()
+    public void Parse_RunTestsIsRejected()
     {
-        var parsed = CliArgumentParser.Parse(["--json", "run-tests", "--mode", "play"]);
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse(["run-tests", "--mode", "play"]));
 
-        Assert.Equal(CommandKind.RunTests, parsed.Kind);
-        Assert.True(parsed.JsonOutput);
-        Assert.Equal("play", parsed.TestMode);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Contains("알 수 없는 명령", ex.Message);
     }
 
     [Fact]
@@ -34,21 +31,12 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_CompileUsesBatchDefaultTimeout()
+    public void Parse_CompileUsesLiveDefaultTimeout()
     {
         var parsed = CliArgumentParser.Parse(["compile"]);
 
         Assert.Equal(CommandKind.Compile, parsed.Kind);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
-    }
-
-    [Fact]
-    public void Parse_RunTestsKeepsExplicitTimeout()
-    {
-        var parsed = CliArgumentParser.Parse(["run-tests", "--mode", "edit", "--timeout-ms", "45000"]);
-
-        Assert.Equal(CommandKind.RunTests, parsed.Kind);
-        Assert.Equal(45_000, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -60,23 +48,23 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_AssetFindUsesBatchDefaultTimeout()
+    public void Parse_AssetFindUsesLiveDefaultTimeout()
     {
         var parsed = CliArgumentParser.Parse(["asset", "find", "--name", "Sample", "--folder", "Assets"]);
 
         Assert.Equal(CommandKind.AssetFind, parsed.Kind);
         Assert.Equal("Sample", parsed.AssetName);
         Assert.Equal("Assets", parsed.AssetFolder);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
-    public void Parse_AssetTypes_UsesBatchDefaultTimeout()
+    public void Parse_AssetTypes_UsesLiveDefaultTimeout()
     {
         var parsed = CliArgumentParser.Parse(["asset", "types"]);
 
         Assert.Equal(CommandKind.AssetTypes, parsed.Kind);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -89,14 +77,14 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_AssetCreateMaterial_UsesBatchTimeout()
+    public void Parse_AssetCreateMaterial_UsesLiveTimeout()
     {
         var parsed = CliArgumentParser.Parse(["asset", "create", "--type", "material", "--path", "Assets/Test/Example"]);
 
         Assert.Equal(CommandKind.AssetCreate, parsed.Kind);
         Assert.Equal("material", parsed.AssetCreateType);
         Assert.Equal("Assets/Test/Example", parsed.AssetPath);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -178,11 +166,11 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "asset",
             "create",
-            "--type", "batch-note",
-            "--path", "Assets/Test/BatchNote"
+            "--type", "custom-note",
+            "--path", "Assets/Test/CustomNote"
         ]);
 
-        Assert.Equal("batch-note", parsed.AssetCreateType);
+        Assert.Equal("custom-note", parsed.AssetCreateType);
     }
 
     [Fact]
@@ -191,8 +179,8 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "asset",
             "create",
-            "--type", "batch-note",
-            "--path", "Assets/Test/BatchNote",
+            "--type", "custom-note",
+            "--path", "Assets/Test/CustomNote",
             "--title", "Hello",
             "--count", "7",
             "--enabled"
@@ -200,7 +188,7 @@ public sealed class CliArgumentParserTests
 
         var args = ProtocolJson.Deserialize<AssetCreateArgs>(parsed.ToEnvelope().argumentsJson);
         Assert.NotNull(args);
-        Assert.Equal("batch-note", args.type);
+        Assert.Equal("custom-note", args.type);
         Assert.Equal("{\"title\":\"Hello\",\"count\":7,\"enabled\":true}", args.optionsJson);
     }
 
@@ -238,7 +226,7 @@ public sealed class CliArgumentParserTests
 
         Assert.Equal(CommandKind.MaterialInfo, parsed.Kind);
         Assert.Equal("Assets/Materials/Wood.mat", parsed.MaterialPath);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -285,7 +273,7 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_MaterialSet_UsesBatchTimeout()
+    public void Parse_MaterialSet_UsesLiveTimeout()
     {
         var parsed = CliArgumentParser.Parse([
             "material", "set",
@@ -294,7 +282,7 @@ public sealed class CliArgumentParserTests
             "--value", "0.8"
         ]);
 
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -307,7 +295,7 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_PrefabInspect_UsesBatchTimeout()
+    public void Parse_PrefabInspect_UsesLiveTimeout()
     {
         var parsed = CliArgumentParser.Parse([
             "prefab",
@@ -317,7 +305,7 @@ public sealed class CliArgumentParserTests
 
         Assert.Equal(CommandKind.PrefabInspect, parsed.Kind);
         Assert.Equal("Assets/Prefabs/Enemy", parsed.PrefabPath);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -367,7 +355,7 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_SceneOpen_UsesBatchTimeout()
+    public void Parse_SceneOpen_UsesLiveTimeout()
     {
         var parsed = CliArgumentParser.Parse([
             "scene",
@@ -377,7 +365,7 @@ public sealed class CliArgumentParserTests
 
         Assert.Equal(CommandKind.SceneOpen, parsed.Kind);
         Assert.Equal("Assets/Scenes/System", parsed.ScenePath);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -483,7 +471,7 @@ public sealed class CliArgumentParserTests
         Assert.Equal("/Root[0]", parsed.SceneParent);
         Assert.Equal("SpawnPoint", parsed.SceneObjectName);
         Assert.Equal("Rigidbody,BoxCollider", parsed.SceneComponents);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
@@ -533,7 +521,7 @@ public sealed class CliArgumentParserTests
         ]);
 
         Assert.Equal(CommandKind.SceneSetTransform, parsed.Kind);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
         var envelope = parsed.ToEnvelope();
         Assert.Equal(ProtocolConstants.CommandScenePatch, envelope.command);
         Assert.Contains("modify-gameobject", envelope.argumentsJson);
@@ -563,7 +551,7 @@ public sealed class CliArgumentParserTests
         ]);
 
         Assert.Equal(CommandKind.SceneAddComponent, parsed.Kind);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
         var envelope = parsed.ToEnvelope();
         Assert.Contains("add-component", envelope.argumentsJson);
         Assert.Contains("BoxCollider", envelope.argumentsJson);
@@ -599,7 +587,7 @@ public sealed class CliArgumentParserTests
 
         Assert.Equal(CommandKind.SceneRemoveComponent, parsed.Kind);
         Assert.True(parsed.Force);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
         var envelope = parsed.ToEnvelope();
         Assert.Contains("remove-component", envelope.argumentsJson);
         var args = ProtocolJson.Deserialize<ScenePatchArgs>(envelope.argumentsJson);
@@ -839,12 +827,12 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_PackageList_UsesBatchTimeout()
+    public void Parse_PackageList_UsesLiveTimeout()
     {
         var parsed = CliArgumentParser.Parse(["package", "list"]);
 
         Assert.Equal(CommandKind.PackageList, parsed.Kind);
-        Assert.Equal(ProtocolConstants.DefaultBatchTimeoutMs, parsed.TimeoutMs);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
