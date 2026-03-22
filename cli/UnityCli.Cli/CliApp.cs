@@ -8,9 +8,12 @@ public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args)
     {
+        var jsonOutputRequested = CliCommandMetadata.DetectJsonOutput(args);
+        ParsedCommand? parsed = null;
+
         try
         {
-            var parsed = CliArgumentParser.Parse(args);
+            parsed = CliArgumentParser.Parse(args);
             if (parsed.Kind == CommandKind.Help)
             {
                 Console.WriteLine(CliArgumentParser.BuildHelpText());
@@ -35,9 +38,17 @@ public static class CliApp
         }
         catch (CliUsageException ex)
         {
-            Console.Error.WriteLine(ex.Message);
-            Console.Error.WriteLine();
-            Console.Error.WriteLine(CliArgumentParser.BuildHelpText());
+            var presentation = CliUsageHelp.Build(args, ex.Message, parsed);
+            var response = ResponseEnvelope.Failure(
+                Guid.NewGuid().ToString("N"),
+                null,
+                "CLI_USAGE",
+                presentation.Message,
+                retryable: false,
+                details: presentation.BuildDetailsJson(),
+                transport: "cli");
+
+            WriteUsageError(jsonOutputRequested, response, presentation);
             return 2;
         }
         catch (Exception ex)
@@ -50,7 +61,8 @@ public static class CliApp
                 retryable: false,
                 details: ex.ToString(),
                 transport: "cli");
-            Console.Error.WriteLine(ResponseFormatter.Format(new ParsedCommand(CommandKind.Help), response));
+
+            WriteErrorResponse(jsonOutputRequested, response);
             return 1;
         }
     }
@@ -220,6 +232,7 @@ public static class CliApp
         InstanceRegistryStore registryStore,
         string? projectRoot)
     {
+        var command = parsed.ToEnvelope();
         var registry = registryStore.Load();
         var target = ResolveTarget(registryStore, registry, projectRoot);
 
@@ -228,7 +241,7 @@ public static class CliApp
             try
             {
                 using var cts = new CancellationTokenSource(parsed.TimeoutMs);
-                return await new LocalIpcClient().SendAsync(target, parsed.ToEnvelope(), parsed.TimeoutMs, cts.Token);
+                return await new LocalIpcClient().SendAsync(target, command, parsed.TimeoutMs, cts.Token);
             }
             catch (Exception ex)
             {
@@ -285,5 +298,40 @@ public static class CliApp
         }
 
         return null;
+    }
+
+    private static void WriteErrorResponse(bool jsonOutputRequested, ResponseEnvelope response)
+    {
+        if (jsonOutputRequested)
+        {
+            Console.Out.WriteLine(ProtocolJson.Serialize(response));
+            return;
+        }
+
+        if (response.error is not null)
+        {
+            Console.Error.WriteLine(response.error.message);
+
+            if (!string.IsNullOrWhiteSpace(response.error.details))
+            {
+                Console.Error.WriteLine();
+                Console.Error.WriteLine(response.error.details);
+            }
+
+            return;
+        }
+
+        Console.Error.WriteLine(ResponseFormatter.Format(new ParsedCommand(CommandKind.Help), response));
+    }
+
+    private static void WriteUsageError(bool jsonOutputRequested, ResponseEnvelope response, CliUsagePresentation presentation)
+    {
+        if (jsonOutputRequested)
+        {
+            Console.Out.WriteLine(ProtocolJson.Serialize(response));
+            return;
+        }
+
+        CliUsageHelp.WriteTo(Console.Error, presentation);
     }
 }

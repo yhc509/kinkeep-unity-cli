@@ -128,23 +128,30 @@ public sealed class ParsedCommand
     {
         if (Kind == CommandKind.Raw)
         {
-            var raw = JsonDocument.Parse(RawJson ?? throw new CliUsageException("raw 명령에는 `--json` payload가 필요합니다."));
-            var root = raw.RootElement;
-            if (!root.TryGetProperty("command", out var commandElement))
+            try
             {
-                throw new CliUsageException("raw payload에는 `command` 필드가 필요합니다.");
+                var raw = JsonDocument.Parse(RawJson ?? throw new CliUsageException("raw 명령에는 `--json` payload가 필요합니다."));
+                var root = raw.RootElement;
+                if (!root.TryGetProperty("command", out var commandElement))
+                {
+                    throw new CliUsageException("raw payload에는 `command` 필드가 필요합니다.");
+                }
+
+                var rawRequest = new CommandEnvelope
+                {
+                    requestId = Guid.NewGuid().ToString("N"),
+                    command = commandElement.GetString() ?? string.Empty,
+                    argumentsJson = root.TryGetProperty("arguments", out var argumentsElement)
+                        ? argumentsElement.GetRawText()
+                        : "{}",
+                };
+
+                return rawRequest;
             }
-
-            var rawRequest = new CommandEnvelope
+            catch (JsonException exception)
             {
-                requestId = Guid.NewGuid().ToString("N"),
-                command = commandElement.GetString() ?? string.Empty,
-                argumentsJson = root.TryGetProperty("arguments", out var argumentsElement)
-                    ? argumentsElement.GetRawText()
-                    : "{}",
-            };
-
-            return rawRequest;
+                throw new CliUsageException("raw payload는 올바른 JSON이어야 합니다. " + exception.Message);
+            }
         }
 
         var request = new CommandEnvelope
