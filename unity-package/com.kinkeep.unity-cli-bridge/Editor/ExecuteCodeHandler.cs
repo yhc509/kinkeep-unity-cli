@@ -10,7 +10,7 @@ using Microsoft.CSharp;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class ExecuteCodeHandler
     {
@@ -72,7 +72,7 @@ public static class PucExecuteWrapper
                 }
 
                 var logEntries = new List<string>();
-                void CaptureLog(string condition, string stackTrace, LogType type)
+                void OnLogMessageReceived(string condition, string stackTrace, LogType type)
                 {
                     if (!string.IsNullOrWhiteSpace(condition))
                     {
@@ -80,7 +80,7 @@ public static class PucExecuteWrapper
                     }
                 }
 
-                Application.logMessageReceived += CaptureLog;
+                Application.logMessageReceived += OnLogMessageReceived;
                 try
                 {
                     string consoleOutput = (string)(executeMethod.Invoke(null, null) ?? string.Empty);
@@ -93,7 +93,7 @@ public static class PucExecuteWrapper
                 }
                 finally
                 {
-                    Application.logMessageReceived -= CaptureLog;
+                    Application.logMessageReceived -= OnLogMessageReceived;
                 }
             }
             catch (CommandFailureException)

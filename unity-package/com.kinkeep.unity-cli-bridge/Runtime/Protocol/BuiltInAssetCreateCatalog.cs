@@ -6,7 +6,7 @@ namespace UnityCli.Protocol
 {
     public static class BuiltInAssetCreateCatalog
     {
-        private static readonly AssetCreateTypeDescriptor[] Descriptors =
+        private static readonly AssetCreateTypeDescriptor[] _descriptors =
         {
             new AssetCreateTypeDescriptor
             {
@@ -125,14 +125,14 @@ namespace UnityCli.Protocol
             },
         };
 
-        private static readonly Dictionary<string, string> TypeMap = BuildTypeMap();
+        private static readonly Dictionary<string, string> _typeMap = BuildTypeMap();
 
         public static AssetCreateTypeDescriptor[] GetDescriptors()
         {
-            var descriptors = new AssetCreateTypeDescriptor[Descriptors.Length];
-            for (int index = 0; index < Descriptors.Length; index++)
+            var descriptors = new AssetCreateTypeDescriptor[_descriptors.Length];
+            for (int index = 0; index < _descriptors.Length; index++)
             {
-                descriptors[index] = CloneDescriptor(Descriptors[index]);
+                descriptors[index] = CloneDescriptor(_descriptors[index]);
             }
 
             return descriptors;
@@ -156,7 +156,7 @@ namespace UnityCli.Protocol
                 return false;
             }
 
-            foreach (AssetCreateTypeDescriptor candidate in Descriptors)
+            foreach (AssetCreateTypeDescriptor candidate in _descriptors)
             {
                 if (string.Equals(candidate.typeId, normalizedType, StringComparison.Ordinal))
                 {
@@ -176,7 +176,7 @@ namespace UnityCli.Protocol
                 return false;
             }
 
-            if (!TypeMap.TryGetValue(rawValue.Trim().ToLowerInvariant(), out string? mappedType)
+            if (!_typeMap.TryGetValue(rawValue.Trim().ToLowerInvariant(), out string? mappedType)
                 || string.IsNullOrWhiteSpace(mappedType))
             {
                 return false;
@@ -206,7 +206,7 @@ namespace UnityCli.Protocol
         private static Dictionary<string, string> BuildTypeMap()
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (AssetCreateTypeDescriptor descriptor in Descriptors)
+            foreach (AssetCreateTypeDescriptor descriptor in _descriptors)
             {
                 string normalizedType = descriptor.typeId.Trim().ToLowerInvariant();
                 map[normalizedType] = normalizedType;

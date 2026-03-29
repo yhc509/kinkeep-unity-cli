@@ -5,11 +5,11 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class SerializedValueApplier
     {
-        private static readonly HashSet<string> SkippedPropertyPaths = new HashSet<string>(StringComparer.Ordinal)
+        private static readonly HashSet<string> _skippedPropertyPaths = new HashSet<string>(StringComparer.Ordinal)
         {
             "m_Script",
             "m_GameObject",
@@ -61,7 +61,7 @@ namespace PUC.Editor
             do
             {
                 SerializedProperty property = iterator.Copy();
-                if (ShouldSkipProperty(property))
+                if (IsPropertySkippable(property))
                 {
                     continue;
                 }
@@ -76,10 +76,10 @@ namespace PUC.Editor
             return values;
         }
 
-        private static bool ShouldSkipProperty(SerializedProperty property)
+        private static bool IsPropertySkippable(SerializedProperty property)
         {
             return !property.editable
-                || SkippedPropertyPaths.Contains(property.propertyPath)
+                || _skippedPropertyPaths.Contains(property.propertyPath)
                 || property.propertyPath.StartsWith("m_GameObject.", StringComparison.Ordinal);
         }
 
@@ -377,7 +377,7 @@ namespace PUC.Editor
                     var jobject = new JObject();
                     foreach (SerializedProperty child in EnumerateDirectChildren(property))
                     {
-                        if (ShouldSkipProperty(child))
+                        if (IsPropertySkippable(child))
                         {
                             continue;
                         }
@@ -399,10 +399,10 @@ namespace PUC.Editor
         {
             SerializedProperty iterator = property.Copy();
             SerializedProperty end = iterator.GetEndProperty();
-            bool enterChildren = true;
-            while (iterator.NextVisible(enterChildren) && !SerializedProperty.EqualContents(iterator, end))
+            bool canEnterChildren = true;
+            while (iterator.NextVisible(canEnterChildren) && !SerializedProperty.EqualContents(iterator, end))
             {
-                enterChildren = false;
+                canEnterChildren = false;
                 if (iterator.depth == property.depth + 1)
                 {
                     yield return iterator.Copy();

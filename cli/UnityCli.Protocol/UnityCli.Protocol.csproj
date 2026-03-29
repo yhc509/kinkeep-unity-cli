@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <Compile Remove="*.cs" />
-    <Compile Include="..\..\unity-package\com.puc.bridge\Runtime\Protocol\*.cs"
+    <Compile Include="..\..\unity-package\com.kinkeep.unity-cli-bridge\Runtime\Protocol\*.cs"
              Link="Protocol\%(Filename)%(Extension)" />
   </ItemGroup>
 

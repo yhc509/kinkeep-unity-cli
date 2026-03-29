@@ -15,17 +15,17 @@ using UnityEditor.Compilation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     [InitializeOnLoad]
     internal static class BridgeBootstrap
     {
-        private static readonly BridgeHost Host;
+        private static readonly BridgeHost _host;
 
         static BridgeBootstrap()
         {
-            Host = new BridgeHost();
-            Host.Start();
+            _host = new BridgeHost();
+            _host.Start();
         }
     }
 
@@ -49,8 +49,8 @@ namespace PUC.Editor
         private readonly MaterialCommandHandler _materialCommandHandler;
         private Socket _unixListener;
         private double _lastHeartbeatTime;
-        private bool _started;
-        private bool _disposed;
+        private bool _isStarted;
+        private bool _isDisposed;
 
         public BridgeHost()
         {
@@ -72,33 +72,33 @@ namespace PUC.Editor
 
         public void Start()
         {
-            if (_started || Application.isBatchMode)
+            if (_isStarted || Application.isBatchMode)
             {
                 return;
             }
 
-            _started = true;
+            _isStarted = true;
             ConsoleLogBuffer.Start();
             RegisterInstance();
             _lastHeartbeatTime = EditorApplication.timeSinceStartup;
             StartListener();
 
             EditorApplication.update += OnEditorUpdate;
-            EditorApplication.quitting += Dispose;
-            AssemblyReloadEvents.beforeAssemblyReload += Dispose;
+            EditorApplication.quitting += OnEditorQuitting;
+            AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
         }
 
         public void Dispose()
         {
-            if (_disposed)
+            if (_isDisposed)
             {
                 return;
             }
 
-            _disposed = true;
+            _isDisposed = true;
             EditorApplication.update -= OnEditorUpdate;
-            EditorApplication.quitting -= Dispose;
-            AssemblyReloadEvents.beforeAssemblyReload -= Dispose;
+            EditorApplication.quitting -= OnEditorQuitting;
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
 
             try
             {
@@ -268,7 +268,7 @@ namespace PUC.Editor
 
         private void OnEditorUpdate()
         {
-            if (_disposed)
+            if (_isDisposed)
             {
                 return;
             }
@@ -284,6 +284,16 @@ namespace PUC.Editor
                 ResponseEnvelope response = HandleCommand(pending.Command);
                 pending.Completion.TrySetResult(response);
             }
+        }
+
+        private void OnEditorQuitting()
+        {
+            Dispose();
+        }
+
+        private void OnBeforeAssemblyReload()
+        {
+            Dispose();
         }
 
         private ResponseEnvelope HandleCommand(CommandEnvelope command)
@@ -406,7 +416,7 @@ namespace PUC.Editor
                     _projectHash,
                     exception.ErrorCode,
                     exception.Message,
-                    exception.Retryable,
+                    exception.IsRetryable,
                     stopwatch.ElapsedMilliseconds,
                     ProtocolConstants.TransportLive,
                     exception.Details);
@@ -461,11 +471,11 @@ namespace PUC.Editor
                 throw new InvalidOperationException("execute-menu에는 path가 필요합니다.");
             }
 
-            bool executed = EditorApplication.ExecuteMenuItem(args.path);
+            bool isExecuted = EditorApplication.ExecuteMenuItem(args.path);
             return ProtocolJson.Serialize(new ExecuteMenuPayload
             {
                 path = args.path,
-                executed = executed,
+                executed = isExecuted,
             });
         }
 
@@ -495,11 +505,11 @@ namespace PUC.Editor
                         record => string.Equals(record.projectHash, registry.activeProjectHash, StringComparison.OrdinalIgnoreCase));
                 }
 
-                bool shouldPromoteCurrent = activeRecord == null
+                bool isCurrentProjectPromotionNeeded = activeRecord == null
                     || string.Equals(activeRecord.state, "offline", StringComparison.OrdinalIgnoreCase)
                     || activeRecord.editorProcessId <= 0;
 
-                if (shouldPromoteCurrent)
+                if (isCurrentProjectPromotionNeeded)
                 {
                     registry.activeProjectHash = _projectHash;
                 }
@@ -607,7 +617,7 @@ namespace PUC.Editor
 
         private void ReportBackgroundException(string operation, Exception exception)
         {
-            if (_disposed || exception is OperationCanceledException)
+            if (_isDisposed || exception is OperationCanceledException)
             {
                 return;
             }

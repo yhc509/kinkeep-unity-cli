@@ -60,7 +60,7 @@ public static class CliReferenceDocumentRenderer
         CliCommandGroup group,
         IEnumerable<CliCommandDescriptor> allCommands)
     {
-        CliCommandDescriptor[] commands = allCommands.Where(command => command.group == group).ToArray();
+        CliCommandDescriptor[] commands = allCommands.Where(command => command.Group == group).ToArray();
         if (commands.Length == 0)
         {
             return;
@@ -76,13 +76,13 @@ public static class CliReferenceDocumentRenderer
         foreach (CliCommandDescriptor command in commands)
         {
             builder.Append("| ");
-            builder.Append(EscapeTableCell("`" + command.command + "`"));
+            builder.Append(EscapeTableCell("`" + command.Command + "`"));
             builder.Append(" | ");
-            builder.Append(EscapeTableCell("`" + command.synopsis + "`"));
+            builder.Append(EscapeTableCell("`" + command.Synopsis + "`"));
             builder.Append(" | ");
             builder.Append(EscapeTableCell(FormatModes(command)));
             builder.Append(" | ");
-            builder.Append(EscapeTableCell(command.summary));
+            builder.Append(EscapeTableCell(command.Summary));
             builder.AppendLine(" |");
         }
 
@@ -140,7 +140,7 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine("- [Architecture](architecture.md)");
         builder.AppendLine("- [Scene Spec](scene-spec.md)");
         builder.AppendLine("- [Prefab Spec](prefab-spec.md)");
-        builder.AppendLine("- [Unity Package README](../unity-package/com.puc.bridge/README.md)");
+        builder.AppendLine("- [Unity Package README](../unity-package/com.kinkeep.unity-cli-bridge/README.md)");
         builder.AppendLine();
     }
 
@@ -179,12 +179,12 @@ public static class CliReferenceDocumentRenderer
     private static string FormatModes(CliCommandDescriptor command)
     {
         var modes = new List<string>();
-        if (command.supportsLocal)
+        if (command.CanUseLocal)
         {
             modes.Add("local");
         }
 
-        if (command.supportsLive)
+        if (command.CanUseLive)
         {
             modes.Add("live");
         }

@@ -2,7 +2,7 @@
 using System;
 using UnityCli.Protocol;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class CustomCommandHandler
     {

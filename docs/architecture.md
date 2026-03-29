@@ -5,7 +5,7 @@
 `PUC` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
 
 - `cli/`: the .NET CLI that receives user commands and routes them to live IPC
-- `unity-package/com.puc.bridge/`: the bridge package that starts automatically inside the Unity Editor
+- `unity-package/com.kinkeep.unity-cli-bridge/`: the bridge package that starts automatically inside the Unity Editor
 - `tools/skills/unity-cli-operator/`: the Codex skill that keeps `unity-cli` usage consistent
 
 ## Runtime Flow
@@ -35,7 +35,7 @@
 
 - `cli/UnityCli.Cli`: user-facing CLI
 - `cli/UnityCli.Protocol`: protocol models shared by the CLI and Unity package
-- `unity-package/com.puc.bridge`: UPM package
+- `unity-package/com.kinkeep.unity-cli-bridge`: UPM package
 - `tools/skills/unity-cli-operator`: Codex skill
 
 ## Current Limits

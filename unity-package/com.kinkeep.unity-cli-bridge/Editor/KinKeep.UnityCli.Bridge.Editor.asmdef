@@ -1,8 +1,8 @@
 {
-  "name": "PUC.Editor",
-  "rootNamespace": "PUC.Editor",
+  "name": "KinKeep.UnityCli.Bridge.Editor",
+  "rootNamespace": "KinKeep.UnityCli.Bridge.Editor",
   "references": [
-    "PUC.Runtime",
+    "KinKeep.UnityCli.Bridge.Runtime",
     "UnityEditor.TestRunner"
   ],
   "includePlatforms": [

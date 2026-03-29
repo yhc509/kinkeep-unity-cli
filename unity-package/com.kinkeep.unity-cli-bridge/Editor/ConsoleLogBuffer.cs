@@ -4,12 +4,12 @@ using System.Linq;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class ConsoleLogBuffer
     {
-        private static readonly object Sync = new();
-        private static readonly Queue<ConsoleLogEntry> Entries = new();
+        private static readonly object _sync = new();
+        private static readonly Queue<ConsoleLogEntry> _entries = new();
         private const int MaxEntries = 512;
 
         public static void Start()
@@ -21,17 +21,17 @@ namespace PUC.Editor
         public static void Stop()
         {
             Application.logMessageReceivedThreaded -= OnLogReceived;
-            lock (Sync)
+            lock (_sync)
             {
-                Entries.Clear();
+                _entries.Clear();
             }
         }
 
         public static ConsoleLogEntry[] Read(int limit, string type)
         {
-            lock (Sync)
+            lock (_sync)
             {
-                IEnumerable<ConsoleLogEntry> query = Entries;
+                IEnumerable<ConsoleLogEntry> query = _entries;
                 if (!string.IsNullOrWhiteSpace(type))
                 {
                     query = query.Where(entry => string.Equals(entry.type, type, StringComparison.OrdinalIgnoreCase));
@@ -43,9 +43,9 @@ namespace PUC.Editor
 
         private static void OnLogReceived(string condition, string stackTrace, LogType type)
         {
-            lock (Sync)
+            lock (_sync)
             {
-                Entries.Enqueue(new ConsoleLogEntry
+                _entries.Enqueue(new ConsoleLogEntry
                 {
                     timestampUtc = DateTimeOffset.UtcNow.ToString("O"),
                     type = type.ToString(),
@@ -53,9 +53,9 @@ namespace PUC.Editor
                     stackTrace = stackTrace,
                 });
 
-                while (Entries.Count > MaxEntries)
+                while (_entries.Count > MaxEntries)
                 {
-                    Entries.Dequeue();
+                    _entries.Dequeue();
                 }
             }
         }

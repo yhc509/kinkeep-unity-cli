@@ -4,7 +4,7 @@ using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class AssetCreateHandler
     {
@@ -18,7 +18,7 @@ namespace PUC.Editor
             AssetCommandSupport.EnsureParentFolderExists(path);
 
             var request = new AssetCreateRequest(args, createType, path);
-            bool overwritten = AssetCommandSupport.DeleteIfTargetExists(path, args.force, "asset-create");
+            bool isOverwritten = AssetCommandSupport.DeleteIfTargetExists(path, args.force, "asset-create");
             AssetCreateArtifact artifact = provider.Create(request);
             ApplyDataPatchIfNeeded(descriptor, artifact, request);
             artifact.SaveAction();
@@ -31,7 +31,7 @@ namespace PUC.Editor
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),
                 createdType = createType,
-                overwritten = overwritten,
+                overwritten = isOverwritten,
             });
         }
 

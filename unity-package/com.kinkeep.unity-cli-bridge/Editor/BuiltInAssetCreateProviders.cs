@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -10,7 +11,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class BuiltInAssetCreateProviders
     {
@@ -44,7 +45,7 @@ namespace PUC.Editor
             public AssetCreateArtifact Create(AssetCreateRequest request)
             {
                 MaterialCreateOptions options = request.GetOptions<MaterialCreateOptions>();
-                Shader shader = ResolveShader(options.shader);
+                Shader shader = ResolveShader(options.Shader);
                 var material = new Material(shader)
                 {
                     name = Path.GetFileNameWithoutExtension(request.AssetPath),
@@ -113,12 +114,12 @@ namespace PUC.Editor
             public AssetCreateArtifact Create(AssetCreateRequest request)
             {
                 AnimatorOverrideControllerCreateOptions options = request.GetOptions<AnimatorOverrideControllerCreateOptions>();
-                if (string.IsNullOrWhiteSpace(options.baseController))
+                if (string.IsNullOrWhiteSpace(options.BaseController))
                 {
                     throw new CommandFailureException("ASSET_OPTION_INVALID", "`--base-controller`가 필요합니다.");
                 }
 
-                string baseControllerPath = AssetCommandSupport.RequireExistingAssetPath(options.baseController, "asset-create");
+                string baseControllerPath = AssetCommandSupport.RequireExistingAssetPath(options.BaseController, "asset-create");
                 RuntimeAnimatorController baseController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(baseControllerPath);
                 if (baseController == null)
                 {
@@ -150,7 +151,7 @@ namespace PUC.Editor
                 var clip = new AnimationClip
                 {
                     name = Path.GetFileNameWithoutExtension(request.AssetPath),
-                    legacy = options.legacy,
+                    legacy = options.IsLegacy,
                 };
 
                 return new AssetCreateArtifact(
@@ -182,7 +183,7 @@ namespace PUC.Editor
 
                 asset.name = Path.GetFileNameWithoutExtension(request.AssetPath);
 
-                if (!string.IsNullOrWhiteSpace(options.initialMap))
+                if (!string.IsNullOrWhiteSpace(options.InitialMap))
                 {
                     Type extensionsType = RequireType(
                         "UnityEngine.InputSystem.InputActionSetupExtensions",
@@ -209,7 +210,7 @@ namespace PUC.Editor
                         throw new CommandFailureException("ASSET_DEPENDENCY_MISSING", "InputActionAsset API를 찾지 못했습니다.");
                     }
 
-                    addActionMap.Invoke(null, new object[] { asset, options.initialMap.Trim() });
+                    addActionMap.Invoke(null, new object[] { asset, options.InitialMap.Trim() });
                 }
 
                 return new AssetCreateArtifact(
@@ -266,9 +267,9 @@ namespace PUC.Editor
             public AssetCreateArtifact Create(AssetCreateRequest request)
             {
                 PrefabCreateOptions options = request.GetOptions<PrefabCreateOptions>();
-                string rootName = string.IsNullOrWhiteSpace(options.rootName)
+                string rootName = string.IsNullOrWhiteSpace(options.RootName)
                     ? Path.GetFileNameWithoutExtension(request.AssetPath)
-                    : options.rootName.Trim();
+                    : options.RootName.Trim();
 
                 if (string.IsNullOrWhiteSpace(rootName))
                 {
@@ -306,9 +307,9 @@ namespace PUC.Editor
             public AssetCreateArtifact Create(AssetCreateRequest request)
             {
                 RenderTextureCreateOptions options = request.GetOptions<RenderTextureCreateOptions>();
-                int width = options.width <= 0 ? 1024 : options.width;
-                int height = options.height <= 0 ? 1024 : options.height;
-                int depth = options.depth < 0 ? 24 : options.depth;
+                int width = options.Width <= 0 ? 1024 : options.Width;
+                int height = options.Height <= 0 ? 1024 : options.Height;
+                int depth = options.Depth < 0 ? 24 : options.Depth;
 
                 var asset = new RenderTexture(width, height, depth)
                 {
@@ -609,39 +610,40 @@ namespace PUC.Editor
         [Serializable]
         private sealed class MaterialCreateOptions
         {
-            public string shader = string.Empty;
+            public string Shader { get; set; } = string.Empty;
         }
 
         [Serializable]
         private sealed class AnimationClipCreateOptions
         {
-            public bool legacy;
+            [JsonProperty("legacy")]
+            public bool IsLegacy { get; set; }
         }
 
         [Serializable]
         private sealed class InputActionsCreateOptions
         {
-            public string initialMap = string.Empty;
+            public string InitialMap { get; set; } = string.Empty;
         }
 
         [Serializable]
         private sealed class PrefabCreateOptions
         {
-            public string rootName = string.Empty;
+            public string RootName { get; set; } = string.Empty;
         }
 
         [Serializable]
         private sealed class RenderTextureCreateOptions
         {
-            public int width;
-            public int height;
-            public int depth = 24;
+            public int Width { get; set; }
+            public int Height { get; set; }
+            public int Depth { get; set; } = 24;
         }
 
         [Serializable]
         private sealed class AnimatorOverrideControllerCreateOptions
         {
-            public string baseController = string.Empty;
+            public string BaseController { get; set; } = string.Empty;
         }
     }
 }

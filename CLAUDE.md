@@ -44,7 +44,7 @@ cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64)
 
 cli/UnityCli.Protocol/       Shared protocol (symlinked from unity-package Runtime/Protocol/)
 
-unity-package/com.puc.bridge/
+unity-package/com.kinkeep.unity-cli-bridge/
   ├── Editor/
   │   ├── BridgeHost          Main bridge orchestrator
   │   ├── AssetCommandHandler Asset CRUD operations

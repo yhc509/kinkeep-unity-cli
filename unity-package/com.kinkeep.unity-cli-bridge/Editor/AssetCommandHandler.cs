@@ -3,7 +3,7 @@ using System.Linq;
 using UnityCli.Protocol;
 using UnityEditor;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class AssetCommandHandler
     {
@@ -127,7 +127,7 @@ namespace PUC.Editor
                 });
             }
 
-            bool created = false;
+            bool isCreated = false;
             string current = "Assets";
             string[] segments = path.Split('/');
             for (int index = 1; index < segments.Length; index++)
@@ -154,7 +154,7 @@ namespace PUC.Editor
                         throw new InvalidOperationException("폴더를 만들지 못했습니다: " + next);
                     }
 
-                    created = true;
+                    isCreated = true;
                 }
 
                 current = next;
@@ -164,7 +164,7 @@ namespace PUC.Editor
             return ProtocolJson.Serialize(new AssetMutationPayload
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),
-                created = created,
+                created = isCreated,
             });
         }
 
@@ -184,7 +184,7 @@ namespace PUC.Editor
             }
 
             AssetCommandSupport.EnsureParentFolderExists(to);
-            bool overwritten = AssetCommandSupport.DeleteIfTargetExists(to, args.force, "asset-move");
+            bool isOverwritten = AssetCommandSupport.DeleteIfTargetExists(to, args.force, "asset-move");
 
             string error = AssetDatabase.MoveAsset(from, to);
             if (!string.IsNullOrWhiteSpace(error))
@@ -197,7 +197,7 @@ namespace PUC.Editor
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(to),
                 previousPath = from,
-                overwritten = overwritten,
+                overwritten = isOverwritten,
             });
         }
 
@@ -226,7 +226,7 @@ namespace PUC.Editor
                 });
             }
 
-            bool overwritten = AssetCommandSupport.DeleteIfTargetExists(destination, args.force, "asset-rename");
+            bool isOverwritten = AssetCommandSupport.DeleteIfTargetExists(destination, args.force, "asset-rename");
             string error = AssetDatabase.MoveAsset(path, destination);
             if (!string.IsNullOrWhiteSpace(error))
             {
@@ -238,7 +238,7 @@ namespace PUC.Editor
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(destination),
                 previousPath = path,
-                overwritten = overwritten,
+                overwritten = isOverwritten,
             });
         }
 

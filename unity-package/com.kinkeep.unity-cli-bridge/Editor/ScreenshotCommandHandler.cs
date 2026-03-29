@@ -5,7 +5,7 @@ using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class ScreenshotCommandHandler
     {

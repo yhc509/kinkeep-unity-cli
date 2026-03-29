@@ -6,7 +6,7 @@ This repository vendors the following third-party component.
 
 - Upstream: https://www.newtonsoft.com/json
 - Source package: `Newtonsoft.Json` NuGet package version `13.0.1`
-- Included file: `unity-package/com.puc.bridge/Editor/Plugins/Newtonsoft.Json.dll`
+- Included file: `unity-package/com.kinkeep.unity-cli-bridge/Editor/Plugins/Newtonsoft.Json.dll`
 - License: MIT
 
 ```text

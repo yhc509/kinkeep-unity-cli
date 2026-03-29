@@ -5,18 +5,21 @@ using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class PrefabCommandHandler
     {
-        private static readonly JsonSerializer Serializer = JsonSerializer.CreateDefault(new JsonSerializerSettings
+        private static readonly JsonSerializerSettings _specJsonSettings = new JsonSerializerSettings
         {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore,
-        });
+        };
+        private static readonly JsonSerializer _serializer = JsonSerializer.CreateDefault(_specJsonSettings);
 
         public bool CanHandle(string command)
         {
@@ -64,25 +67,25 @@ namespace PUC.Editor
             PrefabCreateArgs args = ProtocolJson.Deserialize<PrefabCreateArgs>(argumentsJson) ?? new PrefabCreateArgs();
             string path = ResolvePrefabPath(args.path);
             AssetCommandSupport.EnsureParentFolderExists(path);
-            bool overwritten = AssetCommandSupport.DeleteIfTargetExists(path, args.force, "prefab-create");
+            bool isOverwritten = AssetCommandSupport.DeleteIfTargetExists(path, args.force, "prefab-create");
 
             PrefabCreateSpec spec = DeserializeSpec<PrefabCreateSpec>(args.specJson, "prefab-create");
-            ValidateVersion(spec.version, "prefab-create");
-            if (spec.root == null)
+            ValidateVersion(spec.Version, "prefab-create");
+            if (spec.Root == null)
             {
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "`root`가 필요합니다.");
             }
 
-            string rootName = string.IsNullOrWhiteSpace(spec.root.name)
+            string rootName = string.IsNullOrWhiteSpace(spec.Root.Name)
                 ? Path.GetFileNameWithoutExtension(path)
-                : spec.root.name.Trim();
+                : spec.Root.Name.Trim();
             var root = new GameObject(rootName);
 
             try
             {
-                ApplyNodeState(root, spec.root, rootName, allowMissingName: true);
-                AddComponents(root, spec.root.components, "prefab-create");
-                AddChildren(root.transform, spec.root.children, "prefab-create");
+                ApplyNodeState(root, spec.Root, rootName, allowMissingName: true);
+                AddComponents(root, spec.Root.Components, "prefab-create");
+                AddChildren(root.transform, spec.Root.Children, "prefab-create");
 
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
                 if (saved == null)
@@ -101,7 +104,7 @@ namespace PUC.Editor
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),
                 created = true,
-                overwritten = overwritten,
+                overwritten = isOverwritten,
             });
         }
 
@@ -111,8 +114,8 @@ namespace PUC.Editor
             string path = RequireExistingPrefabPath(args.path, "prefab-patch");
 
             PrefabPatchSpec spec = DeserializeSpec<PrefabPatchSpec>(args.specJson, "prefab-patch");
-            ValidateVersion(spec.version, "prefab-patch");
-            if (spec.operations == null || spec.operations.Length == 0)
+            ValidateVersion(spec.Version, "prefab-patch");
+            if (spec.Operations == null || spec.Operations.Length == 0)
             {
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "`operations`가 비어 있습니다.");
             }
@@ -120,7 +123,7 @@ namespace PUC.Editor
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                ApplyPatchOperations(root, spec.operations);
+                ApplyPatchOperations(root, spec.Operations);
 
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
                 if (saved == null)
@@ -151,10 +154,7 @@ namespace PUC.Editor
 
             try
             {
-                T spec = JsonConvert.DeserializeObject<T>(specJson, new JsonSerializerSettings
-                {
-                    NullValueHandling = NullValueHandling.Ignore,
-                });
+                T spec = JsonConvert.DeserializeObject<T>(specJson, _specJsonSettings);
 
                 if (spec == null)
                 {
@@ -216,12 +216,12 @@ namespace PUC.Editor
 
             foreach (PrefabNodeSpec childSpec in children)
             {
-                string childName = RequireNodeName(childSpec == null ? null : childSpec.name, commandName);
+                string childName = RequireNodeName(childSpec == null ? null : childSpec.Name, commandName);
                 var child = new GameObject(childName);
                 child.transform.SetParent(parent, false);
                 ApplyNodeState(child, childSpec, childName, allowMissingName: false);
-                AddComponents(child, childSpec.components, commandName);
-                AddChildren(child.transform, childSpec.children, commandName);
+                AddComponents(child, childSpec.Components, commandName);
+                AddChildren(child.transform, childSpec.Children, commandName);
             }
         }
 
@@ -240,12 +240,12 @@ namespace PUC.Editor
 
         private static Component AddComponent(GameObject target, PrefabComponentSpec componentSpec, string commandName)
         {
-            if (componentSpec == null || string.IsNullOrWhiteSpace(componentSpec.type))
+            if (componentSpec == null || string.IsNullOrWhiteSpace(componentSpec.Type))
             {
                 throw new CommandFailureException("PREFAB_COMPONENT_INVALID", commandName + " component type이 비어 있습니다.");
             }
 
-            Type componentType = ResolveComponentType(componentSpec.type, commandName);
+            Type componentType = ResolveComponentType(componentSpec.Type, commandName);
             if (componentType == typeof(Transform))
             {
                 throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "Transform은 직접 추가할 수 없습니다.");
@@ -258,12 +258,12 @@ namespace PUC.Editor
             }
             catch (Exception exception)
             {
-                throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component를 추가하지 못했습니다: " + componentSpec.type, exception.Message);
+                throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component를 추가하지 못했습니다: " + componentSpec.Type, exception.Message);
             }
 
-            if (componentSpec.values != null)
+            if (componentSpec.Values != null)
             {
-                SerializedValueApplier.Apply(component, componentSpec.values);
+                SerializedValueApplier.Apply(component, componentSpec.Values);
             }
 
             return component;
@@ -273,27 +273,27 @@ namespace PUC.Editor
         {
             foreach (PrefabPatchOperationSpec operation in operations)
             {
-                if (operation == null || string.IsNullOrWhiteSpace(operation.op))
+                if (operation == null || string.IsNullOrWhiteSpace(operation.Operation))
                 {
                     throw new CommandFailureException("PREFAB_SPEC_INVALID", "patch operation `op`가 비어 있습니다.");
                 }
 
-                switch (operation.op.Trim().ToLowerInvariant())
+                switch (operation.Operation.Trim().ToLowerInvariant())
                 {
                     case "add-child":
                     {
-                        GameObject parent = ResolveNode(root, operation.parent, "add-child");
-                        if (operation.node == null)
+                        GameObject parent = ResolveNode(root, operation.Parent, "add-child");
+                        if (operation.Node == null)
                         {
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`add-child`에는 `node`가 필요합니다.");
                         }
 
-                        AddChildren(parent.transform, new[] { operation.node }, "add-child");
+                        AddChildren(parent.transform, new[] { operation.Node }, "add-child");
                         break;
                     }
                     case "remove-node":
                     {
-                        GameObject target = ResolveNode(root, operation.target, "remove-node");
+                        GameObject target = ResolveNode(root, operation.Target, "remove-node");
                         if (target == root)
                         {
                             throw new CommandFailureException("PREFAB_NODE_INVALID", "루트 오브젝트는 삭제할 수 없습니다.");
@@ -304,10 +304,10 @@ namespace PUC.Editor
                     }
                     case "set-node":
                     {
-                        GameObject target = ResolveNode(root, operation.target, "set-node");
-                        PrefabNodeMutationSpec values = operation.values == null
+                        GameObject target = ResolveNode(root, operation.Target, "set-node");
+                        PrefabNodeMutationSpec values = operation.Values == null
                             ? null
-                            : operation.values.ToObject<PrefabNodeMutationSpec>(Serializer);
+                            : operation.Values.ToObject<PrefabNodeMutationSpec>(_serializer);
                         if (values == null)
                         {
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`set-node`에는 `values`가 필요합니다.");
@@ -318,19 +318,19 @@ namespace PUC.Editor
                     }
                     case "add-component":
                     {
-                        GameObject target = ResolveNode(root, operation.target, "add-component");
-                        if (operation.component == null)
+                        GameObject target = ResolveNode(root, operation.Target, "add-component");
+                        if (operation.Component == null)
                         {
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`add-component`에는 `component`가 필요합니다.");
                         }
 
-                        AddComponent(target, operation.component, "add-component");
+                        AddComponent(target, operation.Component, "add-component");
                         break;
                     }
                     case "remove-component":
                     {
-                        GameObject target = ResolveNode(root, operation.target, "remove-component");
-                        Component component = ResolveComponent(target, operation.componentType, operation.componentIndex, "remove-component");
+                        GameObject target = ResolveNode(root, operation.Target, "remove-component");
+                        Component component = ResolveComponent(target, operation.ComponentType, operation.ComponentIndex, "remove-component");
                         if (component is Transform)
                         {
                             throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "Transform은 제거할 수 없습니다.");
@@ -341,18 +341,18 @@ namespace PUC.Editor
                     }
                     case "set-component-values":
                     {
-                        GameObject target = ResolveNode(root, operation.target, "set-component-values");
-                        Component component = ResolveComponent(target, operation.componentType, operation.componentIndex, "set-component-values");
-                        if (operation.values == null || operation.values.Type != JTokenType.Object)
+                        GameObject target = ResolveNode(root, operation.Target, "set-component-values");
+                        Component component = ResolveComponent(target, operation.ComponentType, operation.ComponentIndex, "set-component-values");
+                        if (operation.Values == null || operation.Values.Type != JTokenType.Object)
                         {
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`set-component-values`에는 object 형태의 `values`가 필요합니다.");
                         }
 
-                        SerializedValueApplier.Apply(component, (JObject)operation.values);
+                        SerializedValueApplier.Apply(component, (JObject)operation.Values);
                         break;
                     }
                     default:
-                        throw new CommandFailureException("PREFAB_SPEC_INVALID", "지원하지 않는 patch operation입니다: " + operation.op);
+                        throw new CommandFailureException("PREFAB_SPEC_INVALID", "지원하지 않는 patch operation입니다: " + operation.Operation);
                 }
             }
         }
@@ -508,12 +508,12 @@ namespace PUC.Editor
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "node spec이 비어 있습니다.");
             }
 
-            string name = string.IsNullOrWhiteSpace(spec.name)
-                ? (allowMissingName ? defaultName : RequireNodeName(spec.name, "prefab"))
-                : spec.name.Trim();
+            string name = string.IsNullOrWhiteSpace(spec.Name)
+                ? (allowMissingName ? defaultName : RequireNodeName(spec.Name, "prefab"))
+                : spec.Name.Trim();
             target.name = name;
 
-            ApplyNodeStateCore(target, spec.active, spec.tag, spec.layer, spec.transform);
+            ApplyNodeStateCore(target, spec.IsActive, spec.Tag, spec.Layer, spec.Transform);
         }
 
         private static void ApplyNodeState(GameObject target, PrefabNodeMutationSpec spec)
@@ -523,12 +523,12 @@ namespace PUC.Editor
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "node values가 비어 있습니다.");
             }
 
-            if (spec.name != null)
+            if (spec.Name != null)
             {
-                target.name = RequireNodeName(spec.name, "set-node");
+                target.name = RequireNodeName(spec.Name, "set-node");
             }
 
-            ApplyNodeStateCore(target, spec.active, spec.tag, spec.layer, spec.transform);
+            ApplyNodeStateCore(target, spec.IsActive, spec.Tag, spec.Layer, spec.Transform);
         }
 
         private static void ApplyNodeStateCore(GameObject target, bool? active, string tag, JToken layer, PrefabTransformSpec transformSpec)
@@ -606,31 +606,31 @@ namespace PUC.Editor
 
         private static void ApplyTransformSpec(Transform transform, PrefabTransformSpec spec)
         {
-            if (spec.localPosition != null)
+            if (spec.LocalPosition != null)
             {
                 Vector3 current = transform.localPosition;
                 transform.localPosition = new Vector3(
-                    spec.localPosition.x ?? current.x,
-                    spec.localPosition.y ?? current.y,
-                    spec.localPosition.z ?? current.z);
+                    spec.LocalPosition.X ?? current.x,
+                    spec.LocalPosition.Y ?? current.y,
+                    spec.LocalPosition.Z ?? current.z);
             }
 
-            if (spec.localRotationEuler != null)
+            if (spec.LocalRotationEuler != null)
             {
                 Vector3 current = transform.localEulerAngles;
                 transform.localEulerAngles = new Vector3(
-                    spec.localRotationEuler.x ?? current.x,
-                    spec.localRotationEuler.y ?? current.y,
-                    spec.localRotationEuler.z ?? current.z);
+                    spec.LocalRotationEuler.X ?? current.x,
+                    spec.LocalRotationEuler.Y ?? current.y,
+                    spec.LocalRotationEuler.Z ?? current.z);
             }
 
-            if (spec.localScale != null)
+            if (spec.LocalScale != null)
             {
                 Vector3 current = transform.localScale;
                 transform.localScale = new Vector3(
-                    spec.localScale.x ?? current.x,
-                    spec.localScale.y ?? current.y,
-                    spec.localScale.z ?? current.z);
+                    spec.LocalScale.X ?? current.x,
+                    spec.LocalScale.Y ?? current.y,
+                    spec.LocalScale.Z ?? current.z);
             }
         }
 
@@ -759,73 +759,81 @@ namespace PUC.Editor
         [Serializable]
         private sealed class PrefabCreateSpec
         {
-            public int version;
-            public PrefabNodeSpec root;
+            public int Version { get; set; }
+            public PrefabNodeSpec Root { get; set; }
         }
 
         [Serializable]
         private sealed class PrefabPatchSpec
         {
-            public int version;
-            public PrefabPatchOperationSpec[] operations = Array.Empty<PrefabPatchOperationSpec>();
+            public int Version { get; set; }
+            public PrefabPatchOperationSpec[] Operations { get; set; } = Array.Empty<PrefabPatchOperationSpec>();
         }
 
         [Serializable]
         private sealed class PrefabNodeSpec
         {
-            public string name;
-            public bool? active;
-            public string tag;
-            public JToken layer;
-            public PrefabTransformSpec transform;
-            public PrefabComponentSpec[] components = Array.Empty<PrefabComponentSpec>();
-            public PrefabNodeSpec[] children = Array.Empty<PrefabNodeSpec>();
+            public string Name { get; set; }
+
+            [JsonProperty("active")]
+            public bool? IsActive { get; set; }
+
+            public string Tag { get; set; }
+            public JToken Layer { get; set; }
+            public PrefabTransformSpec Transform { get; set; }
+            public PrefabComponentSpec[] Components { get; set; } = Array.Empty<PrefabComponentSpec>();
+            public PrefabNodeSpec[] Children { get; set; } = Array.Empty<PrefabNodeSpec>();
         }
 
         [Serializable]
         private sealed class PrefabNodeMutationSpec
         {
-            public string name;
-            public bool? active;
-            public string tag;
-            public JToken layer;
-            public PrefabTransformSpec transform;
+            public string Name { get; set; }
+
+            [JsonProperty("active")]
+            public bool? IsActive { get; set; }
+
+            public string Tag { get; set; }
+            public JToken Layer { get; set; }
+            public PrefabTransformSpec Transform { get; set; }
         }
 
         [Serializable]
         private sealed class PrefabTransformSpec
         {
-            public PrefabVector3Spec localPosition;
-            public PrefabVector3Spec localRotationEuler;
-            public PrefabVector3Spec localScale;
+            public PrefabVector3Spec LocalPosition { get; set; }
+            public PrefabVector3Spec LocalRotationEuler { get; set; }
+            public PrefabVector3Spec LocalScale { get; set; }
         }
 
         [Serializable]
         private sealed class PrefabVector3Spec
         {
-            public float? x;
-            public float? y;
-            public float? z;
+            public float? X { get; set; }
+            public float? Y { get; set; }
+            public float? Z { get; set; }
         }
 
         [Serializable]
         private sealed class PrefabComponentSpec
         {
-            public string type;
-            public JObject values;
+            public string Type { get; set; }
+            public JObject Values { get; set; }
         }
 
         [Serializable]
         private sealed class PrefabPatchOperationSpec
         {
-            public string op;
-            public string parent;
-            public string target;
-            public PrefabNodeSpec node;
-            public JToken values;
-            public PrefabComponentSpec component;
-            public string componentType;
-            public int? componentIndex;
+            [JsonProperty("op")]
+            public string Operation { get; set; }
+
+            public string Parent { get; set; }
+            public string Target { get; set; }
+            public PrefabNodeSpec Node { get; set; }
+            public JToken Values { get; set; }
+            public PrefabComponentSpec Component { get; set; }
+            public string ComponentType { get; set; }
+            public int? ComponentIndex { get; set; }
         }
     }
 }

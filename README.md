@@ -1,8 +1,8 @@
-# PUC
+# kinkeep-unity-cli
 
-`PUC` stands for **Portless Unity CLI**. The internal executable name is still `unity-cli`, but the public-facing name is simply `PUC`. Its real value is not just "Unity from the command line," but "no manual server startup, no per-project ports, and automatic attachment to the correct project."
+`kinkeep-unity-cli` packages the `unity-cli` executable, the `com.kinkeep.unity-cli-bridge` Unity package, and the supporting Codex skill into one project-aware workflow. Its real value is not just "Unity from the command line," but "no manual server startup, no per-project ports, and automatic attachment to the correct project."
 
-## Why PUC Is Different
+## Why kinkeep-unity-cli Is Different
 
 - No manual server startup. The bridge starts automatically when the Editor opens.
 - No per-project port management. The correct Editor instance is selected from the project path and registry.
@@ -11,7 +11,7 @@
 - Project-defined live commands can be exposed through a lightweight `[PucCommand]` extension API instead of adding one-off transport code.
 - The Codex skill keeps the workflow consistent: choose the command, perform the work, then verify the logs.
 
-## What You Can Do With PUC
+## What You Can Do With kinkeep-unity-cli
 
 - Check editor state from the terminal with `status`, `refresh`, and `compile`.
 - Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, and `read-console`.
@@ -33,7 +33,7 @@
 This repository is organized into three parts.
 
 - `cli/`: the `unity-cli` executable and shared protocol
-- `unity-package/com.puc.bridge/`: the Unity package that starts the bridge automatically inside the Editor
+- `unity-package/com.kinkeep.unity-cli-bridge/`: the Unity package that starts the bridge automatically inside the Editor
 - `tools/skills/unity-cli-operator/`: the Codex skill that keeps `unity-cli` usage consistent
 
 ## Current Status
@@ -67,17 +67,19 @@ dist/unity-cli/UnityCli.Cli
 
 ### 2. Add the Unity Package
 
-For local mono-repo use, add a file reference to `unity-package/com.puc.bridge` in the Unity project's `Packages/manifest.json`. The exact relative path depends on where your Unity project lives.
+For local mono-repo use, add a file reference to `unity-package/com.kinkeep.unity-cli-bridge` in the Unity project's `Packages/manifest.json`. The exact relative path depends on where your Unity project lives.
 
 For Git-based installation, use the package path inside this repository.
 
 ```json
 {
   "dependencies": {
-    "com.puc.bridge": "https://github.com/<org>/<repo>.git?path=/unity-package/com.puc.bridge#main"
+    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
   }
 }
 ```
+
+If you are migrating from the old package, update `Packages/manifest.json` so the dependency key changes from `com.puc.bridge` to `com.kinkeep.unity-cli-bridge`, and make sure any explicit asmdef references move from `PUC.Editor` / `PUC.Runtime` to `KinKeep.UnityCli.Bridge.Editor` / `KinKeep.UnityCli.Bridge.Runtime`.
 
 The package already includes `Editor/Plugins/Newtonsoft.Json.dll`, so you do not need to install a separate JSON package.
 
@@ -92,7 +94,7 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli package list --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --json
 ./dist/unity-cli/UnityCli.Cli screenshot --project "$PROJECT_ROOT" --view game --path /tmp/game-view.png --json
-./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"PUC smoke\");" --force --json
+./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"KinKeep smoke\");" --force --json
 ```
 
 Custom command smoke test:
@@ -181,7 +183,7 @@ Material mutation smoke tests:
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Scene spec: [`docs/scene-spec.md`](docs/scene-spec.md)
 - Prefab spec: [`docs/prefab-spec.md`](docs/prefab-spec.md)
-- Unity package usage: [`unity-package/com.puc.bridge/README.md`](unity-package/com.puc.bridge/README.md)
+- Unity package usage: [`unity-package/com.kinkeep.unity-cli-bridge/README.md`](unity-package/com.kinkeep.unity-cli-bridge/README.md)
 - Third-party notices: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 
 Regenerate the CLI reference after command-surface changes:
@@ -194,12 +196,12 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 
 The `unity-cli-operator` skill bundles command selection, scene/prefab patch authoring, and post-task `read-console` verification into one repeatable workflow.
 
-The skill is part of the mono-repo, not part of the Unity package payload. Installing the package through a Git URL gives Unity only `unity-package/com.puc.bridge`, so the Codex skill still needs the repository itself.
+The skill is part of the mono-repo, not part of the Unity package payload. Installing the package through a Git URL gives Unity only `unity-package/com.kinkeep.unity-cli-bridge`, so the Codex skill still needs the repository itself.
 
 Recommended flow:
 
 - clone the mono-repo locally
-- install the Unity package from `?path=/unity-package/com.puc.bridge`
+- install the Unity package from `?path=/unity-package/com.kinkeep.unity-cli-bridge`
 - symlink `tools/skills/unity-cli-operator` into `~/.codex/skills`
 
 Example symlink into the local Codex skills directory:

@@ -178,13 +178,13 @@ internal static class CliUsageHelp
             return null;
         }
 
-        return "usage: unity-cli [--json] [--project <path>] " + descriptor.synopsis;
+        return "usage: unity-cli [--json] [--project <path>] " + descriptor.Synopsis;
     }
 
     private static string[] GetTopLevelCommands()
     {
         return CliCommandCatalog.GetCommands()
-            .Select(descriptor => descriptor.command.Split(' ', 2)[0])
+            .Select(descriptor => descriptor.Command.Split(' ', 2)[0])
             .Append("help")
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
@@ -194,8 +194,8 @@ internal static class CliUsageHelp
     private static string[] GetSubcommandNames(string rootCommand)
     {
         return CliCommandCatalog.GetCommands()
-            .Where(descriptor => descriptor.command.StartsWith(rootCommand + " ", StringComparison.Ordinal))
-            .Select(descriptor => descriptor.command[(rootCommand.Length + 1)..].Split(' ', 2)[0])
+            .Where(descriptor => descriptor.Command.StartsWith(rootCommand + " ", StringComparison.Ordinal))
+            .Select(descriptor => descriptor.Command[(rootCommand.Length + 1)..].Split(' ', 2)[0])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -204,8 +204,8 @@ internal static class CliUsageHelp
     private static string[] GetSubcommandCommands(string rootCommand)
     {
         return CliCommandCatalog.GetCommands()
-            .Where(descriptor => descriptor.command.StartsWith(rootCommand + " ", StringComparison.Ordinal))
-            .Select(descriptor => descriptor.command)
+            .Where(descriptor => descriptor.Command.StartsWith(rootCommand + " ", StringComparison.Ordinal))
+            .Select(descriptor => descriptor.Command)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -223,7 +223,7 @@ internal static class CliUsageHelp
         var descriptor = CliCommandCatalog.FindByCommand(commandPath);
         if (descriptor is not null)
         {
-            foreach (Match match in OptionPattern.Matches(descriptor.synopsis))
+            foreach (Match match in OptionPattern.Matches(descriptor.Synopsis))
             {
                 options.Add(match.Value);
             }

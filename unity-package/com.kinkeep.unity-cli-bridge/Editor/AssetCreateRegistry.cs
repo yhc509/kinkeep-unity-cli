@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     public interface IAssetCreateProvider
     {
@@ -15,11 +17,17 @@ namespace PUC.Editor
 
     public sealed class AssetCreateRequest
     {
+        private static readonly JsonSerializerSettings _optionsJsonSettings = new JsonSerializerSettings
+        {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            NullValueHandling = NullValueHandling.Ignore,
+        };
+
         public AssetCreateRequest(AssetCreateArgs args, string typeId, string assetPath)
         {
             TypeId = typeId;
             AssetPath = assetPath;
-            Force = args.force;
+            IsForced = args.force;
             ScriptPath = args.script;
             TypeName = args.typeName;
             DataJson = args.dataJson;
@@ -30,7 +38,7 @@ namespace PUC.Editor
 
         public string AssetPath { get; private set; }
 
-        public bool Force { get; private set; }
+        public bool IsForced { get; private set; }
 
         public string ScriptPath { get; private set; }
 
@@ -44,7 +52,7 @@ namespace PUC.Editor
         {
             return string.IsNullOrWhiteSpace(OptionsJson)
                 ? new TOptions()
-                : ProtocolJson.Deserialize<TOptions>(OptionsJson) ?? new TOptions();
+                : JsonConvert.DeserializeObject<TOptions>(OptionsJson, _optionsJsonSettings) ?? new TOptions();
         }
     }
 
@@ -76,8 +84,8 @@ namespace PUC.Editor
 
     public static class AssetCreateRegistry
     {
-        private static readonly Dictionary<string, IAssetCreateProvider> Providers = new Dictionary<string, IAssetCreateProvider>(StringComparer.OrdinalIgnoreCase);
-        private static bool _initialized;
+        private static readonly Dictionary<string, IAssetCreateProvider> _providers = new Dictionary<string, IAssetCreateProvider>(StringComparer.OrdinalIgnoreCase);
+        private static bool _isInitialized;
 
         public static void Register(IAssetCreateProvider provider)
         {
@@ -88,7 +96,7 @@ namespace PUC.Editor
         public static AssetCreateTypeDescriptor[] GetDescriptors()
         {
             EnsureInitialized();
-            return Providers.Values
+            return _providers.Values
                 .Select(provider => NormalizeDescriptor(provider.Describe()))
                 .OrderBy(descriptor => descriptor.typeId, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -105,7 +113,7 @@ namespace PUC.Editor
             }
 
             IAssetCreateProvider provider;
-            if (!Providers.TryGetValue(normalizedType, out provider))
+            if (!_providers.TryGetValue(normalizedType, out provider))
             {
                 throw new CommandFailureException("ASSET_TYPE_NOT_FOUND", "지원하지 않는 asset 생성 타입입니다: " + typeId);
             }
@@ -115,12 +123,12 @@ namespace PUC.Editor
 
         private static void EnsureInitialized()
         {
-            if (_initialized)
+            if (_isInitialized)
             {
                 return;
             }
 
-            _initialized = true;
+            _isInitialized = true;
             foreach (IAssetCreateProvider provider in BuiltInAssetCreateProviders.CreateAll())
             {
                 RegisterInternal(provider);
@@ -141,12 +149,12 @@ namespace PUC.Editor
             }
 
             string normalizedType = descriptor.typeId.Trim().ToLowerInvariant();
-            if (Providers.ContainsKey(normalizedType))
+            if (_providers.ContainsKey(normalizedType))
             {
                 throw new InvalidOperationException("이미 등록된 asset create type입니다: " + normalizedType);
             }
 
-            Providers.Add(normalizedType, provider);
+            _providers.Add(normalizedType, provider);
         }
 
         private static AssetCreateTypeDescriptor NormalizeDescriptor(AssetCreateTypeDescriptor descriptor)

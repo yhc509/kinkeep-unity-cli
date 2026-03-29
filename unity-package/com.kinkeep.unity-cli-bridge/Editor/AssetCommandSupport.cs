@@ -4,7 +4,7 @@ using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace PUC.Editor
+namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class AssetCommandSupport
     {
@@ -34,7 +34,7 @@ namespace PUC.Editor
             bool isFolder = AssetDatabase.IsValidFolder(normalizedPath);
             string guid = AssetDatabase.AssetPathToGUID(normalizedPath);
             UnityEngine.Object mainAsset = isFolder ? null : AssetDatabase.LoadMainAssetAtPath(normalizedPath);
-            bool exists = DoesAssetPathExistOnDisk(normalizedPath) || isFolder || mainAsset != null;
+            bool hasExistingAsset = DoesAssetPathExistOnDisk(normalizedPath) || isFolder || mainAsset != null;
 
             string assetName;
             if (mainAsset != null)
@@ -58,7 +58,7 @@ namespace PUC.Editor
                 assetName = assetName ?? string.Empty,
                 mainType = mainType == null ? string.Empty : mainType.Name,
                 isFolder = isFolder,
-                exists = exists,
+                exists = hasExistingAsset,
             };
         }
 
@@ -103,14 +103,14 @@ namespace PUC.Editor
             }
         }
 
-        public static bool DeleteIfTargetExists(string path, bool force, string commandName)
+        public static bool DeleteIfTargetExists(string path, bool canOverwrite, string commandName)
         {
             if (!AssetExists(path))
             {
                 return false;
             }
 
-            if (!force)
+            if (!canOverwrite)
             {
                 throw new InvalidOperationException(commandName + " 대상 경로가 이미 있습니다. 덮어쓰려면 --force를 사용하세요: " + path);
             }
