@@ -7,7 +7,7 @@ public static class RepositoryPaths
         var current = new DirectoryInfo(Path.GetFullPath(startDirectory));
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "PUC.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "KinKeepUnityCli.sln")))
             {
                 return current.FullName;
             }

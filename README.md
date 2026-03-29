@@ -215,8 +215,8 @@ ln -sfn "$(pwd -P)/tools/skills/unity-cli-operator" ~/.codex/skills/unity-cli-op
 CLI and tests:
 
 ```bash
-dotnet build PUC.sln -c Debug
-/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test PUC.sln
+dotnet build KinKeepUnityCli.sln -c Debug
+/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test KinKeepUnityCli.sln
 dotnet run --project cli/UnityCli.DocGen -- --check
 ```
 

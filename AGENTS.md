@@ -8,9 +8,9 @@
 ## 검증 기본값
 
 - CLI 코드 수정 후:
-  - `dotnet build PUC.sln -c Debug`
+  - `dotnet build KinKeepUnityCli.sln -c Debug`
 - 테스트 실행 후:
-  - `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test PUC.sln`
+  - `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test KinKeepUnityCli.sln`
 - Unity 연동 수정 후:
   - 실제 Unity 프로젝트에서 `status`, `refresh`, `asset info`, `asset find`, `asset create`를 live로 확인
   - 실제 Unity 프로젝트에서 `prefab create`, `prefab inspect`, `prefab patch`를 live로 확인

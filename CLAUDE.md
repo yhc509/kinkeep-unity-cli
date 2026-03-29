@@ -12,13 +12,13 @@ The CLI is **live IPC only**. Unity commands require a running Editor with the b
 
 ```bash
 # Build
-dotnet build PUC.sln -c Debug
+dotnet build KinKeepUnityCli.sln -c Debug
 
 # Run all tests
-dotnet test PUC.sln
+dotnet test KinKeepUnityCli.sln
 
 # Run a single test
-dotnet test PUC.sln --filter "FullyQualifiedName~ClassName.MethodName"
+dotnet test KinKeepUnityCli.sln --filter "FullyQualifiedName~ClassName.MethodName"
 
 # Publish macOS arm64 binary
 ./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
@@ -74,6 +74,6 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 
 ## Verification After Changes
 
-- CLI code changes → `dotnet build PUC.sln -c Debug`
-- Test changes → `dotnet test PUC.sln`
+- CLI code changes → `dotnet build KinKeepUnityCli.sln -c Debug`
+- Test changes → `dotnet test KinKeepUnityCli.sln`
 - Unity integration changes → test live IPC flows with an actual Unity project
