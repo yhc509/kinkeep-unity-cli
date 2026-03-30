@@ -2,7 +2,7 @@
 
 ## Summary
 
-`PUC` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
+`kinkeep-unity-cli` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
 
 - `cli/`: the .NET CLI that receives user commands and routes them to live IPC
 - `unity-package/com.kinkeep.unity-cli-bridge/`: the bridge package that starts automatically inside the Unity Editor
@@ -33,10 +33,35 @@
 
 ## Repository Layout
 
+- `KinKeepUnityCli.sln`: solution root for the CLI, protocol project, DocGen, and tests
 - `cli/UnityCli.Cli`: user-facing CLI
 - `cli/UnityCli.Protocol`: protocol models shared by the CLI and Unity package
 - `unity-package/com.kinkeep.unity-cli-bridge`: UPM package
 - `tools/skills/unity-cli-operator`: Codex skill
+
+## Editor Bridge Layout
+
+Inside `unity-package/com.kinkeep.unity-cli-bridge/Editor`, the bridge is split by responsibility.
+
+- `BridgeHost.cs` bootstraps the bridge, registers the live instance, opens the IPC listener, and wires command handlers together
+- `AssetCommandHandler.cs` covers asset CRUD and metadata flows
+- `BuiltInAssetCreateProviders.cs` and `BuiltInAssetCreateProviders.Advanced.cs` split built-in asset creation into basic and dependency-aware providers
+- `SceneCommandHandler.cs`, `SceneCommandHandler.Patching.cs`, `SceneInspector.cs`, and `SceneSpecModels.cs` split scene entry points, patch logic, graph traversal, and DTO/spec models
+- `PrefabCommandHandler.cs`, `PrefabCommandHandler.Patching.cs`, `PrefabInspector.cs`, and `PrefabSpecModels.cs` split prefab entry points, patch logic, inspection, and DTO/spec models
+- `SerializedValueApplier.cs` applies serialized values by `SerializedProperty.propertyPath`
+- `TypeDiscoveryUtility.cs` provides shared type scanning for component and asset type resolution
+- `BridgeJsonSettings.cs` centralizes the shared camelCase + ignore-null JSON serializer settings
+
+## Shared Protocol Layout
+
+`cli/UnityCli.Protocol` compiles linked source files from `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol`, so the CLI and the Unity package stay on the same request/response contracts.
+
+- `CliCommandCatalog.cs`: command descriptors
+- `CommandModels.cs`: request/response envelopes
+- `ProtocolConstants.cs`: command names, timeouts, and registry constants
+- `ProtocolHelpers.cs` and `ProtocolJson.cs`: shared command/serialization helpers
+- `Registry*.cs`: registry persistence and path models
+- `TransportModels.cs`: IPC transport payloads
 
 ## Current Limits
 
