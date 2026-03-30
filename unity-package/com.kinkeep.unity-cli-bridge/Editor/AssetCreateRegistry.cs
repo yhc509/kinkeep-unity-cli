@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using UnityCli.Protocol;
 using UnityEngine;
 
@@ -17,12 +16,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
     public sealed class AssetCreateRequest
     {
-        private static readonly JsonSerializerSettings _optionsJsonSettings = new JsonSerializerSettings
-        {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            NullValueHandling = NullValueHandling.Ignore,
-        };
-
         public AssetCreateRequest(AssetCreateArgs args, string typeId, string assetPath)
         {
             TypeId = typeId;
@@ -52,7 +45,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             return string.IsNullOrWhiteSpace(OptionsJson)
                 ? new TOptions()
-                : JsonConvert.DeserializeObject<TOptions>(OptionsJson, _optionsJsonSettings) ?? new TOptions();
+                : JsonConvert.DeserializeObject<TOptions>(OptionsJson, BridgeJsonSettings.CamelCaseIgnoreNull) ?? new TOptions();
         }
     }
 
