@@ -94,6 +94,30 @@ public sealed class CliAppTests
     }
 
     [Fact]
+    public async Task RunAsync_JsonProjectOverride_DoesNotFallBackToActiveProject()
+    {
+        using var temp = new TempDirectory();
+        string projectRoot = CreateUnityProject(temp.Path, "SampleProject");
+        string otherProjectRoot = CreateUnityProject(temp.Path, "OtherProject");
+        string otherProjectHash = ProtocolConstants.ComputeProjectHash(otherProjectRoot);
+        string expectedProjectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
+        string registryContents =
+            $$"""
+            {"activeProjectHash":"{{otherProjectHash}}","instances":[{"projectRoot":"{{otherProjectRoot.Replace("\\", "\\\\")}}","projectName":"OtherProject","projectHash":"{{otherProjectHash}}","pipeName":"{{ProtocolConstants.BuildPipeName(otherProjectHash).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            """;
+
+        var result = await InvokeAsync(["--json", "--project", projectRoot, "compile"], registryContents: registryContents);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("LIVE_UNAVAILABLE", response.error?.code);
+        Assert.Equal(expectedProjectHash, response.target);
+        Assert.DoesNotContain(otherProjectHash, result.Stdout);
+    }
+
+    [Fact]
     public async Task RunAsync_JsonUnexpectedException_WritesCliErrorToStdoutOnly()
     {
         var result = await InvokeAsync(
@@ -231,6 +255,14 @@ public sealed class CliAppTests
         {
             ConsoleLock.Release();
         }
+    }
+
+    private static string CreateUnityProject(string root, string name)
+    {
+        string projectRoot = Path.Combine(root, name);
+        Directory.CreateDirectory(Path.Combine(projectRoot, "Assets"));
+        Directory.CreateDirectory(Path.Combine(projectRoot, "Packages"));
+        return projectRoot;
     }
 
     private sealed record CliInvocationResult(int ExitCode, string Stdout, string Stderr);
