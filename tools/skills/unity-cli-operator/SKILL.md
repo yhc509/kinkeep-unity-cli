@@ -10,8 +10,9 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 ## Quick Workflow
 
 1. 실행 파일을 찾는다.
-- 우선순위는 `UNITY_CLI_BIN` 환경 변수, 현재 repo의 `dist/unity-cli/UnityCli.Cli`, `PATH` 상의 `unity-cli` 순서다.
-- 셋 다 없으면 설치나 빌드가 필요하다고 판단한다.
+- 우선순위는 `UNITY_CLI_BIN` 환경 변수, `ucli` (PATH 상의 symlink), 현재 repo의 `dist/unity-cli/UnityCli.Cli` 순서다.
+- `ucli`가 PATH에 있으면 그대로 사용한다. 매 호출마다 변수를 재정의하지 않는다.
+- 셋 다 없으면 `ln -s ~/dev/unity/unity-cli/dist/unity-cli/UnityCli.Cli ~/bin/ucli`로 symlink을 만든다.
 
 2. 프로젝트 루트를 실제 경로로 맞춘다.
 - macOS에서는 항상 `pwd -P`를 우선한다.

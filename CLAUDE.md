@@ -57,6 +57,7 @@ unity-package/com.kinkeep.unity-cli-bridge/
   │   ├── SceneCommandHandler.Patching.cs  Scene patch operation application (partial class)
   │   ├── SceneInspector.cs  Scene graph traversal, node-path resolution, inspect payload building
   │   ├── SceneSpecModels.cs  Scene DTO/spec models
+  │   ├── InspectorUtility.cs  Shared inspector helpers (asset tokens, path parsing, layer resolution, transform application)
   │   ├── PrefabCommandHandler.cs  prefab create/inspect/patch entry points
   │   ├── PrefabCommandHandler.Patching.cs  Prefab patch operation application (partial class)
   │   ├── PrefabInspector.cs  Prefab inspection, node-path resolution, inspect payload building
