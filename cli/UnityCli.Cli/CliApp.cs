@@ -131,7 +131,7 @@ public static class CliApp
     private static async Task<ResponseEnvelope> RunStatusAsync(InstanceRegistryStore registryStore, string? projectRoot)
     {
         var registry = registryStore.Load();
-        var target = ResolveTarget(registryStore, registry, projectRoot);
+        var target = ResolveTarget(registry, projectRoot);
         if (target is not null)
         {
             try
@@ -178,7 +178,7 @@ public static class CliApp
         string? projectRoot)
     {
         var registry = registryStore.Load();
-        var target = ResolveTarget(registryStore, registry, projectRoot);
+        var target = ResolveTarget(registry, projectRoot);
         var unityPath = !string.IsNullOrWhiteSpace(projectRoot)
             ? UnityEditorLocator.TryResolve(projectRoot)
             : null;
@@ -234,7 +234,7 @@ public static class CliApp
     {
         var command = parsed.ToEnvelope();
         var registry = registryStore.Load();
-        var target = ResolveTarget(registryStore, registry, projectRoot);
+        var target = ResolveTarget(registry, projectRoot);
 
         if (target is not null)
         {
@@ -280,16 +280,28 @@ public static class CliApp
             details: details);
     }
 
-    private static InstanceRecord? ResolveTarget(InstanceRegistryStore registryStore, InstanceRegistry registry, string? projectRoot)
+    private static InstanceRecord? ResolveTarget(InstanceRegistry registry, string? projectRoot)
     {
         if (!string.IsNullOrWhiteSpace(projectRoot))
         {
-            var projectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
+            var canonicalProjectRoot = ProtocolConstants.GetCanonicalPath(projectRoot);
+            var projectHash = ProtocolConstants.ComputeProjectHash(canonicalProjectRoot);
             var match = registry.instances.FirstOrDefault(item => item.projectHash == projectHash);
             if (match is not null)
             {
                 return match;
             }
+
+            return new InstanceRecord
+            {
+                projectRoot = canonicalProjectRoot,
+                projectName = Path.GetFileName(canonicalProjectRoot),
+                projectHash = projectHash,
+                pipeName = ProtocolConstants.BuildPipeName(projectHash),
+                state = "offline",
+                lastSeenUtc = DateTimeOffset.UtcNow.ToString("O"),
+                capabilities = Array.Empty<string>(),
+            };
         }
 
         if (!string.IsNullOrWhiteSpace(registry.activeProjectHash))

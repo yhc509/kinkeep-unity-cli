@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Encodings.Web;
 using UnityCli.Cli.Models;
 using UnityCli.Protocol;
 
@@ -6,6 +7,12 @@ namespace UnityCli.Cli.Services;
 
 public static class ResponseFormatter
 {
+    private static readonly JsonSerializerOptions PrettyPrintOptions = new(ProtocolJson.Default)
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     public static string Format(ParsedCommand parsed, ResponseEnvelope response)
     {
         if (parsed.JsonOutput)
@@ -74,7 +81,7 @@ public static class ResponseFormatter
     private static string PrettyJson(string json)
     {
         var element = JsonSerializer.Deserialize<JsonElement>(json, ProtocolJson.Default);
-        return JsonSerializer.Serialize(element, new JsonSerializerOptions(ProtocolJson.Default) { WriteIndented = true });
+        return JsonSerializer.Serialize(element, PrettyPrintOptions);
     }
 
     private static string TryPrettyJson(string input)
