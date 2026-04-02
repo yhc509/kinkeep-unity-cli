@@ -84,7 +84,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             AssetDatabase.SaveAssets();
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            // Unity 6+: SavePrefab 후 ImportAsset 대신 Refresh를 써야
+            // file watcher가 변경을 동기 인식하여 "modified externally" 대화상자가 뜨지 않음.
+            AssetDatabase.Refresh();
             return ProtocolJson.Serialize(new PrefabMutationPayload
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),
@@ -122,7 +124,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             AssetDatabase.SaveAssets();
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            // Unity 6+: SavePrefab 후 ImportAsset 대신 Refresh를 써야
+            // file watcher가 변경을 동기 인식하여 "modified externally" 대화상자가 뜨지 않음.
+            AssetDatabase.Refresh();
             return ProtocolJson.Serialize(new PrefabMutationPayload
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),

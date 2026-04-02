@@ -89,8 +89,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 {
                     throw new CommandFailureException("SCENE_SAVE_FAILED", "scene를 저장하지 못했습니다: " + path);
                 }
-
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                // Unity 6+: SaveScene 후 ImportAsset 대신 Refresh를 써야
+                // file watcher가 변경을 동기 인식하여 "modified externally" 대화상자가 뜨지 않음.
+                AssetDatabase.Refresh();
                 return ProtocolJson.Serialize(new SceneMutationPayload
                 {
                     asset = AssetCommandSupport.BuildRecordFromPath(path),
