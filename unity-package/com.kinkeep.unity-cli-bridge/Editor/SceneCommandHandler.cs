@@ -89,8 +89,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 {
                     throw new CommandFailureException("SCENE_SAVE_FAILED", "scene를 저장하지 못했습니다: " + path);
                 }
-
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
                 return ProtocolJson.Serialize(new SceneMutationPayload
                 {
                     asset = AssetCommandSupport.BuildRecordFromPath(path),

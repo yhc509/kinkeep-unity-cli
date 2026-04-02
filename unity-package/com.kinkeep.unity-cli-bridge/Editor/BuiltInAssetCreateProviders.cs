@@ -148,6 +148,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             {
                                 throw new CommandFailureException("ASSET_CREATE_FAILED", "scene를 저장하지 못했습니다: " + request.AssetPath);
                             }
+                            AssetDatabase.Refresh();
                         }
                         finally
                         {
