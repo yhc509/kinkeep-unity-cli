@@ -42,6 +42,12 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine("- `local`: resolved inside the CLI without Unity IPC.");
         builder.AppendLine("- `live`: executed against a running Unity Editor over local IPC.");
         builder.AppendLine();
+        builder.AppendLine("## Project Selection");
+        builder.AppendLine();
+        builder.AppendLine("- `--project <path|name>` accepts either a Unity project path or a registered project name.");
+        builder.AppendLine("- If the token is an existing directory, path resolution takes precedence over registry-name matching.");
+        builder.AppendLine("- If it is neither, the CLI returns a usage error instead of hashing the current working directory.");
+        builder.AppendLine();
 
         foreach (CliCommandGroup group in CommandGroups)
         {

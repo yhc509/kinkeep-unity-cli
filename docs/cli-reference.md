@@ -15,6 +15,12 @@ Project-specific extension providers can still add more `asset create` types at 
 - `local`: resolved inside the CLI without Unity IPC.
 - `live`: executed against a running Unity Editor over local IPC.
 
+## Project Selection
+
+- `--project <path|name>` accepts either a Unity project path or a registered project name.
+- If the token is an existing directory, path resolution takes precedence over registry-name matching.
+- If it is neither, the CLI returns a usage error instead of hashing the current working directory.
+
 ## Editor Control
 
 Commands for editor state, compilation, play state, menus, arbitrary code execution, project-defined custom commands, and console access.
@@ -100,7 +106,7 @@ Commands for selecting the active Unity project target from the local registry.
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
 | `instances list` | `instances list` | local | Lists known Unity project instances and the active registry selection. |
-| `instances use` | `instances use <projectHash\|projectPath>` | local | Pins the active target project by hash or project path. |
+| `instances use` | `instances use <projectHash\|projectPath\|projectName>` | local | Pins the active target project by hash, project path, or registered project name. Existing directory paths win over name matches. |
 
 ## Diagnostics
 

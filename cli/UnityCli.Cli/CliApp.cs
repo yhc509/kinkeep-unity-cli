@@ -22,13 +22,13 @@ public static class CliApp
 
             var registryStore = new InstanceRegistryStore();
             var locator = new UnityProjectLocator();
-            var projectRoot = ResolveProjectRoot(parsed, locator);
+            var projectRoot = ResolveProjectRoot(parsed, locator, registryStore);
 
             var response = parsed.Kind switch
             {
                 CommandKind.Status => await RunStatusAsync(registryStore, projectRoot),
                 CommandKind.InstancesList => ListInstances(registryStore, projectRoot),
-                CommandKind.InstancesUse => UseInstance(registryStore, parsed, projectRoot),
+                CommandKind.InstancesUse => UseInstance(registryStore, parsed),
                 CommandKind.Doctor => await RunDoctorAsync(registryStore, locator, parsed, projectRoot),
                 _ => await ExecuteUnityCommandAsync(parsed, registryStore, projectRoot),
             };
@@ -67,11 +67,21 @@ public static class CliApp
         }
     }
 
-    private static string? ResolveProjectRoot(ParsedCommand parsed, UnityProjectLocator locator)
+    private static string? ResolveProjectRoot(
+        ParsedCommand parsed,
+        UnityProjectLocator locator,
+        InstanceRegistryStore registryStore)
     {
         if (!string.IsNullOrWhiteSpace(parsed.ProjectOverride))
         {
-            return ProtocolConstants.GetCanonicalPath(parsed.ProjectOverride);
+            var projectOverride = parsed.ProjectOverride.Trim();
+            if (Directory.Exists(projectOverride))
+            {
+                return ProtocolConstants.GetCanonicalPath(projectOverride);
+            }
+
+            var registry = registryStore.Load();
+            return registryStore.ResolveProjectRootOverride(registry, projectOverride);
         }
 
         return locator.TryFindProjectRoot(Environment.CurrentDirectory);
@@ -99,15 +109,15 @@ public static class CliApp
             transport: "cli");
     }
 
-    private static ResponseEnvelope UseInstance(InstanceRegistryStore registryStore, ParsedCommand parsed, string? projectRoot)
+    private static ResponseEnvelope UseInstance(InstanceRegistryStore registryStore, ParsedCommand parsed)
     {
         if (string.IsNullOrWhiteSpace(parsed.InstanceTarget))
         {
-            throw new CliUsageException("`instances use`에는 project hash 또는 project path가 필요합니다.");
+            throw new CliUsageException("`instances use`에는 project hash, project path 또는 project name이 필요합니다.");
         }
 
         var registry = registryStore.Load();
-        var target = registryStore.ResolveOrCreateTarget(registry, parsed.InstanceTarget!, projectRoot);
+        var target = registryStore.ResolveOrCreateTarget(registry, parsed.InstanceTarget!);
         registry.activeProjectHash = target.projectHash;
         registryStore.Save(registry);
 
@@ -265,7 +275,7 @@ public static class CliApp
             "Unity Editor가 실행 중이지 않거나 Bridge가 활성화되지 않았습니다.",
             retryable: false,
             transport: "cli",
-            details: "Unity 프로젝트 루트에서 실행하거나 `unity-cli instances use <projectPath>`로 대상을 고정하세요.");
+            details: "Unity 프로젝트 루트에서 실행하거나 `unity-cli instances use <projectHash|projectPath|projectName>`로 대상을 고정하세요.");
     }
 
     private static ResponseEnvelope CreateLiveUnavailableResponse(string? projectHash, string? details)

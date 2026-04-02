@@ -417,8 +417,8 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false),
             new CliCommandDescriptor(
                 "instances use",
-                "instances use <projectHash|projectPath>",
-                "Pins the active target project by hash or project path.",
+                "instances use <projectHash|projectPath|projectName>",
+                "Pins the active target project by hash, project path, or registered project name. Existing directory paths win over name matches.",
                 CliCommandGroup.InstanceManagement,
                 protocolCommand: null,
                 canUseLocal: true,
@@ -453,7 +453,10 @@ namespace UnityCli.Protocol
         public static string BuildHelpText()
         {
             var builder = new StringBuilder();
-            builder.AppendLine("usage: unity-cli [--json] [--project <path>] <command> [options]");
+            builder.AppendLine("usage: unity-cli [--json] [--project <path|name>] <command> [options]");
+            builder.AppendLine();
+            builder.AppendLine("options:");
+            builder.AppendLine("  --project <path|name>  Existing directory paths take precedence over registered project names.");
             builder.AppendLine();
             builder.AppendLine("commands:");
             foreach (CliCommandDescriptor command in _commands)

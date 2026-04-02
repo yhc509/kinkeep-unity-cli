@@ -62,7 +62,7 @@ internal sealed class CliUsagePresentation
 
 internal static class CliUsageHelp
 {
-    private const string GlobalUsage = "usage: unity-cli [--json] [--project <path>] <command> [options]";
+    private const string GlobalUsage = "usage: unity-cli [--json] [--project <path|name>] <command> [options]";
     private static readonly Regex OptionPattern = new(@"--[a-z0-9-]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static CliUsagePresentation Build(string[] args, string message, ParsedCommand? parsed)
@@ -167,7 +167,7 @@ internal static class CliUsageHelp
 
     private static string BuildRootUsage(string rootCommand)
     {
-        return $"usage: unity-cli [--json] [--project <path>] {rootCommand} <subcommand> [options]";
+        return $"usage: unity-cli [--json] [--project <path|name>] {rootCommand} <subcommand> [options]";
     }
 
     private static string? TryBuildCommandUsage(string commandPath)
@@ -178,7 +178,7 @@ internal static class CliUsageHelp
             return null;
         }
 
-        return "usage: unity-cli [--json] [--project <path>] " + descriptor.Synopsis;
+        return "usage: unity-cli [--json] [--project <path|name>] " + descriptor.Synopsis;
     }
 
     private static string[] GetTopLevelCommands()

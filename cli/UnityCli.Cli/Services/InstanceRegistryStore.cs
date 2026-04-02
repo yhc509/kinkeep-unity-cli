@@ -37,9 +37,73 @@ public sealed class InstanceRegistryStore
         File.WriteAllText(_registryPath, json);
     }
 
-    public InstanceRecord ResolveOrCreateTarget(InstanceRegistry registry, string input, string? fallbackProjectRoot)
+    private static string? ResolveProjectRootByName(InstanceRegistry registry, string projectName)
+    {
+        if (string.IsNullOrWhiteSpace(projectName))
+        {
+            return null;
+        }
+
+        var trimmedProjectName = projectName.Trim();
+        registry.instances ??= Array.Empty<InstanceRecord>();
+
+        var matches = registry.instances
+            .Where(item => string.Equals(item.projectName, trimmedProjectName, StringComparison.OrdinalIgnoreCase))
+            .Select(item => ProtocolConstants.GetCanonicalPath(item.projectRoot))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            return null;
+        }
+
+        if (matches.Length > 1)
+        {
+            throw CreateAmbiguousProjectNameException(trimmedProjectName, matches);
+        }
+
+        return matches[0];
+    }
+
+    private static string? TryResolveProjectRootOverride(InstanceRegistry registry, string input)
     {
         var trimmed = input.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return null;
+        }
+
+        if (Directory.Exists(trimmed))
+        {
+            return ProtocolConstants.GetCanonicalPath(trimmed);
+        }
+
+        return ResolveProjectRootByName(registry, trimmed);
+    }
+
+    private static CliUsageException CreateUnknownProjectOverrideException(string input)
+    {
+        return new CliUsageException(
+            $"'{input}' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.");
+    }
+
+    private static CliUsageException CreateUnknownInstanceTargetException(string input)
+    {
+        return new CliUsageException(
+            $"'{input}' is not a known project hash, a registered project name, or a valid directory path. Run 'unity-cli instances list' to see registered projects.");
+    }
+
+    public InstanceRecord ResolveOrCreateTarget(InstanceRegistry registry, string input)
+    {
+        registry.instances ??= Array.Empty<InstanceRecord>();
+
+        var trimmed = input.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new CliUsageException("project hash, project path 또는 project name이 필요합니다.");
+        }
+
         if (trimmed.Length == 12 && !trimmed.Contains(Path.DirectorySeparatorChar) && !trimmed.Contains(Path.AltDirectorySeparatorChar))
         {
             var existing = registry.instances.FirstOrDefault(item => item.projectHash == trimmed);
@@ -49,19 +113,20 @@ public sealed class InstanceRegistryStore
             }
         }
 
-        var projectRoot = Directory.Exists(trimmed)
-            ? ProtocolConstants.GetCanonicalPath(trimmed)
-            : fallbackProjectRoot;
-
+        var projectRoot = TryResolveProjectRootOverride(registry, trimmed);
         if (string.IsNullOrWhiteSpace(projectRoot))
         {
-            throw new CliUsageException("project path를 찾을 수 없습니다.");
+            throw CreateUnknownInstanceTargetException(trimmed);
         }
 
         var projectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
         var match = registry.instances.FirstOrDefault(item => item.projectHash == projectHash);
         if (match is not null)
         {
+            match.projectRoot = projectRoot;
+            match.projectName = string.IsNullOrWhiteSpace(match.projectName) ? Path.GetFileName(projectRoot) : match.projectName;
+            match.projectHash = projectHash;
+            match.pipeName = string.IsNullOrWhiteSpace(match.pipeName) ? ProtocolConstants.BuildPipeName(projectHash) : match.pipeName;
             return match;
         }
 
@@ -77,6 +142,18 @@ public sealed class InstanceRegistryStore
 
         registry.instances = registry.instances.Append(created).ToArray();
         return created;
+    }
+
+    public string ResolveProjectRootOverride(InstanceRegistry registry, string input)
+    {
+        var trimmed = input.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new CliUsageException("project path 또는 project name이 필요합니다.");
+        }
+
+        return TryResolveProjectRootOverride(registry, trimmed)
+            ?? throw CreateUnknownProjectOverrideException(trimmed);
     }
 
     private static InstanceRegistry Sanitize(InstanceRegistry registry)
@@ -200,5 +277,11 @@ public sealed class InstanceRegistryStore
             (false, true) => -1,
             _ => 0,
         };
+    }
+
+    private static CliUsageException CreateAmbiguousProjectNameException(string projectName, string[] candidatePaths)
+    {
+        return new CliUsageException(
+            $"등록된 프로젝트 이름이 중복되어 대상을 결정할 수 없습니다: {projectName}. project path를 사용하세요. 후보: {string.Join(", ", candidatePaths)}");
     }
 }

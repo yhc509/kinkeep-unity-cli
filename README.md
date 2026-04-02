@@ -5,7 +5,7 @@
 ## Why kinkeep-unity-cli Is Different
 
 - No manual server startup. The bridge starts automatically when the Editor opens.
-- No per-project port management. The correct Editor instance is selected from the project path and registry.
+- No per-project port management. The correct Editor instance is selected from the project path, registered project name, and registry.
 - One live command surface. Commands run through local IPC against a running Unity Editor with the bridge active.
 - Scene, asset, material, package, and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create`, `material info/set`, `package list/add/remove/search`, `scene open/inspect/patch`, scene object shortcuts like `scene add-object` and `scene set-transform`, and `prefab create/inspect/patch`.
 - Project-defined live commands can be exposed through a lightweight `[PucCommand]` extension API instead of adding one-off transport code.
@@ -50,6 +50,8 @@ Current command surface, at a glance:
 - Package management: `package list`, `package add`, `package remove`, `package search`
 - Scene workflows: `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`
 - Prefab workflows: `prefab inspect`, `prefab create`, `prefab patch`
+
+Any command that accepts `--project` can target either an actual Unity project path or a registered project name from the local instance registry. Existing directory paths take precedence over registry-name matches, and invalid values fail fast with a usage error instead of hashing the current working directory. If multiple registered projects share the same name, use the full project path.
 
 ## Quick Start
 

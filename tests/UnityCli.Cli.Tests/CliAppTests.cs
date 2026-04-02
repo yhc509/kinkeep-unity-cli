@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using UnityCli.Cli.Services;
 using UnityCli.Protocol;
 
 namespace UnityCli.Cli.Tests;
@@ -22,7 +23,7 @@ public sealed class CliAppTests
         Assert.Contains("알 수 없는 명령", response.error?.message);
 
         var details = ParseDetails(response.error?.details);
-        Assert.Equal("usage: unity-cli [--json] [--project <path>] <command> [options]", details.GetProperty("usage").GetString());
+        Assert.Equal("usage: unity-cli [--json] [--project <path|name>] <command> [options]", details.GetProperty("usage").GetString());
         Assert.Equal("status", details.GetProperty("suggestions")[0].GetString());
     }
 
@@ -57,7 +58,7 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path>] asset delete --path <Assets/...> --force",
+            "usage: unity-cli [--json] [--project <path|name>] asset delete --path <Assets/...> --force",
             details.GetProperty("usage").GetString());
     }
 
@@ -75,7 +76,7 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path>] status",
+            "usage: unity-cli [--json] [--project <path|name>] status",
             details.GetProperty("usage").GetString());
     }
 
@@ -91,6 +92,17 @@ public sealed class CliAppTests
         Assert.Equal("error", response.status);
         Assert.Equal("NO_TARGET", response.error?.code);
         Assert.Equal("cli", response.transport);
+    }
+
+    [Fact]
+    public async Task RunAsync_Help_ExplainsProjectPathPriority()
+    {
+        var result = await InvokeAsync(["help"]);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", result.Stdout);
+        Assert.Contains("--project <path|name>  Existing directory paths take precedence over registered project names.", result.Stdout);
     }
 
     [Fact]
@@ -115,6 +127,130 @@ public sealed class CliAppTests
         Assert.Equal("LIVE_UNAVAILABLE", response.error?.code);
         Assert.Equal(expectedProjectHash, response.target);
         Assert.DoesNotContain(otherProjectHash, result.Stdout);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonProjectOverride_ProjectName_UsesRegisteredProjectRoot()
+    {
+        using var projects = new TempDirectory();
+        string projectRoot = CreateUnityProject(projects.Path, "SampleProject");
+        string expectedProjectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
+        string registryContents =
+            $$"""
+            {"instances":[{"projectRoot":"{{projectRoot.Replace("\\", "\\\\")}}","projectName":"SampleProject","projectHash":"{{expectedProjectHash}}","pipeName":"{{ProtocolConstants.BuildPipeName(expectedProjectHash).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            """;
+
+        var result = await InvokeAsync(["--json", "--project", "SampleProject", "compile"], registryContents: registryContents);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("LIVE_UNAVAILABLE", response.error?.code);
+        Assert.Equal(expectedProjectHash, response.target);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonProjectOverride_ProjectName_WhenRegistryDoesNotMatch_ReturnsUsageError()
+    {
+        const string projectOverride = "KinKeep";
+        var result = await InvokeAsync(["--json", "--project", projectOverride, "compile"], registryContents: "{\"instances\":[]}");
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("CLI_USAGE", response.error?.code);
+        Assert.Equal(
+            "'KinKeep' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
+            response.error?.message);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonProjectOverride_DotPath_UsesCurrentProjectPath()
+    {
+        using var temp = new TempDirectory();
+        string projectRoot = CreateUnityProject(temp.Path, "SampleProject");
+        string expectedProjectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
+
+        var result = await InvokeAsync(["--json", "--project", ".", "compile"], currentDirectory: projectRoot);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("LIVE_UNAVAILABLE", response.error?.code);
+        Assert.Equal(expectedProjectHash, response.target);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonProjectOverride_ProjectName_WhenAmbiguous_ReturnsUsageError()
+    {
+        using var projects = new TempDirectory();
+        string firstProjectRoot = CreateUnityProject(projects.Path, "SampleProjectA");
+        string secondProjectRoot = CreateUnityProject(projects.Path, "SampleProjectB");
+        string registryContents =
+            $$"""
+            {"instances":[{"projectRoot":"{{firstProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{ProtocolConstants.ComputeProjectHash(firstProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(firstProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]},{"projectRoot":"{{secondProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{ProtocolConstants.ComputeProjectHash(secondProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(secondProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":5678,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            """;
+
+        var result = await InvokeAsync(["--json", "--project", "KinKeep", "compile"], registryContents: registryContents);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("CLI_USAGE", response.error?.code);
+        Assert.Contains("중복되어", response.error?.message);
+        Assert.Contains(ProtocolConstants.GetCanonicalPath(firstProjectRoot), response.error?.message);
+        Assert.Contains(ProtocolConstants.GetCanonicalPath(secondProjectRoot), response.error?.message);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonProjectOverride_PathTakesPrecedenceOverRegisteredProjectName()
+    {
+        using var projects = new TempDirectory();
+        string pathProjectRoot = CreateUnityProject(projects.Path, "KinKeep");
+        string registeredProjectRoot = CreateUnityProject(projects.Path, "RegisteredProject");
+        string pathProjectHash = ProtocolConstants.ComputeProjectHash(pathProjectRoot);
+        string registeredProjectHash = ProtocolConstants.ComputeProjectHash(registeredProjectRoot);
+        string registryContents =
+            $$"""
+            {"instances":[{"projectRoot":"{{registeredProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{registeredProjectHash}}","pipeName":"{{ProtocolConstants.BuildPipeName(registeredProjectHash).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            """;
+
+        var result = await InvokeAsync(
+            ["--json", "--project", "KinKeep", "compile"],
+            registryContents: registryContents,
+            currentDirectory: projects.Path);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("LIVE_UNAVAILABLE", response.error?.code);
+        Assert.Equal(pathProjectHash, response.target);
+        Assert.NotEqual(registeredProjectHash, response.target);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonInstancesUse_ProjectName_WhenRegistryDoesNotMatch_ReturnsUsageError()
+    {
+        using var temp = new TempDirectory();
+        string fallbackProjectRoot = CreateUnityProject(temp.Path, "FallbackProject");
+        var result = await InvokeAsync(
+            ["--json", "instances", "use", "TypoProject"],
+            registryContents: "{\"instances\":[]}",
+            currentDirectory: fallbackProjectRoot);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("CLI_USAGE", response.error?.code);
+        Assert.Equal(
+            "'TypoProject' is not a known project hash, a registered project name, or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
+            response.error?.message);
     }
 
     [Fact]
@@ -146,7 +282,7 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path>] raw --json '{\"command\":\"status\",\"arguments\":{}}'",
+            "usage: unity-cli [--json] [--project <path|name>] raw --json '{\"command\":\"status\",\"arguments\":{}}'",
             details.GetProperty("usage").GetString());
     }
 
@@ -185,7 +321,7 @@ public sealed class CliAppTests
         Assert.Equal(string.Empty, result.Stdout);
         Assert.Contains("--force", result.Stderr);
         Assert.Contains(
-            "usage: unity-cli [--json] [--project <path>] asset delete --path <Assets/...> --force",
+            "usage: unity-cli [--json] [--project <path|name>] asset delete --path <Assets/...> --force",
             result.Stderr);
     }
 
@@ -197,7 +333,16 @@ public sealed class CliAppTests
         Assert.Equal(2, result.ExitCode);
         Assert.Equal(string.Empty, result.Stdout);
         Assert.Contains("지원하지 않는 옵션입니다: --verbose", result.Stderr);
-        Assert.Contains("usage: unity-cli [--json] [--project <path>] status", result.Stderr);
+        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] status", result.Stderr);
+    }
+
+    [Fact]
+    public void BuildHelpText_DescribesProjectPathPrecedence()
+    {
+        var helpText = CliCommandMetadata.BuildHelpText();
+
+        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", helpText);
+        Assert.Contains("Existing directory paths take precedence over registered project names.", helpText);
     }
 
     private static ResponseEnvelope ParseResponse(string stdout)
@@ -212,7 +357,10 @@ public sealed class CliAppTests
         return JsonSerializer.Deserialize<JsonElement>(details!);
     }
 
-    private static async Task<CliInvocationResult> InvokeAsync(string[] args, string? registryContents = null)
+    private static async Task<CliInvocationResult> InvokeAsync(
+        string[] args,
+        string? registryContents = null,
+        string? currentDirectory = null)
     {
         await ConsoleLock.WaitAsync();
 
@@ -236,7 +384,7 @@ public sealed class CliAppTests
             try
             {
                 Environment.SetEnvironmentVariable("UNITY_CLI_REGISTRY_PATH", registryPath);
-                Environment.CurrentDirectory = temp.Path;
+                Environment.CurrentDirectory = currentDirectory ?? temp.Path;
                 Console.SetOut(stdout);
                 Console.SetError(stderr);
 
