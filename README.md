@@ -15,6 +15,7 @@
 
 - Check editor state from the terminal with `status`, `refresh`, and `compile`.
 - Drive live editor behavior with `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, and `read-console`.
+- Drive Play Mode QA workflows with `qa click`, `qa tap`, `qa swipe`, `qa key`, `qa wait`, and `qa wait-until`.
 - Query and manage assets with `asset find`, `asset info`, `asset create`, `asset move`, `asset rename`, `asset reimport`, and `asset delete`.
 - Inspect and update material shader properties with `material info` and `material set`.
 - Inspect and manage Unity packages with `package list`, `package add`, `package remove`, and `package search`.
@@ -38,8 +39,8 @@ This repository is organized into three parts.
 
 ## Current Status
 
-- Live IPC is the only supported execution mode.
-- Asset find/create/move/delete, material info/set, package list/add/remove/search, scene open/inspect/patch plus scene convenience shortcuts, and prefab create/inspect/patch are supported.
+- Live IPC is the only supported editor transport, and a small set of CLI utilities such as registry commands, diagnostics, and `qa wait` are handled locally.
+- Asset find/create/move/delete, material info/set, package list/add/remove/search, Play Mode QA commands, scene open/inspect/patch plus scene convenience shortcuts, and prefab create/inspect/patch are supported.
 - Release validation is currently focused on `macOS arm64`.
 
 Current command surface, at a glance:
@@ -47,6 +48,7 @@ Current command surface, at a glance:
 - Editor control: `status`, `refresh`, `compile`, `play`, `pause`, `stop`, `execute-menu`, `execute`, `custom`, `screenshot`, `read-console`
 - Asset workflows: `asset find`, `asset types`, `asset info`, `asset reimport`, `asset mkdir`, `asset move`, `asset rename`, `asset delete`, `asset create`
 - Material workflows: `material info`, `material set`
+- QA workflows: `qa click`, `qa tap`, `qa swipe`, `qa key`, `qa wait`, `qa wait-until`
 - Package management: `package list`, `package add`, `package remove`, `package search`
 - Scene workflows: `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`
 - Prefab workflows: `prefab inspect`, `prefab create`, `prefab patch`
@@ -97,6 +99,14 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --json
 ./dist/unity-cli/UnityCli.Cli screenshot --project "$PROJECT_ROOT" --view game --path /tmp/game-view.png --json
 ./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"KinKeep smoke\");" --force --json
+```
+
+QA smoke tests:
+
+```bash
+./dist/unity-cli/UnityCli.Cli qa wait --ms 250 --json
+./dist/unity-cli/UnityCli.Cli qa click --project "$PROJECT_ROOT" --qa-id StartButton --json
+./dist/unity-cli/UnityCli.Cli qa wait-until --project "$PROJECT_ROOT" --scene SampleScene --timeout 5000 --json
 ```
 
 Custom command smoke test:
@@ -224,7 +234,8 @@ dotnet run --project cli/UnityCli.DocGen -- --check
 
 Unity integration:
 
-- Live: `status`, `refresh`, `compile`, `execute`, `custom`, `screenshot`, `asset find`, `asset info`, `asset create`, `material info`, `material set`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
+- Live: `status`, `refresh`, `compile`, `execute`, `custom`, `screenshot`, `asset find`, `asset info`, `asset create`, `material info`, `material set`, `qa click`, `qa tap`, `qa swipe`, `qa key`, `qa wait-until`, `package list`, `package add`, `package remove`, `package search`, `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`, `prefab create`, `prefab inspect`, `prefab patch`
+- Local: `qa wait`, `instances list`, `instances use`, `doctor`
 - Commands require a running Unity Editor with the bridge active. If live IPC is unavailable, the CLI returns an error instead of trying any editor-off fallback.
 - After live work, always check `read-console --type error` and `read-console --type warning`.
 

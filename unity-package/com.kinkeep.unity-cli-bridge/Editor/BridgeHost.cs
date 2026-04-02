@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -47,7 +48,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private readonly CustomCommandHandler _customCommandHandler;
         private readonly PackageCommandHandler _packageCommandHandler;
         private readonly MaterialCommandHandler _materialCommandHandler;
-        private Socket _unixListener;
+        private readonly QaCommandHandler _qaCommandHandler;
+        private Socket? _unixListener;
         private double _lastHeartbeatTime;
         private bool _isStarted;
         private bool _isDisposed;
@@ -68,6 +70,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             _customCommandHandler = new CustomCommandHandler();
             _packageCommandHandler = new PackageCommandHandler();
             _materialCommandHandler = new MaterialCommandHandler();
+            _qaCommandHandler = new QaCommandHandler();
         }
 
         public void Start()
@@ -202,13 +205,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true))
             using (var reader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
             {
-                string line = await reader.ReadLineAsync();
+                string? line = await reader.ReadLineAsync();
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     return;
                 }
 
-                CommandEnvelope command = ProtocolJson.Deserialize<CommandEnvelope>(line);
+                CommandEnvelope? command = ProtocolJson.Deserialize<CommandEnvelope>(line);
                 if (command == null || string.IsNullOrWhiteSpace(command.command))
                 {
                     string requestId = command != null && !string.IsNullOrWhiteSpace(command.requestId)
@@ -281,8 +284,63 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             while (_pendingRequests.TryDequeue(out PendingRequest pending))
             {
+                if (pending.Completion.Task.IsCompleted)
+                {
+                    continue;
+                }
+
+                if (_qaCommandHandler.CanHandle(pending.Command.command) && _qaCommandHandler.IsDeferred(pending.Command.command))
+                {
+                    StartDeferredQaRequest(pending);
+                    continue;
+                }
+
                 ResponseEnvelope response = HandleCommand(pending.Command);
                 pending.Completion.TrySetResult(response);
+            }
+        }
+
+        private void StartDeferredQaRequest(PendingRequest pending)
+        {
+            CommandEnvelope command = pending.Command;
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                if (IsBusyEditorCommand(command.command))
+                {
+                    stopwatch.Stop();
+                    pending.Completion.TrySetResult(BuildBusyResponse(command, stopwatch.ElapsedMilliseconds));
+                    return;
+                }
+
+                _qaCommandHandler.StartDeferred(command.command, command.argumentsJson, pending.Completion, _projectHash);
+            }
+            catch (CommandFailureException exception)
+            {
+                stopwatch.Stop();
+                pending.Completion.TrySetResult(ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    exception.ErrorCode,
+                    exception.Message,
+                    exception.IsRetryable,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.Details));
+            }
+            catch (Exception exception)
+            {
+                stopwatch.Stop();
+                pending.Completion.TrySetResult(ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    "COMMAND_FAILED",
+                    exception.Message,
+                    false,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.ToString()));
             }
         }
 
@@ -305,15 +363,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 if (IsBusyEditorCommand(command.command))
                 {
                     stopwatch.Stop();
-                    return ResponseEnvelope.Failure(
-                        command.requestId,
-                        _projectHash,
-                        ProtocolConstants.BusyErrorCode,
-                        "Unity가 compile/update 중이라 지금 명령을 처리할 수 없습니다.",
-                        true,
-                        stopwatch.ElapsedMilliseconds,
-                        ProtocolConstants.TransportLive,
-                        null);
+                    return BuildBusyResponse(command, stopwatch.ElapsedMilliseconds);
                 }
 
                 string dataJson;
@@ -344,6 +394,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 else if (_materialCommandHandler.CanHandle(command.command))
                 {
                     dataJson = _materialCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_qaCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _qaCommandHandler.Handle(command.command, command.argumentsJson);
                 }
                 else if (_packageCommandHandler.CanHandle(command.command))
                 {
@@ -446,6 +500,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return !ProtocolHelpers.IsCommandAllowedWhileBusy(command);
         }
 
+        private ResponseEnvelope BuildBusyResponse(CommandEnvelope command, long durationMs)
+        {
+            return ResponseEnvelope.Failure(
+                command.requestId,
+                _projectHash,
+                ProtocolConstants.BusyErrorCode,
+                "Unity가 compile/update 중이라 지금 명령을 처리할 수 없습니다.",
+                true,
+                durationMs,
+                ProtocolConstants.TransportLive,
+                null);
+        }
+
         private string BuildStatusJson()
         {
             return ProtocolJson.Serialize(new StatusPayload
@@ -498,7 +565,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 records.Add(BuildInstanceRecord());
                 registry.instances = records.OrderBy(record => record.projectName, StringComparer.OrdinalIgnoreCase).ToArray();
 
-                InstanceRecord activeRecord = null;
+                InstanceRecord? activeRecord = null;
                 if (!string.IsNullOrWhiteSpace(registry.activeProjectHash))
                 {
                     activeRecord = registry.instances.FirstOrDefault(
@@ -630,7 +697,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             public PendingRequest(CommandEnvelope command)
             {
                 Command = command;
-                Completion = new TaskCompletionSource<ResponseEnvelope>(TaskCreationOptions.RunContinuationsAsynchronously);
+                Completion = new TaskCompletionSource<ResponseEnvelope>(
+                    command.requestId,
+                    TaskCreationOptions.RunContinuationsAsynchronously);
             }
 
             public CommandEnvelope Command { get; private set; }

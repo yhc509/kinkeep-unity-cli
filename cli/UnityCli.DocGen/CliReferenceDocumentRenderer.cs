@@ -15,6 +15,7 @@ public static class CliReferenceDocumentRenderer
         CliCommandGroup.PrefabWorkflows,
         CliCommandGroup.PackageManagement,
         CliCommandGroup.MaterialWorkflows,
+        CliCommandGroup.QaWorkflows,
         CliCommandGroup.InstanceManagement,
         CliCommandGroup.Diagnostics,
     };
@@ -162,6 +163,7 @@ public static class CliReferenceDocumentRenderer
             CliCommandGroup.PrefabWorkflows => "Prefab Workflows",
             CliCommandGroup.PackageManagement => "Package Management",
             CliCommandGroup.MaterialWorkflows => "Material Workflows",
+            CliCommandGroup.QaWorkflows => "QA Workflows",
             CliCommandGroup.InstanceManagement => "Instance Management",
             CliCommandGroup.Diagnostics => "Diagnostics",
             _ => group.ToString(),
@@ -178,6 +180,7 @@ public static class CliReferenceDocumentRenderer
             CliCommandGroup.PrefabWorkflows => "Commands for inspecting, creating, and patching prefab assets.",
             CliCommandGroup.PackageManagement => "Commands for listing, adding, removing, and searching Unity packages.",
             CliCommandGroup.MaterialWorkflows => "Commands for inspecting and mutating material properties and texture slots.",
+            CliCommandGroup.QaWorkflows => "Commands for Play Mode QA interactions such as click, tap, swipe, key input, and wait conditions.",
             CliCommandGroup.InstanceManagement => "Commands for selecting the active Unity project target from the local registry.",
             CliCommandGroup.Diagnostics => "Low-level commands for environment inspection and raw protocol debugging.",
             _ => string.Empty,

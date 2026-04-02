@@ -48,6 +48,12 @@ public enum CommandKind
     Custom,
     MaterialInfo,
     MaterialSet,
+    QaClick,
+    QaTap,
+    QaSwipe,
+    QaKey,
+    QaWait,
+    QaWaitUntil,
 }
 
 public sealed class ParsedCommand
@@ -123,6 +129,19 @@ public sealed class ParsedCommand
     public string? PrefabSpecJson { get; set; }
     public bool PrefabWithValues { get; set; }
     public bool Force { get; set; }
+    public string? QaId { get; set; }
+    public string? QaTarget { get; set; }
+    public int? QaTapX { get; set; }
+    public int? QaTapY { get; set; }
+    public string? QaSwipeFrom { get; set; }
+    public string? QaSwipeTo { get; set; }
+    public int QaSwipeDuration { get; set; } = ProtocolConstants.DefaultQaSwipeDurationMs;
+    public string? QaKeyName { get; set; }
+    public int QaWaitMs { get; set; }
+    public string? QaWaitScene { get; set; }
+    public string? QaWaitLogContains { get; set; }
+    public string? QaWaitObjectExists { get; set; }
+    public int QaWaitTimeout { get; set; } = ProtocolConstants.DefaultQaWaitUntilTimeoutMs;
 
     public CommandEnvelope ToEnvelope()
     {
@@ -176,6 +195,11 @@ public sealed class ParsedCommand
                 CommandKind.Custom => ProtocolConstants.CommandCustom,
                 CommandKind.MaterialInfo => ProtocolConstants.CommandMaterialInfo,
                 CommandKind.MaterialSet => ProtocolConstants.CommandMaterialSet,
+                CommandKind.QaClick => ProtocolConstants.CommandQaClick,
+                CommandKind.QaTap => ProtocolConstants.CommandQaTap,
+                CommandKind.QaSwipe => ProtocolConstants.CommandQaSwipe,
+                CommandKind.QaKey => ProtocolConstants.CommandQaKey,
+                CommandKind.QaWaitUntil => ProtocolConstants.CommandQaWaitUntil,
                 CommandKind.AssetFind => ProtocolConstants.CommandAssetFind,
                 CommandKind.AssetTypes => ProtocolConstants.CommandAssetTypes,
                 CommandKind.AssetInfo => ProtocolConstants.CommandAssetInfo,
@@ -258,6 +282,35 @@ public sealed class ParsedCommand
                 value = MaterialValue,
                 texture = MaterialTexture,
                 textureAsset = MaterialTextureAsset,
+            },
+            CommandKind.QaClick => new QaClickArgs
+            {
+                qaId = QaId,
+                target = QaTarget,
+            },
+            CommandKind.QaTap => new QaTapArgs
+            {
+                x = QaTapX ?? 0,
+                y = QaTapY ?? 0,
+            },
+            CommandKind.QaSwipe => new QaSwipeArgs
+            {
+                fromX = ParseCoordinate(QaSwipeFrom, 0),
+                fromY = ParseCoordinate(QaSwipeFrom, 1),
+                toX = ParseCoordinate(QaSwipeTo, 0),
+                toY = ParseCoordinate(QaSwipeTo, 1),
+                durationMs = QaSwipeDuration,
+            },
+            CommandKind.QaKey => new QaKeyArgs
+            {
+                key = QaKeyName ?? string.Empty,
+            },
+            CommandKind.QaWaitUntil => new QaWaitUntilArgs
+            {
+                scene = QaWaitScene,
+                logContains = QaWaitLogContains,
+                objectExists = QaWaitObjectExists,
+                timeoutMs = QaWaitTimeout,
             },
             CommandKind.AssetFind => new AssetFindArgs
             {
@@ -428,6 +481,22 @@ public sealed class ParsedCommand
         }
 
         return ExecuteCodeSnippet ?? string.Empty;
+    }
+
+    private static int ParseCoordinate(string? csv, int index)
+    {
+        if (string.IsNullOrWhiteSpace(csv))
+        {
+            return 0;
+        }
+
+        var parts = csv.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length <= index || !int.TryParse(parts[index], out var value))
+        {
+            return 0;
+        }
+
+        return value;
     }
 
     private string ResolvePrefabSpecJson()

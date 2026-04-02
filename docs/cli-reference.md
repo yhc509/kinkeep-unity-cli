@@ -101,6 +101,19 @@ Commands for inspecting and mutating material properties and texture slots.
 | `material info` | `material info --path <Assets/...mat>` | live | Inspects a material's shader and property values. |
 | `material set` | `material set --path <Assets/...mat> (--property <name> --value <val> \| --texture <name> --asset <Assets/...>)` | live | Sets a material property value or texture. |
 
+## QA Workflows
+
+Commands for Play Mode QA interactions such as click, tap, swipe, key input, and wait conditions.
+
+| Command | Synopsis | Modes | Summary |
+| --- | --- | --- | --- |
+| `qa click` | `qa click (--qa-id <id> \| --target <path>)` | live | Clicks a UI element identified by QA ID or GameObject path; requires Play Mode. |
+| `qa tap` | `qa tap --x <int> --y <int>` | live | Taps at a screen coordinate; requires Play Mode. |
+| `qa swipe` | `qa swipe --from <x,y> --to <x,y> [--duration <ms>]` | live | Swipes between two screen coordinates; requires Play Mode. |
+| `qa key` | `qa key --key <keyName>` | live | Simulates a key press via Input System; requires Play Mode. |
+| `qa wait` | `qa wait --ms <int>` | local | Waits for the specified number of milliseconds (local only, does not contact the editor). |
+| `qa wait-until` | `qa wait-until (--scene <name> \| --log-contains <text> \| --object-exists <qa-id\|path>) [--timeout <ms>]` | live | Polls the editor until a condition is met or timeout expires; requires Play Mode. |
+
 ## Instance Management
 
 Commands for selecting the active Unity project target from the local registry.

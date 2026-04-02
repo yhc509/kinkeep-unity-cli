@@ -396,4 +396,77 @@ namespace UnityCli.Protocol
         public string message = string.Empty;
         public string stackTrace = string.Empty;
     }
+
+    [Serializable]
+    public sealed class QaClickArgs
+    {
+        public string? qaId;
+        public string? target;
+    }
+
+    [Serializable]
+    public sealed class QaClickPayload
+    {
+        public bool targetFound;
+        public string resolvedPath = string.Empty;
+        public string? qaId;
+    }
+
+    [Serializable]
+    public sealed class QaTapArgs
+    {
+        public int x;
+        public int y;
+    }
+
+    [Serializable]
+    public sealed class QaTapPayload
+    {
+        public bool completed;
+    }
+
+    [Serializable]
+    public sealed class QaSwipeArgs
+    {
+        public int fromX;
+        public int fromY;
+        public int toX;
+        public int toY;
+        public int durationMs = ProtocolConstants.DefaultQaSwipeDurationMs;
+    }
+
+    [Serializable]
+    public sealed class QaSwipePayload
+    {
+        public bool completed;
+    }
+
+    [Serializable]
+    public sealed class QaKeyArgs
+    {
+        public string key = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class QaKeyPayload
+    {
+        public bool completed;
+    }
+
+    [Serializable]
+    public sealed class QaWaitUntilArgs
+    {
+        public string? scene;
+        public string? logContains;
+        public string? objectExists;
+        public int timeoutMs = ProtocolConstants.DefaultQaWaitUntilTimeoutMs;
+    }
+
+    [Serializable]
+    public sealed class QaWaitUntilPayload
+    {
+        public bool conditionMet;
+        public int elapsedMs;
+        public string? reason;
+    }
 }

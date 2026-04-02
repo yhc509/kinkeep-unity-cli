@@ -30,6 +30,7 @@ public static class CliApp
                 CommandKind.InstancesList => ListInstances(registryStore, projectRoot),
                 CommandKind.InstancesUse => UseInstance(registryStore, parsed),
                 CommandKind.Doctor => await RunDoctorAsync(registryStore, locator, parsed, projectRoot),
+                CommandKind.QaWait => await RunQaWait(parsed),
                 _ => await ExecuteUnityCommandAsync(parsed, registryStore, projectRoot),
             };
 
@@ -276,6 +277,23 @@ public static class CliApp
             retryable: false,
             transport: "cli",
             details: "Unity 프로젝트 루트에서 실행하거나 `unity-cli instances use <projectHash|projectPath|projectName>`로 대상을 고정하세요.");
+    }
+
+    private static Task<ResponseEnvelope> RunQaWait(ParsedCommand parsed)
+    {
+        if (parsed.QaWaitMs <= 0)
+        {
+            throw new CliUsageException("qa wait에는 --ms <밀리초>가 필요합니다.");
+        }
+
+        Thread.Sleep(parsed.QaWaitMs);
+        var payload = System.Text.Json.JsonSerializer.Serialize(new { waited = true, ms = parsed.QaWaitMs });
+        return Task.FromResult(ResponseEnvelope.Success(
+            Guid.NewGuid().ToString("N"),
+            null,
+            payload,
+            parsed.QaWaitMs,
+            "cli"));
     }
 
     private static ResponseEnvelope CreateLiveUnavailableResponse(string? projectHash, string? details)

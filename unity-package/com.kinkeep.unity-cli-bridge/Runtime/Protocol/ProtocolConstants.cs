@@ -52,6 +52,13 @@ namespace UnityCli.Protocol
         public const string CommandPrefabInspect = "prefab-inspect";
         public const string CommandPrefabCreate = "prefab-create";
         public const string CommandPrefabPatch = "prefab-patch";
+        public const string CommandQaClick = "qa-click";
+        public const string CommandQaTap = "qa-tap";
+        public const string CommandQaSwipe = "qa-swipe";
+        public const string CommandQaKey = "qa-key";
+        public const string CommandQaWaitUntil = "qa-wait-until";
+        public const int DefaultQaWaitUntilTimeoutMs = 10_000;
+        public const int DefaultQaSwipeDurationMs = 300;
 
         public static string ComputeProjectHash(string projectRoot)
         {

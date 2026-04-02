@@ -62,6 +62,7 @@ public static class CliArgumentParser
             "prefab" => ParsePrefab(tokens),
             "package" => ParsePackage(tokens),
             "material" => ParseMaterial(tokens),
+            "qa" => ParseQa(tokens),
             "instances" => ParseInstances(tokens),
             "doctor" => new ParsedCommand(CommandKind.Doctor),
             "raw" => new ParsedCommand(CommandKind.Raw),
@@ -195,6 +196,21 @@ public static class CliArgumentParser
         };
     }
 
+    private static ParsedCommand ParseQa(Queue<string> tokens)
+    {
+        string subCommand = RequireSubcommand(tokens, "qa", "click", "tap", "swipe", "key", "wait", "wait-until");
+        return subCommand switch
+        {
+            "click" => new ParsedCommand(CommandKind.QaClick),
+            "tap" => new ParsedCommand(CommandKind.QaTap),
+            "swipe" => new ParsedCommand(CommandKind.QaSwipe),
+            "key" => new ParsedCommand(CommandKind.QaKey),
+            "wait" => new ParsedCommand(CommandKind.QaWait),
+            "wait-until" => new ParsedCommand(CommandKind.QaWaitUntil),
+            _ => throw new CliUsageException($"알 수 없는 qa 서브커맨드입니다: {subCommand}"),
+        };
+    }
+
     private static ParsedCommand ParseCustom(Queue<string> tokens)
     {
         if (tokens.Count == 0)
@@ -303,6 +319,46 @@ public static class CliArgumentParser
                     break;
                 case CommandKind.MaterialSet when token == "--asset":
                     parsed.MaterialTextureAsset = RequireAssetPath(RequireValue(tokens, "--asset"), "--asset");
+                    break;
+                case CommandKind.QaClick when token == "--qa-id":
+                case CommandKind.QaWaitUntil when token == "--qa-id":
+                    parsed.QaId = RequireValue(tokens, "--qa-id");
+                    break;
+                case CommandKind.QaClick when token == "--target":
+                    parsed.QaTarget = RequireValue(tokens, "--target");
+                    break;
+                case CommandKind.QaTap when token == "--x":
+                    parsed.QaTapX = RequireInteger(RequireValue(tokens, "--x"), "--x");
+                    break;
+                case CommandKind.QaTap when token == "--y":
+                    parsed.QaTapY = RequireInteger(RequireValue(tokens, "--y"), "--y");
+                    break;
+                case CommandKind.QaSwipe when token == "--from":
+                    parsed.QaSwipeFrom = RequireValue(tokens, "--from");
+                    break;
+                case CommandKind.QaSwipe when token == "--to":
+                    parsed.QaSwipeTo = RequireValue(tokens, "--to");
+                    break;
+                case CommandKind.QaSwipe when token == "--duration":
+                    parsed.QaSwipeDuration = RequireInt(RequireValue(tokens, "--duration"), "--duration");
+                    break;
+                case CommandKind.QaKey when token == "--key":
+                    parsed.QaKeyName = RequireValue(tokens, "--key");
+                    break;
+                case CommandKind.QaWait when token == "--ms":
+                    parsed.QaWaitMs = RequireInt(RequireValue(tokens, "--ms"), "--ms");
+                    break;
+                case CommandKind.QaWaitUntil when token == "--scene":
+                    parsed.QaWaitScene = RequireValue(tokens, "--scene");
+                    break;
+                case CommandKind.QaWaitUntil when token == "--log-contains":
+                    parsed.QaWaitLogContains = RequireValue(tokens, "--log-contains");
+                    break;
+                case CommandKind.QaWaitUntil when token == "--object-exists":
+                    parsed.QaWaitObjectExists = RequireValue(tokens, "--object-exists");
+                    break;
+                case CommandKind.QaWaitUntil when token == "--timeout":
+                    parsed.QaWaitTimeout = RequireInt(RequireValue(tokens, "--timeout"), "--timeout");
                     break;
                 case CommandKind.AssetFind when token == "--name":
                     parsed.AssetName = RequireValue(tokens, "--name");
@@ -479,6 +535,7 @@ public static class CliArgumentParser
         ValidateScreenshotOptions(parsed);
         ValidatePackageOptions(parsed);
         ValidateMaterialOptions(parsed);
+        ValidateQaOptions(parsed);
         ValidateExecuteOptions(parsed);
 
         if (parsed.Kind == CommandKind.Raw && string.IsNullOrWhiteSpace(parsed.RawJson))
@@ -502,6 +559,16 @@ public static class CliArgumentParser
         if (!int.TryParse(value, out var result) || result <= 0)
         {
             throw new CliUsageException($"{option} 값은 1 이상의 정수여야 합니다.");
+        }
+
+        return result;
+    }
+
+    private static int RequireInteger(string value, string option)
+    {
+        if (!int.TryParse(value, out var result))
+        {
+            throw new CliUsageException($"{option} 값은 정수여야 합니다.");
         }
 
         return result;
@@ -547,6 +614,16 @@ public static class CliArgumentParser
         }
 
         return normalized;
+    }
+
+    private static string RequireSubcommand(Queue<string> tokens, string command, params string[] available)
+    {
+        if (tokens.Count == 0)
+        {
+            throw new CliUsageException($"`{command}` 다음에는 하위 명령이 필요합니다.");
+        }
+
+        return tokens.Dequeue().ToLowerInvariant();
     }
 
     private static void ValidateAssetOptions(ParsedCommand parsed)
@@ -697,6 +774,54 @@ public static class CliArgumentParser
                 if (!hasPropertySet && !hasTextureSet)
                 {
                     throw new CliUsageException("`material set`에는 `--property`+`--value` 또는 `--texture`+`--asset` 조합이 필요합니다.");
+                }
+
+                break;
+            }
+        }
+    }
+
+    private static void ValidateQaOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.QaClick:
+            {
+                bool hasQaId = !string.IsNullOrWhiteSpace(parsed.QaId);
+                bool hasTarget = !string.IsNullOrWhiteSpace(parsed.QaTarget);
+                if (hasQaId == hasTarget)
+                {
+                    throw new CliUsageException("`qa click`에는 `--qa-id` 또는 `--target` 중 하나만 필요합니다.");
+                }
+
+                break;
+            }
+            case CommandKind.QaTap when !parsed.QaTapX.HasValue || !parsed.QaTapY.HasValue:
+                throw new CliUsageException("`qa tap`에는 `--x`와 `--y`가 모두 필요합니다.");
+            case CommandKind.QaSwipe when string.IsNullOrWhiteSpace(parsed.QaSwipeFrom) || string.IsNullOrWhiteSpace(parsed.QaSwipeTo):
+                throw new CliUsageException("`qa swipe`에는 `--from`과 `--to`가 모두 필요합니다.");
+            case CommandKind.QaKey when string.IsNullOrWhiteSpace(parsed.QaKeyName):
+                throw new CliUsageException("`qa key`에는 `--key`가 필요합니다.");
+            case CommandKind.QaWait when parsed.QaWaitMs <= 0:
+                throw new CliUsageException("`qa wait`에는 `--ms`가 필요합니다.");
+            case CommandKind.QaWaitUntil:
+            {
+                bool hasScene = !string.IsNullOrWhiteSpace(parsed.QaWaitScene);
+                bool hasLogContains = !string.IsNullOrWhiteSpace(parsed.QaWaitLogContains);
+                bool hasObjectExists = !string.IsNullOrWhiteSpace(parsed.QaWaitObjectExists) || !string.IsNullOrWhiteSpace(parsed.QaId);
+                if (!hasScene && !hasLogContains && !hasObjectExists)
+                {
+                    throw new CliUsageException("`qa wait-until`에는 `--scene`, `--log-contains`, `--object-exists`, `--qa-id` 중 하나 이상이 필요합니다.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(parsed.QaId) && !string.IsNullOrWhiteSpace(parsed.QaWaitObjectExists))
+                {
+                    throw new CliUsageException("`qa wait-until`에서는 `--qa-id`와 `--object-exists`를 동시에 쓸 수 없습니다.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(parsed.QaId))
+                {
+                    parsed.QaWaitObjectExists = parsed.QaId;
                 }
 
                 break;
