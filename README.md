@@ -51,7 +51,7 @@ Current command surface, at a glance:
 - Scene workflows: `scene open`, `scene inspect`, `scene patch`, `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`
 - Prefab workflows: `prefab inspect`, `prefab create`, `prefab patch`
 
-Any command that accepts `--project` can target either an actual Unity project path or a registered project name from the local instance registry. Existing directory paths take precedence over registry-name matches, and invalid values fail fast with a usage error instead of hashing the current working directory. If multiple registered projects share the same name, use the full project path.
+Any command that accepts `--project` can target either an actual Unity project path or a registered project name from the local instance registry. Registered project-name matching is case-insensitive. Existing directory paths take precedence when the same token could match both a real path and a registered name, and invalid values fail fast with a usage error instead of hashing the current working directory. If multiple registered projects collapse to the same case-insensitive name, use the full project path.
 
 ## Quick Start
 

@@ -45,7 +45,9 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine("## Project Selection");
         builder.AppendLine();
         builder.AppendLine("- `--project <path|name>` accepts either a Unity project path or a registered project name.");
-        builder.AppendLine("- If the token is an existing directory, path resolution takes precedence over registry-name matching.");
+        builder.AppendLine("- Registered project-name matching is case-insensitive.");
+        builder.AppendLine("- If the token is an existing directory, path resolution takes precedence when the same token could also match a registered project name.");
+        builder.AppendLine("- If multiple registered projects collapse to the same case-insensitive name, use the full project path.");
         builder.AppendLine("- If it is neither, the CLI returns a usage error instead of hashing the current working directory.");
         builder.AppendLine();
 

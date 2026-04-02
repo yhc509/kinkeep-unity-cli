@@ -456,7 +456,7 @@ namespace UnityCli.Protocol
             builder.AppendLine("usage: unity-cli [--json] [--project <path|name>] <command> [options]");
             builder.AppendLine();
             builder.AppendLine("options:");
-            builder.AppendLine("  --project <path|name>  Existing directory paths take precedence over registered project names.");
+            builder.AppendLine("  --project <path|name>  Existing directory paths take precedence over registered project names. Project-name matches are case-insensitive.");
             builder.AppendLine();
             builder.AppendLine("commands:");
             foreach (CliCommandDescriptor command in _commands)

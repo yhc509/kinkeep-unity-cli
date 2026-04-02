@@ -18,7 +18,9 @@ Project-specific extension providers can still add more `asset create` types at 
 ## Project Selection
 
 - `--project <path|name>` accepts either a Unity project path or a registered project name.
-- If the token is an existing directory, path resolution takes precedence over registry-name matching.
+- Registered project-name matching is case-insensitive.
+- If the token is an existing directory, path resolution takes precedence when the same token could also match a registered project name.
+- If multiple registered projects collapse to the same case-insensitive name, use the full project path.
 - If it is neither, the CLI returns a usage error instead of hashing the current working directory.
 
 ## Editor Control

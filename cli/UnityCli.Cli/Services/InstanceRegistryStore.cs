@@ -37,49 +37,75 @@ public sealed class InstanceRegistryStore
         File.WriteAllText(_registryPath, json);
     }
 
-    private static string? ResolveProjectRootByName(InstanceRegistry registry, string projectName)
+    private static bool TryResolveProjectRootByName(
+        InstanceRegistry registry,
+        string projectName,
+        out string? projectRoot,
+        out InstanceRecord? match)
     {
+        projectRoot = null;
+        match = null;
+
         if (string.IsNullOrWhiteSpace(projectName))
         {
-            return null;
+            return false;
         }
 
         var trimmedProjectName = projectName.Trim();
         registry.instances ??= Array.Empty<InstanceRecord>();
 
         var matches = registry.instances
+            // Registered project names are matched case-insensitively so shell casing does not change target selection.
             .Where(item => string.Equals(item.projectName, trimmedProjectName, StringComparison.OrdinalIgnoreCase))
-            .Select(item => ProtocolConstants.GetCanonicalPath(item.projectRoot))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .GroupBy(item => ProtocolConstants.GetCanonicalPath(item.projectRoot), StringComparer.OrdinalIgnoreCase)
+            .Select(group => (projectRoot: group.Key, match: group.First()))
             .ToArray();
 
         if (matches.Length == 0)
         {
-            return null;
+            return false;
         }
 
         if (matches.Length > 1)
         {
-            throw CreateAmbiguousProjectNameException(trimmedProjectName, matches);
+            throw CreateAmbiguousProjectNameException(trimmedProjectName, matches.Select(item => item.projectRoot).ToArray());
         }
 
-        return matches[0];
+        projectRoot = matches[0].projectRoot;
+        match = matches[0].match;
+        return true;
     }
 
-    private static string? TryResolveProjectRootOverride(InstanceRegistry registry, string input)
+    private static bool TryResolveProjectRootOverride(
+        InstanceRegistry registry,
+        string input,
+        out string? projectRoot,
+        out InstanceRecord? match)
     {
+        projectRoot = null;
+        match = null;
+
         var trimmed = input.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))
         {
-            return null;
+            return false;
         }
+
+        registry.instances ??= Array.Empty<InstanceRecord>();
 
         if (Directory.Exists(trimmed))
         {
-            return ProtocolConstants.GetCanonicalPath(trimmed);
+            var canonicalProjectRoot = ProtocolConstants.GetCanonicalPath(trimmed);
+            projectRoot = canonicalProjectRoot;
+            var projectHash = ProtocolConstants.ComputeProjectHash(canonicalProjectRoot);
+
+            // A literal directory path always wins over same-text registry name matches.
+            match = registry.instances.FirstOrDefault(item =>
+                string.Equals(item.projectHash, projectHash, StringComparison.OrdinalIgnoreCase));
+            return true;
         }
 
-        return ResolveProjectRootByName(registry, trimmed);
+        return TryResolveProjectRootByName(registry, trimmed, out projectRoot, out match);
     }
 
     private static CliUsageException CreateUnknownProjectOverrideException(string input)
@@ -113,16 +139,23 @@ public sealed class InstanceRegistryStore
             }
         }
 
-        var projectRoot = TryResolveProjectRootOverride(registry, trimmed);
-        if (string.IsNullOrWhiteSpace(projectRoot))
+        if (!TryResolveProjectRootOverride(registry, trimmed, out var projectRoot, out var resolvedMatch)
+            || string.IsNullOrWhiteSpace(projectRoot))
         {
             throw CreateUnknownInstanceTargetException(trimmed);
         }
 
         var projectHash = ProtocolConstants.ComputeProjectHash(projectRoot);
-        var match = registry.instances.FirstOrDefault(item => item.projectHash == projectHash);
+        // Reuse the entry already resolved from the loaded registry before falling back to a hash lookup.
+        var match = resolvedMatch;
+        if (match is null || !string.Equals(match.projectHash, projectHash, StringComparison.OrdinalIgnoreCase))
+        {
+            match = registry.instances.FirstOrDefault(item => string.Equals(item.projectHash, projectHash, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (match is not null)
         {
+            // Intentionally mutate the loaded registry entry in place so callers keep using the same snapshot object.
             match.projectRoot = projectRoot;
             match.projectName = string.IsNullOrWhiteSpace(match.projectName) ? Path.GetFileName(projectRoot) : match.projectName;
             match.projectHash = projectHash;
@@ -152,8 +185,10 @@ public sealed class InstanceRegistryStore
             throw new CliUsageException("project path 또는 project name이 필요합니다.");
         }
 
-        return TryResolveProjectRootOverride(registry, trimmed)
-            ?? throw CreateUnknownProjectOverrideException(trimmed);
+        return TryResolveProjectRootOverride(registry, trimmed, out var projectRoot, out _)
+            && !string.IsNullOrWhiteSpace(projectRoot)
+            ? projectRoot
+            : throw CreateUnknownProjectOverrideException(trimmed);
     }
 
     private static InstanceRegistry Sanitize(InstanceRegistry registry)

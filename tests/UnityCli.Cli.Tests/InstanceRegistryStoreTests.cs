@@ -4,6 +4,7 @@ using UnityCli.Protocol;
 
 namespace UnityCli.Cli.Tests;
 
+[Collection(CurrentDirectoryCollection.Name)]
 public sealed class InstanceRegistryStoreTests
 {
     [Fact]

@@ -5,6 +5,7 @@ using UnityCli.Protocol;
 
 namespace UnityCli.Cli.Tests;
 
+[Collection(CurrentDirectoryCollection.Name)]
 public sealed class CliAppTests
 {
     private static readonly SemaphoreSlim ConsoleLock = new(1, 1);
@@ -103,6 +104,7 @@ public sealed class CliAppTests
         Assert.Equal(string.Empty, result.Stderr);
         Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", result.Stdout);
         Assert.Contains("--project <path|name>  Existing directory paths take precedence over registered project names.", result.Stdout);
+        Assert.Contains("Project-name matches are case-insensitive.", result.Stdout);
     }
 
     [Fact]
@@ -343,6 +345,7 @@ public sealed class CliAppTests
 
         Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", helpText);
         Assert.Contains("Existing directory paths take precedence over registered project names.", helpText);
+        Assert.Contains("Project-name matches are case-insensitive.", helpText);
     }
 
     private static ResponseEnvelope ParseResponse(string stdout)
