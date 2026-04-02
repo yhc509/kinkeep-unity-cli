@@ -111,7 +111,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (SceneNodeSpec childSpec in children)
             {
-                string childName = SceneInspector.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName);
+                string childName = InspectorUtility.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName, "SCENE");
                 var child = new GameObject(childName);
                 SceneManager.MoveGameObjectToScene(child, scene);
                 if (parent != null)

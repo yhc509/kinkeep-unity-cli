@@ -17,7 +17,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (PrefabNodeSpec childSpec in children)
             {
-                string childName = PrefabInspector.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName);
+                string childName = InspectorUtility.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName, "PREFAB");
                 var child = new GameObject(childName);
                 child.transform.SetParent(parent, false);
                 PrefabInspector.ApplyNodeState(child, childSpec, childName, allowMissingName: false);
