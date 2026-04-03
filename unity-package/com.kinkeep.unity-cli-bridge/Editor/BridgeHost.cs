@@ -52,6 +52,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private readonly QaCommandHandler _qaCommandHandler;
         private Socket? _unixListener;
         private double _lastHeartbeatTime;
+        private bool _originalRunInBackground;
         private bool _isStarted;
         private bool _isDisposed;
 
@@ -429,6 +430,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         case ProtocolConstants.CommandPlay:
                             EditorApplication.isPaused = false;
                             EditorApplication.isPlaying = true;
+                            _originalRunInBackground = UnityEngine.Application.runInBackground;
                             UnityEngine.Application.runInBackground = true;
                             dataJson = ProtocolJson.Serialize(new PlayStatePayload { isPlaying = true });
                             break;
@@ -439,6 +441,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         case ProtocolConstants.CommandStop:
                             EditorApplication.isPlaying = false;
                             EditorApplication.isPaused = false;
+                            UnityEngine.Application.runInBackground = _originalRunInBackground;
                             dataJson = ProtocolJson.Serialize(new StopStatePayload
                             {
                                 isPlaying = false,

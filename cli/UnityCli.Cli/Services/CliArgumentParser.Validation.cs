@@ -1,0 +1,396 @@
+#nullable enable
+using System.Linq;
+using System.Text.Json;
+using UnityCli.Cli.Models;
+using UnityCli.Protocol;
+
+namespace UnityCli.Cli.Services;
+
+public static partial class CliArgumentParser
+{
+    private static string RequireScreenshotView(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "game" => "game",
+            "scene" => "scene",
+            _ => throw new CliUsageException("`--view`는 `game` 또는 `scene`만 지원합니다."),
+        };
+    }
+
+    private static int RequireInt(string value, string option, int? minimumValue = 1)
+    {
+        if (!int.TryParse(value, out var result))
+        {
+            throw new CliUsageException($"{option} 값은 {DescribeIntegerRequirement(minimumValue)}여야 합니다.");
+        }
+
+        if (minimumValue.HasValue && result < minimumValue.Value)
+        {
+            throw new CliUsageException($"{option} 값은 {DescribeIntegerRequirement(minimumValue)}여야 합니다.");
+        }
+
+        return result;
+    }
+
+    private static string DescribeIntegerRequirement(int? minimumValue)
+    {
+        return minimumValue switch
+        {
+            null => "정수",
+            0 => "0 이상의 정수",
+            1 => "1 이상의 정수",
+            _ => minimumValue.Value + " 이상의 정수",
+        };
+    }
+
+    private static string RequireValue(Queue<string> tokens, string option)
+    {
+        if (tokens.Count == 0)
+        {
+            throw new CliUsageException($"{option} 값이 비어 있습니다.");
+        }
+
+        return tokens.Dequeue();
+    }
+
+    private static string RequireAssetPath(string value, string option)
+    {
+        var normalized = value.Replace('\\', '/').Trim();
+        if (normalized == "Assets" || normalized.StartsWith("Assets/", StringComparison.Ordinal))
+        {
+            return normalized.TrimEnd('/');
+        }
+
+        throw new CliUsageException($"{option} 값은 `Assets/...` 형식이어야 합니다.");
+    }
+
+    private static string RequireAssetCreateType(string value)
+    {
+        string normalized = BuiltInAssetCreateCatalog.NormalizeTypeId(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new CliUsageException("`asset create --type` 값이 비어 있습니다.");
+        }
+
+        return normalized;
+    }
+
+    private static string RequireSubcommand(Queue<string> tokens, string command)
+    {
+        if (tokens.Count == 0)
+        {
+            throw new CliUsageException($"`{command}` 다음에는 하위 명령이 필요합니다.");
+        }
+
+        return tokens.Dequeue().ToLowerInvariant();
+    }
+
+    private static void ValidateAssetOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.AssetFind when string.IsNullOrWhiteSpace(parsed.AssetName):
+                throw new CliUsageException("`asset find`에는 `--name`이 필요합니다.");
+            case CommandKind.AssetInfo:
+            {
+                var hasPath = !string.IsNullOrWhiteSpace(parsed.AssetPath);
+                var hasGuid = !string.IsNullOrWhiteSpace(parsed.AssetGuid);
+                if (hasPath == hasGuid)
+                {
+                    throw new CliUsageException("`asset info`에는 `--path` 또는 `--guid` 중 하나만 필요합니다.");
+                }
+
+                break;
+            }
+            case CommandKind.AssetReimport when string.IsNullOrWhiteSpace(parsed.AssetPath):
+                throw new CliUsageException("`asset reimport`에는 `--path`가 필요합니다.");
+            case CommandKind.AssetMkdir when string.IsNullOrWhiteSpace(parsed.AssetPath):
+                throw new CliUsageException("`asset mkdir`에는 `--path`가 필요합니다.");
+            case CommandKind.AssetMove when string.IsNullOrWhiteSpace(parsed.AssetFrom) || string.IsNullOrWhiteSpace(parsed.AssetTo):
+                throw new CliUsageException("`asset move`에는 `--from`과 `--to`가 모두 필요합니다.");
+            case CommandKind.AssetRename when string.IsNullOrWhiteSpace(parsed.AssetPath) || string.IsNullOrWhiteSpace(parsed.AssetNewName):
+                throw new CliUsageException("`asset rename`에는 `--path`와 `--name`이 모두 필요합니다.");
+            case CommandKind.AssetDelete when string.IsNullOrWhiteSpace(parsed.AssetPath):
+                throw new CliUsageException("`asset delete`에는 `--path`가 필요합니다.");
+            case CommandKind.AssetDelete when !parsed.Force:
+                throw new CliUsageException("`asset delete`는 `--force`가 필요합니다.");
+            case CommandKind.AssetCreate when string.IsNullOrWhiteSpace(parsed.AssetCreateType) || string.IsNullOrWhiteSpace(parsed.AssetPath):
+                throw new CliUsageException("`asset create`에는 `--type`과 `--path`가 필요합니다.");
+            case CommandKind.AssetCreate when parsed.AssetCreateType == "scriptable-object"
+                && string.IsNullOrWhiteSpace(parsed.AssetScript)
+                && string.IsNullOrWhiteSpace(parsed.AssetTypeName):
+                throw new CliUsageException("`asset create --type scriptable-object`에는 `--script` 또는 `--type-name`이 필요합니다.");
+            case CommandKind.AssetCreate when parsed.AssetCreateType == "animator-override-controller"
+                && string.IsNullOrWhiteSpace(parsed.AssetBaseController):
+                throw new CliUsageException("`asset create --type animator-override-controller`에는 `--base-controller`가 필요합니다.");
+            case CommandKind.AssetCreate when IsBuiltInAssetCreateType(parsed.AssetCreateType)
+                && parsed.AssetCustomOptions.Count > 0:
+                throw new CliUsageException(
+                    "`asset create --type " + parsed.AssetCreateType + "`에서 지원하지 않는 옵션입니다: "
+                    + string.Join(", ", parsed.AssetCustomOptions.Keys.Select(key => "--" + ToKebabCase(key))));
+            case CommandKind.PrefabInspect when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab inspect`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabCreate when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab create`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabPatch when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab patch`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabCreate when HasInvalidPrefabSpecSource(parsed):
+                throw new CliUsageException("`prefab create`에는 `--spec-file` 또는 `--spec-json` 중 하나만 필요합니다.");
+            case CommandKind.PrefabPatch when HasInvalidPrefabSpecSource(parsed):
+                throw new CliUsageException("`prefab patch`에는 `--spec-file` 또는 `--spec-json` 중 하나만 필요합니다.");
+        }
+    }
+
+    private static void ValidateSceneOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.SceneOpen when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene open`에는 `--path`가 필요합니다.");
+            case CommandKind.SceneInspect when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene inspect`에는 `--path`가 필요합니다.");
+            case CommandKind.ScenePatch when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene patch`에는 `--path`가 필요합니다.");
+            case CommandKind.ScenePatch when HasInvalidSceneSpecSource(parsed):
+                throw new CliUsageException("`scene patch`에는 `--spec-file` 또는 `--spec-json` 중 하나만 필요합니다.");
+            case CommandKind.ScenePatch when !parsed.Force && ScenePatchContainsDestructiveOperation(parsed):
+                throw new CliUsageException("`scene patch`에서 `delete-gameobject` 또는 `remove-component`를 쓰려면 `--force`가 필요합니다.");
+            case CommandKind.SceneAddObject when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene add-object`에는 `--path`가 필요합니다.");
+            case CommandKind.SceneAddObject when string.IsNullOrWhiteSpace(parsed.SceneObjectName):
+                throw new CliUsageException("`scene add-object`에는 `--name`이 필요합니다.");
+            case CommandKind.SceneSetTransform when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene set-transform`에는 `--path`가 필요합니다.");
+            case CommandKind.SceneSetTransform when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`scene set-transform`에는 `--target`이 필요합니다.");
+            case CommandKind.SceneSetTransform
+                when string.IsNullOrWhiteSpace(parsed.ScenePosition)
+                && string.IsNullOrWhiteSpace(parsed.SceneRotation)
+                && string.IsNullOrWhiteSpace(parsed.SceneScale):
+                throw new CliUsageException("`scene set-transform`에는 `--position`, `--rotation`, `--scale` 중 하나 이상이 필요합니다.");
+            case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene add-component`에는 `--path`가 필요합니다.");
+            case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`scene add-component`에는 `--target`이 필요합니다.");
+            case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
+                throw new CliUsageException("`scene add-component`에는 `--type`이 필요합니다.");
+            case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.ScenePath):
+                throw new CliUsageException("`scene remove-component`에는 `--path`가 필요합니다.");
+            case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`scene remove-component`에는 `--target`이 필요합니다.");
+            case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
+                throw new CliUsageException("`scene remove-component`에는 `--type`이 필요합니다.");
+            case CommandKind.SceneRemoveComponent when !parsed.Force:
+                throw new CliUsageException("`scene remove-component`는 `--force`가 필요합니다.");
+        }
+    }
+
+    private static void ValidateScreenshotOptions(ParsedCommand parsed)
+    {
+        if (parsed.Kind != CommandKind.Screenshot)
+        {
+            return;
+        }
+
+        bool hasView = !string.IsNullOrWhiteSpace(parsed.ScreenshotView);
+        bool hasCamera = !string.IsNullOrWhiteSpace(parsed.ScreenshotCamera);
+
+        if (hasView == hasCamera)
+        {
+            throw new CliUsageException("`screenshot`에는 `--view` 또는 `--camera` 중 하나만 필요합니다.");
+        }
+    }
+
+    private static void ValidateExecuteMenuOptions(ParsedCommand parsed)
+    {
+        if (parsed.Kind != CommandKind.ExecuteMenu)
+        {
+            return;
+        }
+
+        bool hasPath = !string.IsNullOrWhiteSpace(parsed.MenuPath);
+        bool hasList = parsed.MenuList;
+        if (hasPath == hasList)
+        {
+            throw new CliUsageException("`execute-menu`에는 `--path` 또는 `--list <prefix>` 중 하나만 필요합니다.");
+        }
+
+        if (parsed.MenuList && string.IsNullOrWhiteSpace(parsed.MenuListPrefix))
+        {
+            throw new CliUsageException("`execute-menu --list`에는 prefix가 필요합니다.");
+        }
+    }
+
+    private static void ValidatePackageOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.PackageAdd when string.IsNullOrWhiteSpace(parsed.PackageName):
+                throw new CliUsageException("`package add`에는 `--name`이 필요합니다.");
+            case CommandKind.PackageRemove when string.IsNullOrWhiteSpace(parsed.PackageName):
+                throw new CliUsageException("`package remove`에는 `--name`이 필요합니다.");
+            case CommandKind.PackageRemove when !parsed.Force:
+                throw new CliUsageException("`package remove`는 `--force`가 필요합니다.");
+            case CommandKind.PackageSearch when string.IsNullOrWhiteSpace(parsed.PackageQuery):
+                throw new CliUsageException("`package search`에는 `--query`가 필요합니다.");
+        }
+    }
+
+    private static void ValidateMaterialOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.MaterialInfo when string.IsNullOrWhiteSpace(parsed.MaterialPath):
+                throw new CliUsageException("`material info`에는 `--path`가 필요합니다.");
+            case CommandKind.MaterialSet when string.IsNullOrWhiteSpace(parsed.MaterialPath):
+                throw new CliUsageException("`material set`에는 `--path`가 필요합니다.");
+            case CommandKind.MaterialSet:
+            {
+                bool hasPropertySet = !string.IsNullOrWhiteSpace(parsed.MaterialProperty)
+                    && !string.IsNullOrWhiteSpace(parsed.MaterialValue);
+                bool hasTextureSet = !string.IsNullOrWhiteSpace(parsed.MaterialTexture)
+                    && !string.IsNullOrWhiteSpace(parsed.MaterialTextureAsset);
+                if (!hasPropertySet && !hasTextureSet)
+                {
+                    throw new CliUsageException("`material set`에는 `--property`+`--value` 또는 `--texture`+`--asset` 조합이 필요합니다.");
+                }
+
+                break;
+            }
+        }
+    }
+
+    private static void ValidateQaOptions(ParsedCommand parsed)
+    {
+        switch (parsed.Kind)
+        {
+            case CommandKind.QaClick:
+            {
+                bool hasQaId = !string.IsNullOrWhiteSpace(parsed.QaId);
+                bool hasTarget = !string.IsNullOrWhiteSpace(parsed.QaTarget);
+                if (hasQaId == hasTarget)
+                {
+                    throw new CliUsageException("`qa click`에는 `--qa-id` 또는 `--target` 중 하나만 필요합니다.");
+                }
+
+                break;
+            }
+            case CommandKind.QaTap when !parsed.QaTapX.HasValue || !parsed.QaTapY.HasValue:
+                throw new CliUsageException("`qa tap`에는 `--x`와 `--y`가 모두 필요합니다.");
+            case CommandKind.QaSwipe when string.IsNullOrWhiteSpace(parsed.QaSwipeFrom) || string.IsNullOrWhiteSpace(parsed.QaSwipeTo):
+                throw new CliUsageException("`qa swipe`에는 `--from`과 `--to`가 모두 필요합니다.");
+            case CommandKind.QaSwipe:
+                RequireCoordinatePair(parsed.QaSwipeFrom!, "--from");
+                RequireCoordinatePair(parsed.QaSwipeTo!, "--to");
+                break;
+            case CommandKind.QaKey when string.IsNullOrWhiteSpace(parsed.QaKeyName):
+                throw new CliUsageException("`qa key`에는 `--key`가 필요합니다.");
+            case CommandKind.QaWait when parsed.QaWaitMs <= 0:
+                throw new CliUsageException("`qa wait`에는 `--ms`가 필요합니다.");
+            case CommandKind.QaWaitUntil:
+            {
+                bool hasScene = !string.IsNullOrWhiteSpace(parsed.QaWaitScene);
+                bool hasLogContains = !string.IsNullOrWhiteSpace(parsed.QaWaitLogContains);
+                bool hasObjectExists = !string.IsNullOrWhiteSpace(parsed.QaWaitObjectExists) || !string.IsNullOrWhiteSpace(parsed.QaId);
+                if (!hasScene && !hasLogContains && !hasObjectExists)
+                {
+                    throw new CliUsageException("`qa wait-until`에는 `--scene`, `--log-contains`, `--object-exists`, `--qa-id` 중 하나 이상이 필요합니다.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(parsed.QaId) && !string.IsNullOrWhiteSpace(parsed.QaWaitObjectExists))
+                {
+                    throw new CliUsageException("`qa wait-until`에서는 `--qa-id`와 `--object-exists`를 동시에 쓸 수 없습니다.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(parsed.QaId))
+                {
+                    parsed.QaWaitObjectExists = parsed.QaId;
+                }
+
+                break;
+            }
+        }
+    }
+
+    private static void RequireCoordinatePair(string value, string option)
+    {
+        string[] parts = value.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[0], out _) || !int.TryParse(parts[1], out _))
+        {
+            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
+        }
+    }
+
+    private static void ValidateExecuteOptions(ParsedCommand parsed)
+    {
+        if (parsed.Kind != CommandKind.ExecuteCode)
+        {
+            return;
+        }
+
+        bool hasCode = !string.IsNullOrWhiteSpace(parsed.ExecuteCodeSnippet);
+        bool hasFile = !string.IsNullOrWhiteSpace(parsed.ExecuteCodeFile);
+
+        if (hasCode == hasFile)
+        {
+            throw new CliUsageException("`execute`에는 `--code` 또는 `--file` 중 하나만 필요합니다.");
+        }
+
+        if (!parsed.Force)
+        {
+            throw new CliUsageException("`execute`는 `--force`가 필요합니다.");
+        }
+    }
+
+    private static bool HasInvalidPrefabSpecSource(ParsedCommand parsed)
+    {
+        bool hasFile = !string.IsNullOrWhiteSpace(parsed.PrefabSpecFile);
+        bool hasInline = !string.IsNullOrWhiteSpace(parsed.PrefabSpecJson);
+        return hasFile == hasInline;
+    }
+
+    private static bool HasInvalidSceneSpecSource(ParsedCommand parsed)
+    {
+        bool hasFile = !string.IsNullOrWhiteSpace(parsed.SceneSpecFile);
+        bool hasInline = !string.IsNullOrWhiteSpace(parsed.SceneSpecJson);
+        return hasFile == hasInline;
+    }
+
+    private static bool ScenePatchContainsDestructiveOperation(ParsedCommand parsed)
+    {
+        string specJson = parsed.ResolveSceneSpecJson();
+
+        try
+        {
+            using var document = JsonDocument.Parse(specJson);
+            if (!document.RootElement.TryGetProperty("operations", out JsonElement operations)
+                || operations.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (JsonElement operation in operations.EnumerateArray())
+            {
+                if (!operation.TryGetProperty("op", out JsonElement opElement)
+                    || opElement.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                string? op = opElement.GetString();
+                if (string.Equals(op, "delete-gameobject", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(op, "remove-component", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
+    }
+}

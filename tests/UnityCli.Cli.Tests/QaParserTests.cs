@@ -49,6 +49,18 @@ public sealed class QaParserTests
     }
 
     [Fact]
+    public void Parse_QaSwipe_WithTarget_AcceptsDuration()
+    {
+        var parsed = CliArgumentParser.Parse(["qa", "swipe", "--target", "/Canvas/Slider", "--from", "0,0", "--to", "100,0", "--duration", "500"]);
+
+        Assert.Equal(CommandKind.QaSwipe, parsed.Kind);
+        Assert.Equal("/Canvas/Slider", parsed.QaTarget);
+        Assert.Equal("0,0", parsed.QaSwipeFrom);
+        Assert.Equal("100,0", parsed.QaSwipeTo);
+        Assert.Equal(500, parsed.QaSwipeDuration);
+    }
+
+    [Fact]
     public void Parse_QaSwipe_UsesDefaultDuration()
     {
         var parsed = CliArgumentParser.Parse(["qa", "swipe", "--from", "100,200", "--to", "300,400"]);

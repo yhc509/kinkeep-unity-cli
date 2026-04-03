@@ -15,7 +15,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
     internal sealed class QaTargetRegistry
     {
         private static readonly Dictionary<string, GameObject> QaIdCache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, GameObject> PathCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, GameObject> PathCache = new(StringComparer.Ordinal);
         private static bool _isSubscribed;
         private static bool _isDirty = true;
 
