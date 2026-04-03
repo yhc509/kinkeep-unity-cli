@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -289,7 +290,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     continue;
                 }
 
-                if (_qaCommandHandler.CanHandle(pending.Command.command) && _qaCommandHandler.IsDeferred(pending.Command.command))
+                if (_qaCommandHandler.CanHandle(pending.Command.command) && _qaCommandHandler.IsDeferred(pending.Command.command, pending.Command.argumentsJson))
                 {
                     StartDeferredQaRequest(pending);
                     continue;
@@ -428,6 +429,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         case ProtocolConstants.CommandPlay:
                             EditorApplication.isPaused = false;
                             EditorApplication.isPlaying = true;
+                            UnityEngine.Application.runInBackground = true;
                             dataJson = ProtocolJson.Serialize(new PlayStatePayload { isPlaying = true });
                             break;
                         case ProtocolConstants.CommandPause:
@@ -533,9 +535,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private string HandleExecuteMenu(string argumentsJson)
         {
             ExecuteMenuArgs args = ProtocolJson.Deserialize<ExecuteMenuArgs>(argumentsJson) ?? new ExecuteMenuArgs();
+            if (args.list)
+            {
+                if (!string.IsNullOrWhiteSpace(args.path))
+                {
+                    throw new CommandFailureException("INVALID_ARGS", "execute-menu에서는 path와 list를 동시에 지정할 수 없습니다.");
+                }
+
+                return ListMenuItems(args.prefix);
+            }
+
             if (string.IsNullOrWhiteSpace(args.path))
             {
-                throw new InvalidOperationException("execute-menu에는 path가 필요합니다.");
+                throw new CommandFailureException("INVALID_ARGS", "execute-menu에는 path가 필요합니다.");
             }
 
             bool isExecuted = EditorApplication.ExecuteMenuItem(args.path);
@@ -543,6 +555,36 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 path = args.path,
                 executed = isExecuted,
+                menus = Array.Empty<string>(),
+            });
+        }
+
+        private static string ListMenuItems(string? prefix)
+        {
+            if (string.IsNullOrWhiteSpace(prefix))
+            {
+                throw new CommandFailureException("INVALID_ARGS", "execute-menu --list에는 prefix가 필요합니다.");
+            }
+
+            Type? unsupportedType = typeof(EditorApplication).Assembly.GetType("UnityEditor.Unsupported");
+            if (unsupportedType == null)
+            {
+                throw new CommandFailureException("MENU_LIST_UNAVAILABLE", "UnityEditor.Unsupported 타입을 찾지 못했습니다.");
+            }
+
+            MethodInfo? getSubmenus = unsupportedType.GetMethod(
+                "GetSubmenus",
+                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            if (getSubmenus is null)
+            {
+                throw new CommandFailureException("MENU_LIST_UNAVAILABLE", "UnityEditor.Unsupported.GetSubmenus API를 찾지 못했습니다.");
+            }
+
+            string[] menus = getSubmenus.Invoke(null, new object[] { prefix }) as string[] ?? Array.Empty<string>();
+            return ProtocolJson.Serialize(new ExecuteMenuPayload
+            {
+                prefix = prefix,
+                menus = menus,
             });
         }
 

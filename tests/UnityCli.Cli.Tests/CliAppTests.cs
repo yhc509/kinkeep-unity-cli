@@ -82,6 +82,22 @@ public sealed class CliAppTests
     }
 
     [Fact]
+    public async Task RunAsync_JsonQaSwipeInvalidCoordinate_WritesStructuredUsageError()
+    {
+        var result = await InvokeAsync(["--json", "qa", "swipe", "--from", "10,right", "--to", "20,30"]);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        var response = ParseResponse(result.Stdout);
+        Assert.Equal("CLI_USAGE", response.error?.code);
+        Assert.Contains("--from", response.error?.message);
+
+        var details = ParseDetails(response.error?.details);
+        Assert.Contains("qa swipe", details.GetProperty("usage").GetString());
+    }
+
+    [Fact]
     public async Task RunAsync_JsonNoTarget_KeepsFailureStructuredOnStdout()
     {
         var result = await InvokeAsync(["--json", "compile"]);

@@ -70,6 +70,8 @@ public sealed class ParsedCommand
     public int ConsoleLimit { get; set; } = ProtocolConstants.DefaultConsoleLimit;
     public string? ConsoleType { get; set; }
     public string? MenuPath { get; set; }
+    public bool MenuList { get; set; }
+    public string? MenuListPrefix { get; set; }
     public string? InstanceTarget { get; set; }
     public string? RawJson { get; set; }
     public string? ScreenshotView { get; set; }
@@ -236,9 +238,11 @@ public sealed class ParsedCommand
                 limit = ConsoleLimit,
                 type = ConsoleType,
             },
-            CommandKind.ExecuteMenu => new
+            CommandKind.ExecuteMenu => new ExecuteMenuArgs
             {
-                path = MenuPath,
+                path = MenuPath ?? string.Empty,
+                list = MenuList,
+                prefix = MenuListPrefix,
             },
             CommandKind.Screenshot => new ScreenshotArgs
             {
@@ -295,10 +299,11 @@ public sealed class ParsedCommand
             },
             CommandKind.QaSwipe => new QaSwipeArgs
             {
-                fromX = ParseCoordinate(QaSwipeFrom, 0),
-                fromY = ParseCoordinate(QaSwipeFrom, 1),
-                toX = ParseCoordinate(QaSwipeTo, 0),
-                toY = ParseCoordinate(QaSwipeTo, 1),
+                target = QaTarget ?? string.Empty,
+                fromX = ParseCoordinate(QaSwipeFrom, 0, "--from"),
+                fromY = ParseCoordinate(QaSwipeFrom, 1, "--from"),
+                toX = ParseCoordinate(QaSwipeTo, 0, "--to"),
+                toY = ParseCoordinate(QaSwipeTo, 1, "--to"),
                 durationMs = QaSwipeDuration,
             },
             CommandKind.QaKey => new QaKeyArgs
@@ -483,17 +488,17 @@ public sealed class ParsedCommand
         return ExecuteCodeSnippet ?? string.Empty;
     }
 
-    private static int ParseCoordinate(string? csv, int index)
+    private static int ParseCoordinate(string? csv, int index, string option)
     {
         if (string.IsNullOrWhiteSpace(csv))
         {
-            return 0;
+            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
         }
 
         var parts = csv.Split(',', StringSplitOptions.TrimEntries);
-        if (parts.Length <= index || !int.TryParse(parts[index], out var value))
+        if (parts.Length != 2 || index >= parts.Length || !int.TryParse(parts[index], out var value))
         {
-            return 0;
+            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
         }
 
         return value;

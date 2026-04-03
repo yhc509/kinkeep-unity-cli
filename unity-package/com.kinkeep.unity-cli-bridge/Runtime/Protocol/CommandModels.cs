@@ -54,6 +54,8 @@ namespace UnityCli.Protocol
     public sealed class ExecuteMenuArgs
     {
         public string path = string.Empty;
+        public bool list;
+        public string? prefix;
     }
 
     [Serializable]
@@ -61,6 +63,8 @@ namespace UnityCli.Protocol
     {
         public string path = string.Empty;
         public bool executed;
+        public string? prefix;
+        public string[] menus = Array.Empty<string>();
     }
 
     [Serializable]
@@ -428,6 +432,7 @@ namespace UnityCli.Protocol
     [Serializable]
     public sealed class QaSwipeArgs
     {
+        public string target = string.Empty;
         public int fromX;
         public int fromY;
         public int toX;

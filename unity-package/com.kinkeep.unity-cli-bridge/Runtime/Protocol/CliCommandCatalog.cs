@@ -130,13 +130,14 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false),
             new CliCommandDescriptor(
                 "execute-menu",
-                "execute-menu --path \"Menu/Item\"",
-                "Executes a Unity menu item in a running editor.",
+                "execute-menu (--path \"Menu/Item\" | --list \"Prefix\")",
+                "Executes a Unity menu item or lists registered menu items matching a prefix in a running editor.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandExecuteMenu,
                 canUseLocal: false,
                 canUseLive: true,
-                isAllowedWhileBusy: false),
+                isAllowedWhileBusy: false,
+                notes: new[] { "Use --list to inspect registered menu item paths before executing one." }),
             new CliCommandDescriptor(
                 "screenshot",
                 "screenshot (--view game|scene | --camera <name>) [--path <output.png>] [--width N] [--height N]",

@@ -13,9 +13,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class QaCommandHandler
     {
+        private static readonly Dictionary<int, ScreenPositionContext> ScreenPositionContextCache = new();
+        private static bool _isScreenPositionCacheSubscribed;
+
         public QaCommandHandler()
         {
             QaTargetRegistry.EnsureSubscribed();
+            EnsureScreenPositionCacheSubscribed();
         }
 
         public bool CanHandle(string command)
@@ -29,7 +33,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         public string Handle(string command, string argumentsJson)
         {
-            if (IsDeferred(command))
+            if (IsDeferred(command, argumentsJson))
             {
                 throw new InvalidOperationException("Deferred QA command must be started through StartDeferred: " + command);
             }
@@ -51,13 +55,36 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 return HandleKey(argumentsJson);
             }
 
+            if (string.Equals(command, ProtocolConstants.CommandQaSwipe, StringComparison.Ordinal))
+            {
+                return HandleSwipeOnTarget(argumentsJson);
+            }
+
             throw new InvalidOperationException("Unhandled QA command: " + command);
         }
 
-        public bool IsDeferred(string command)
+        public bool IsDeferred(string command, string? argumentsJson = null)
         {
-            return string.Equals(command, ProtocolConstants.CommandQaSwipe, StringComparison.Ordinal)
-                || string.Equals(command, ProtocolConstants.CommandQaWaitUntil, StringComparison.Ordinal);
+            if (string.Equals(command, ProtocolConstants.CommandQaWaitUntil, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (string.Equals(command, ProtocolConstants.CommandQaSwipe, StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrWhiteSpace(argumentsJson))
+                {
+                    QaSwipeArgs? args = ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson);
+                    if (args != null && !string.IsNullOrWhiteSpace(args.target))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         public void StartDeferred(
@@ -118,8 +145,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
             else if (!string.IsNullOrWhiteSpace(args.target))
             {
-                target = GameObject.Find(args.target!);
-                if (target == null)
+                if (!QaTargetRegistry.TryResolvePath(args.target!, out target) || target == null)
                 {
                     throw new CommandFailureException("QA_TARGET_NOT_FOUND", $"No active GameObject found at path '{args.target}'.", false, null);
                 }
@@ -185,6 +211,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             ValidateWaitUntilArgs(args);
             int timeoutMs = args.timeoutMs > 0 ? args.timeoutMs : ProtocolConstants.DefaultQaWaitUntilTimeoutMs;
             var stopwatch = Stopwatch.StartNew();
+            var reasonSegments = new List<string>(3);
 
             void Poll()
             {
@@ -198,9 +225,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 {
                     EnsureDeferredPlayMode();
 
-                    if (CheckCondition(args, out string? reason))
+                    int elapsedMs = GetElapsedMilliseconds(stopwatch);
+
+                    if (CheckCondition(args, reasonSegments, out string? reason))
                     {
-                        int elapsedMs = GetElapsedMilliseconds(stopwatch);
                         CompleteSuccess(new QaWaitUntilPayload
                         {
                             conditionMet = true,
@@ -210,7 +238,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         return;
                     }
 
-                    int elapsedMs = GetElapsedMilliseconds(stopwatch);
                     if (elapsedMs >= timeoutMs)
                     {
                         EditorApplication.update -= Poll;
@@ -397,6 +424,57 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 null);
         }
 
+        private static string HandleSwipeOnTarget(string argumentsJson)
+        {
+            QaSwipeArgs args = ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson) ?? new QaSwipeArgs();
+
+            if (string.IsNullOrWhiteSpace(args.target))
+            {
+                throw new CommandFailureException("QA_MISSING_TARGET", "qa swipe --target requires a target path.", false, null);
+            }
+
+            if (!QaTargetRegistry.TryResolvePath(args.target!, out GameObject? target) || target == null)
+            {
+                throw new CommandFailureException("QA_TARGET_NOT_FOUND", $"No active GameObject found at path '{args.target}'.", false, null);
+            }
+
+            Vector2 from = new Vector2(args.fromX, args.fromY);
+            Vector2 to = new Vector2(args.toX, args.toY);
+            int steps = Mathf.Max(1, Mathf.CeilToInt(args.durationMs / 16f));
+
+            DragGameObject(target, from, to, steps);
+
+            return ProtocolJson.Serialize(new QaSwipePayload { completed = true });
+        }
+
+        private static void DragGameObject(GameObject target, Vector2 from, Vector2 to, int steps)
+        {
+            EventSystem eventSystem = RequireEventSystem();
+            var pointerData = new PointerEventData(eventSystem)
+            {
+                position = from,
+                pressPosition = from,
+                button = PointerEventData.InputButton.Left,
+                pointerDrag = target,
+            };
+
+            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.beginDragHandler);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = (float)i / steps;
+                Vector2 pos = Vector2.Lerp(from, to, t);
+                pointerData.position = pos;
+                pointerData.delta = pos - Vector2.Lerp(from, to, (float)(i - 1) / steps);
+                ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
+            }
+
+            pointerData.position = to;
+            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.endDragHandler);
+            ExecuteEvents.Execute(target, pointerData, ExecuteEvents.pointerUpHandler);
+        }
+
         private static void ClickGameObject(GameObject target)
         {
             EventSystem eventSystem = RequireEventSystem();
@@ -419,10 +497,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return eventSystem;
         }
 
-        private static bool CheckCondition(QaWaitUntilArgs args, out string? reason)
+        private static bool CheckCondition(QaWaitUntilArgs args, List<string> reasonSegments, out string? reason)
         {
             reason = null;
-            var reasons = new List<string>();
+            reasonSegments.Clear();
 
             if (!string.IsNullOrWhiteSpace(args.scene))
             {
@@ -432,7 +510,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return false;
                 }
 
-                reasons.Add($"Active scene is '{activeScene.name}'.");
+                reasonSegments.Add($"Active scene is '{activeScene.name}'.");
             }
 
             if (!string.IsNullOrWhiteSpace(args.logContains))
@@ -453,39 +531,36 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return false;
                 }
 
-                reasons.Add($"Log contains '{args.logContains}'.");
+                reasonSegments.Add($"Log contains '{args.logContains}'.");
             }
 
             if (!string.IsNullOrWhiteSpace(args.objectExists))
             {
                 GameObject? target;
-                if (!QaTargetRegistry.TryResolve(args.objectExists!, out target) || target == null)
-                {
-                    target = GameObject.Find(args.objectExists!);
-                }
-
-                if (target == null)
+                if ((!QaTargetRegistry.TryResolve(args.objectExists!, out target) || target == null)
+                    && (!QaTargetRegistry.TryResolvePath(args.objectExists!, out target) || target == null))
                 {
                     return false;
                 }
 
-                reasons.Add($"Object '{args.objectExists}' exists.");
+                reasonSegments.Add($"Object '{args.objectExists}' exists.");
             }
 
-            reason = reasons.Count > 0 ? string.Join(" ", reasons) : null;
+            reason = reasonSegments.Count > 0 ? string.Join(" ", reasonSegments) : null;
             return true;
         }
 
         private static Vector2 GetScreenPosition(GameObject gameObject)
         {
-            RectTransform? rectTransform = gameObject.GetComponent<RectTransform>();
+            ScreenPositionContext context = GetScreenPositionContext(gameObject);
+            RectTransform? rectTransform = context.RectTransform;
             if (rectTransform != null)
             {
                 var corners = new Vector3[4];
                 rectTransform.GetWorldCorners(corners);
                 Vector3 center = (corners[0] + corners[2]) * 0.5f;
 
-                Canvas? canvas = gameObject.GetComponentInParent<Canvas>();
+                Canvas? canvas = context.ParentCanvas;
                 if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
                 {
                     Camera? canvasCamera = canvas.worldCamera ?? Camera.main;
@@ -508,6 +583,46 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return Vector2.zero;
         }
 
+        private static void EnsureScreenPositionCacheSubscribed()
+        {
+            if (_isScreenPositionCacheSubscribed)
+            {
+                return;
+            }
+
+            _isScreenPositionCacheSubscribed = true;
+            EditorApplication.hierarchyChanged += ClearScreenPositionCache;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static ScreenPositionContext GetScreenPositionContext(GameObject gameObject)
+        {
+            int instanceId = gameObject.GetInstanceID();
+            if (ScreenPositionContextCache.TryGetValue(instanceId, out ScreenPositionContext? context))
+            {
+                return context;
+            }
+
+            gameObject.TryGetComponent(out RectTransform? rectTransform);
+            Canvas? parentCanvas = rectTransform != null
+                ? gameObject.GetComponentInParent<Canvas>()
+                : null;
+
+            context = new ScreenPositionContext(rectTransform, parentCanvas);
+            ScreenPositionContextCache[instanceId] = context;
+            return context;
+        }
+
+        private static void ClearScreenPositionCache()
+        {
+            ScreenPositionContextCache.Clear();
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            ClearScreenPositionCache();
+        }
+
         private static string GetGameObjectPath(GameObject gameObject)
         {
             string path = gameObject.name;
@@ -519,6 +634,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return "/" + path;
+        }
+
+        private sealed class ScreenPositionContext
+        {
+            public ScreenPositionContext(RectTransform? rectTransform, Canvas? parentCanvas)
+            {
+                RectTransform = rectTransform;
+                ParentCanvas = parentCanvas;
+            }
+
+            public RectTransform? RectTransform { get; }
+
+            public Canvas? ParentCanvas { get; }
         }
     }
 }

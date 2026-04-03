@@ -3,7 +3,8 @@
   "rootNamespace": "KinKeep.UnityCli.Bridge.Editor",
   "references": [
     "KinKeep.UnityCli.Bridge.Runtime",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [
     "Editor"
@@ -16,6 +17,12 @@
   ],
   "autoReferenced": true,
   "defineConstraints": [],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.inputsystem",
+      "expression": "",
+      "define": "ENABLE_INPUT_SYSTEM"
+    }
+  ],
   "noEngineReferences": false
 }

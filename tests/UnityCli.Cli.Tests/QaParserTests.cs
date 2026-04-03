@@ -118,6 +118,66 @@ public sealed class QaParserTests
     }
 
     [Fact]
+    public void Parse_QaClick_WithQaIdAndTarget_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "click",
+            "--qa-id", "test-btn",
+            "--target", "Canvas/Panel/Button"
+        ]));
+
+        Assert.Contains("--qa-id", ex.Message);
+        Assert.Contains("--target", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaTap_WithNonIntegerCoordinate_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "tap",
+            "--x", "left",
+            "--y", "200"
+        ]));
+
+        Assert.Contains("--x", ex.Message);
+        Assert.Contains("정수", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaSwipe_WithInvalidCoordinate_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "swipe",
+            "--from", "100,down",
+            "--to", "300,400"
+        ]));
+
+        Assert.Contains("--from", ex.Message);
+        Assert.Contains("x,y", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaWaitUntil_WithoutCondition_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse(["qa", "wait-until"]));
+
+        Assert.Contains("하나 이상", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaWaitUntil_WithQaIdAndObjectExists_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "wait-until",
+            "--qa-id", "start-btn",
+            "--object-exists", "/Canvas/Panel/Button"
+        ]));
+
+        Assert.Contains("--qa-id", ex.Message);
+        Assert.Contains("--object-exists", ex.Message);
+    }
+
+    [Fact]
     public void Parse_QaClick_ToEnvelope_UsesQaClickCommand()
     {
         var parsed = CliArgumentParser.Parse(["qa", "click", "--qa-id", "test-btn"]);
@@ -189,6 +249,21 @@ public sealed class QaParserTests
         Assert.Equal("Loading", arguments.GetProperty("logContains").GetString());
         Assert.Equal("start-btn", arguments.GetProperty("objectExists").GetString());
         Assert.Equal(5000, arguments.GetProperty("timeoutMs").GetInt32());
+    }
+
+    [Fact]
+    public void ToEnvelope_QaSwipe_WithInvalidCoordinate_ThrowsUsage()
+    {
+        var parsed = new ParsedCommand(CommandKind.QaSwipe)
+        {
+            QaSwipeFrom = "100,down",
+            QaSwipeTo = "300,400",
+        };
+
+        var ex = Assert.Throws<CliUsageException>(() => parsed.ToEnvelope());
+
+        Assert.Contains("--from", ex.Message);
+        Assert.Contains("x,y", ex.Message);
     }
 
     [Fact]

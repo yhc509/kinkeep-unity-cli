@@ -36,7 +36,7 @@ Commands for editor state, compilation, play state, menus, arbitrary code execut
 | `play` | `play` | live | Starts Play Mode in a running editor. |
 | `pause` | `pause` | live | Pauses Play Mode in a running editor. |
 | `stop` | `stop` | live | Stops Play Mode in a running editor. |
-| `execute-menu` | `execute-menu --path "Menu/Item"` | live | Executes a Unity menu item in a running editor. |
+| `execute-menu` | `execute-menu (--path "Menu/Item" \| --list "Prefix")` | live | Executes a Unity menu item or lists registered menu items matching a prefix in a running editor. |
 | `screenshot` | `screenshot (--view game\|scene \| --camera <name>) [--path <output.png>] [--width N] [--height N]` | live | Captures a screenshot from the Game View, Scene View, or a named camera. |
 | `execute` | `execute (--code <csharp> \| --file <path>) --force` | live | Executes arbitrary C# code in the running editor context; always requires --force. |
 | `custom` | `custom <command-name> [--json <args>]` | live | Invokes a project-defined custom command registered via [PucCommand] attribute. |

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using KinKeep.UnityCli.Bridge;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,8 +14,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
     /// </summary>
     internal sealed class QaTargetRegistry
     {
-        private static readonly Dictionary<string, GameObject> Cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, GameObject> QaIdCache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, GameObject> PathCache = new(StringComparer.OrdinalIgnoreCase);
         private static bool _isSubscribed;
+        private static bool _isDirty = true;
 
         private QaTargetRegistry()
         {
@@ -30,6 +33,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             _isSubscribed = true;
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
+            EditorApplication.hierarchyChanged += OnHierarchyChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         public static bool TryResolve(string qaId, out GameObject? target)
@@ -41,42 +46,56 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             EnsureSubscribed();
+            EnsureCacheCurrent();
+            return TryGetCachedTarget(QaIdCache, qaId, out target);
+        }
 
-            if (Cache.Count == 0)
+        public static bool TryResolvePath(string path, out GameObject? target)
+        {
+            target = null;
+            if (string.IsNullOrWhiteSpace(path))
             {
-                Rebuild();
+                return false;
             }
 
-            if (Cache.TryGetValue(qaId, out GameObject cached) && cached != null)
-            {
-                target = cached;
-                return true;
-            }
-
-            Rebuild();
-            if (Cache.TryGetValue(qaId, out cached) && cached != null)
-            {
-                target = cached;
-                return true;
-            }
-
-            return false;
+            EnsureSubscribed();
+            EnsureCacheCurrent();
+            return TryGetCachedTarget(PathCache, NormalizePath(path), out target);
         }
 
         public static void Rebuild()
         {
-            Cache.Clear();
+            if (!_isDirty)
+            {
+                return;
+            }
+
+            QaIdCache.Clear();
+            PathCache.Clear();
+
+            Transform[] transforms = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
+            foreach (Transform transform in transforms)
+            {
+                if (transform == null || transform.parent != null || !transform.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                CacheHierarchy(transform, string.Empty);
+            }
 
             MonoBehaviour[] monoBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
             foreach (MonoBehaviour monoBehaviour in monoBehaviours)
             {
-                if (monoBehaviour == null)
+                if (monoBehaviour == null || !monoBehaviour.gameObject.activeInHierarchy)
                 {
                     continue;
                 }
 
                 ScanFields(monoBehaviour);
             }
+
+            _isDirty = false;
         }
 
         private static void ScanFields(MonoBehaviour monoBehaviour)
@@ -106,27 +125,105 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         continue;
                     }
 
-                    if (Cache.ContainsKey(attribute.Id))
+                    if (QaIdCache.ContainsKey(attribute.Id))
                     {
                         Debug.LogWarning($"[QaTargetRegistry] Duplicate QA ID '{attribute.Id}' found on '{gameObject.name}'. Keeping the first match.");
                         continue;
                     }
 
-                    Cache[attribute.Id] = gameObject;
+                    QaIdCache[attribute.Id] = gameObject;
                 }
 
                 type = type.BaseType;
             }
         }
 
+        private static void EnsureCacheCurrent()
+        {
+            if (_isDirty)
+            {
+                Rebuild();
+            }
+        }
+
+        private static bool TryGetCachedTarget(
+            Dictionary<string, GameObject> cache,
+            string key,
+            out GameObject? target)
+        {
+            target = null;
+            if (!cache.TryGetValue(key, out GameObject cached) || cached == null || !cached.activeInHierarchy)
+            {
+                return false;
+            }
+
+            target = cached;
+            return true;
+        }
+
+        private static void CacheHierarchy(Transform transform, string parentPath)
+        {
+            string currentPath = string.IsNullOrEmpty(parentPath)
+                ? "/" + transform.name
+                : parentPath + "/" + transform.name;
+
+            if (!PathCache.ContainsKey(currentPath))
+            {
+                PathCache[currentPath] = transform.gameObject;
+            }
+
+            int childCount = transform.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform child = transform.GetChild(i);
+                if (child == null || !child.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                CacheHierarchy(child, currentPath);
+            }
+        }
+
+        private static string NormalizePath(string path)
+        {
+            string normalized = path.Replace('\\', '/').Trim();
+            normalized = normalized.TrimEnd('/');
+            if (normalized.Length == 0)
+            {
+                return "/";
+            }
+
+            return normalized.StartsWith("/", StringComparison.Ordinal)
+                ? normalized
+                : "/" + normalized.TrimStart('/');
+        }
+
+        private static void Invalidate()
+        {
+            _isDirty = true;
+            QaIdCache.Clear();
+            PathCache.Clear();
+        }
+
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            Rebuild();
+            Invalidate();
         }
 
         private static void OnSceneUnloaded(Scene scene)
         {
-            Rebuild();
+            Invalidate();
+        }
+
+        private static void OnHierarchyChanged()
+        {
+            Invalidate();
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            Invalidate();
         }
     }
 }

@@ -29,9 +29,37 @@ PROJECT_ROOT="$(pwd -P)"
 - 플레이 상태: `play`, `pause`, `stop`
 - 로그 확인: `read-console`
 - 메뉴 실행: `execute-menu`
+- 메뉴 조회: `execute-menu --list`
 - scene 전환: `scene open`
 
 live 편집이 필요한 명령은 에디터가 켜져 있고 busy 상태가 아닐 때 우선 실행한다.
+
+## 메뉴 실행 (execute-menu)
+
+### 언제 메뉴 조회를 먼저 하는가
+
+메뉴 경로는 Unity 버전마다 다르다. **경로를 추측하지 말고** 반드시 `--list`로 먼저 확인한다.
+
+권장 사례:
+- **UI 요소 추가 전**: Unity 6에서 `GameObject/UI/Button`은 없고 `GameObject/UI (Canvas)/Button - TextMeshPro`가 있다. 항상 조회 먼저.
+- **첫 메뉴 실행 전**: 프로젝트에 연결한 뒤 한 번은 `--list "GameObject"`로 전체 메뉴 구조를 파악한다.
+- **`executed: false` 반환 시**: 경로가 틀렸거나 validation 실패. `--list`로 올바른 경로를 확인한다.
+- **커스텀 패키지 메뉴**: 패키지가 등록한 메뉴는 표준 경로와 다를 수 있으므로 항상 조회.
+
+```bash
+# 전체 GameObject 하위 메뉴 조회
+ucli execute-menu --list "GameObject" --project "$PROJECT_ROOT" --json
+
+# UI 관련 메뉴만 조회
+ucli execute-menu --list "GameObject/UI" --project "$PROJECT_ROOT" --json
+
+# 조회 결과에서 정확한 경로로 실행
+ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project "$PROJECT_ROOT" --json
+```
+
+### execute-menu로 충분한 경우
+
+3D Object, UI, Audio, Light, Effects 등 Unity 기본 메뉴에서 오브젝트를 추가하는 경우 별도 템플릿 커맨드 없이 `execute-menu`로 충분하다. 새 커맨드를 만들기 전에 메뉴로 해결 가능한지 먼저 확인한다.
 
 ## live 연결 전제
 

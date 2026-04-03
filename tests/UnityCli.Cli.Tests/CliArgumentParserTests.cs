@@ -687,6 +687,52 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_ExecuteMenu_AcceptsPath()
+    {
+        var parsed = CliArgumentParser.Parse(["execute-menu", "--path", "Assets/Refresh"]);
+
+        Assert.Equal(CommandKind.ExecuteMenu, parsed.Kind);
+        Assert.Equal("Assets/Refresh", parsed.MenuPath);
+        Assert.False(parsed.MenuList);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
+    }
+
+    [Fact]
+    public void Parse_ExecuteMenu_AcceptsListPrefix()
+    {
+        var parsed = CliArgumentParser.Parse(["execute-menu", "--list", "GameObject"]);
+        var args = ProtocolJson.Deserialize<ExecuteMenuArgs>(parsed.ToEnvelope().argumentsJson);
+
+        Assert.Equal(CommandKind.ExecuteMenu, parsed.Kind);
+        Assert.True(parsed.MenuList);
+        Assert.Equal("GameObject", parsed.MenuListPrefix);
+        Assert.NotNull(args);
+        Assert.True(args.list);
+        Assert.Equal("GameObject", args.prefix);
+        Assert.Equal(string.Empty, args.path);
+    }
+
+    [Fact]
+    public void Parse_ExecuteMenu_RejectsPathAndListTogether()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse(["execute-menu", "--path", "Assets/Refresh", "--list", "GameObject"]));
+
+        Assert.Contains("--path", ex.Message);
+        Assert.Contains("--list", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_ExecuteMenu_RequiresPathOrList()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse(["execute-menu"]));
+
+        Assert.Contains("--path", ex.Message);
+        Assert.Contains("--list", ex.Message);
+    }
+
+    [Fact]
     public void Parse_Execute_RequiresCodeOrFile()
     {
         var ex = Assert.Throws<CliUsageException>(() =>

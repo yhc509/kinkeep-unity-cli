@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CSharp;
 using UnityCli.Protocol;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class ExecuteCodeHandler
     {
+        private const string UserCodePlaceholder = "/*__PUC_USER_CODE__*/";
         private const string WrapperTemplate = @"
 using System;
 using System.Collections.Generic;
@@ -41,6 +43,9 @@ public static class PucExecuteWrapper
         return __sb.ToString();
     }
 }";
+        private static readonly Regex UsingDirectiveLineRegex = new Regex(
+            @"^[ \t]*using[ \t]+([A-Za-z][\w.]*)[ \t]*;[ \t]*(?:\r?\n|$)",
+            RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
         public bool CanHandle(string command)
         {
@@ -57,7 +62,7 @@ public static class PucExecuteWrapper
 
             try
             {
-                string wrappedCode = WrapperTemplate.Replace("/*__PUC_USER_CODE__*/", args.code);
+                string wrappedCode = BuildWrappedCode(args.code);
                 Assembly assembly = CompileCode(wrappedCode);
                 Type? wrapperType = assembly.GetType("PucExecuteWrapper");
                 if (wrapperType == null)
@@ -117,6 +122,57 @@ public static class PucExecuteWrapper
                     success = false,
                     error = ex.Message,
                 });
+            }
+        }
+
+        private static string BuildWrappedCode(string userCode)
+        {
+            string templateBody = StripUsingDirectives(WrapperTemplate, out string[] templateUsings);
+            string userCodeBody = StripUsingDirectives(userCode, out string[] userUsings);
+            string[] mergedUsings = MergeUsingDirectives(templateUsings, userUsings);
+            string usingBlock = string.Join(Environment.NewLine, mergedUsings);
+
+            return usingBlock
+                + Environment.NewLine
+                + Environment.NewLine
+                + templateBody.Replace(UserCodePlaceholder, userCodeBody);
+        }
+
+        private static string StripUsingDirectives(string source, out string[] usings)
+        {
+            var extractedUsings = new List<string>();
+            string stripped = UsingDirectiveLineRegex.Replace(source, delegate(Match match)
+            {
+                extractedUsings.Add("using " + match.Groups[1].Value + ";");
+                return string.Empty;
+            });
+
+            usings = extractedUsings.ToArray();
+            return stripped.TrimStart('\r', '\n');
+        }
+
+        private static string[] MergeUsingDirectives(IEnumerable<string> templateUsings, IEnumerable<string> userUsings)
+        {
+            var mergedUsings = new List<string>();
+            var seenUsings = new HashSet<string>(StringComparer.Ordinal);
+
+            AppendUsingDirectives(mergedUsings, seenUsings, templateUsings);
+            AppendUsingDirectives(mergedUsings, seenUsings, userUsings);
+
+            return mergedUsings.ToArray();
+        }
+
+        private static void AppendUsingDirectives(
+            ICollection<string> mergedUsings,
+            ISet<string> seenUsings,
+            IEnumerable<string> usings)
+        {
+            foreach (string usingDirective in usings)
+            {
+                if (seenUsings.Add(usingDirective))
+                {
+                    mergedUsings.Add(usingDirective);
+                }
             }
         }
 

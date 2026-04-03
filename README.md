@@ -10,6 +10,7 @@
 - Scene, asset, material, package, and prefab workflows are first-class. This goes beyond `status` and `refresh` into `asset create`, `material info/set`, `package list/add/remove/search`, `scene open/inspect/patch`, scene object shortcuts like `scene add-object` and `scene set-transform`, and `prefab create/inspect/patch`.
 - Project-defined live commands can be exposed through a lightweight `[PucCommand]` extension API instead of adding one-off transport code.
 - The Codex skill keeps the workflow consistent: choose the command, perform the work, then verify the logs.
+- Unity menu workflows support both direct execution and prefix listing through `execute-menu --path ...` and `execute-menu --list ...`.
 
 ## What You Can Do With kinkeep-unity-cli
 
@@ -98,6 +99,7 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli package list --project "$PROJECT_ROOT" --json
 ./dist/unity-cli/UnityCli.Cli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --json
 ./dist/unity-cli/UnityCli.Cli screenshot --project "$PROJECT_ROOT" --view game --path /tmp/game-view.png --json
+./dist/unity-cli/UnityCli.Cli execute-menu --project "$PROJECT_ROOT" --list "GameObject" --json
 ./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"KinKeep smoke\");" --force --json
 ```
 

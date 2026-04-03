@@ -198,7 +198,7 @@ public static class CliArgumentParser
 
     private static ParsedCommand ParseQa(Queue<string> tokens)
     {
-        string subCommand = RequireSubcommand(tokens, "qa", "click", "tap", "swipe", "key", "wait", "wait-until");
+        string subCommand = RequireSubcommand(tokens, "qa");
         return subCommand switch
         {
             "click" => new ParsedCommand(CommandKind.QaClick),
@@ -261,6 +261,10 @@ public static class CliArgumentParser
                     break;
                 case CommandKind.ExecuteMenu when token == "--path":
                     parsed.MenuPath = RequireValue(tokens, "--path");
+                    break;
+                case CommandKind.ExecuteMenu when token == "--list":
+                    parsed.MenuList = true;
+                    parsed.MenuListPrefix = RequireValue(tokens, "--list");
                     break;
                 case CommandKind.Screenshot when token == "--view":
                     parsed.ScreenshotView = RequireScreenshotView(RequireValue(tokens, "--view"));
@@ -325,13 +329,14 @@ public static class CliArgumentParser
                     parsed.QaId = RequireValue(tokens, "--qa-id");
                     break;
                 case CommandKind.QaClick when token == "--target":
+                case CommandKind.QaSwipe when token == "--target":
                     parsed.QaTarget = RequireValue(tokens, "--target");
                     break;
                 case CommandKind.QaTap when token == "--x":
-                    parsed.QaTapX = RequireInteger(RequireValue(tokens, "--x"), "--x");
+                    parsed.QaTapX = RequireInt(RequireValue(tokens, "--x"), "--x", minimumValue: null);
                     break;
                 case CommandKind.QaTap when token == "--y":
-                    parsed.QaTapY = RequireInteger(RequireValue(tokens, "--y"), "--y");
+                    parsed.QaTapY = RequireInt(RequireValue(tokens, "--y"), "--y", minimumValue: null);
                     break;
                 case CommandKind.QaSwipe when token == "--from":
                     parsed.QaSwipeFrom = RequireValue(tokens, "--from");
@@ -438,7 +443,7 @@ public static class CliArgumentParser
                     parsed.AssetHeight = RequireInt(RequireValue(tokens, "--height"), "--height");
                     break;
                 case CommandKind.AssetCreate when token == "--depth":
-                    parsed.AssetDepth = RequireNonNegativeInt(RequireValue(tokens, "--depth"), "--depth");
+                    parsed.AssetDepth = RequireInt(RequireValue(tokens, "--depth"), "--depth", minimumValue: 0);
                     break;
                 case CommandKind.SceneOpen when token == "--path":
                 case CommandKind.SceneInspect when token == "--path":
@@ -525,11 +530,7 @@ public static class CliArgumentParser
             }
         }
 
-        if (parsed.Kind == CommandKind.ExecuteMenu && string.IsNullOrWhiteSpace(parsed.MenuPath))
-        {
-            throw new CliUsageException("`execute-menu`에는 `--path`가 필요합니다.");
-        }
-
+        ValidateExecuteMenuOptions(parsed);
         ValidateAssetOptions(parsed);
         ValidateSceneOptions(parsed);
         ValidateScreenshotOptions(parsed);
@@ -554,34 +555,30 @@ public static class CliArgumentParser
         };
     }
 
-    private static int RequireInt(string value, string option)
-    {
-        if (!int.TryParse(value, out var result) || result <= 0)
-        {
-            throw new CliUsageException($"{option} 값은 1 이상의 정수여야 합니다.");
-        }
-
-        return result;
-    }
-
-    private static int RequireInteger(string value, string option)
+    private static int RequireInt(string value, string option, int? minimumValue = 1)
     {
         if (!int.TryParse(value, out var result))
         {
-            throw new CliUsageException($"{option} 값은 정수여야 합니다.");
+            throw new CliUsageException($"{option} 값은 {DescribeIntegerRequirement(minimumValue)}여야 합니다.");
+        }
+
+        if (minimumValue.HasValue && result < minimumValue.Value)
+        {
+            throw new CliUsageException($"{option} 값은 {DescribeIntegerRequirement(minimumValue)}여야 합니다.");
         }
 
         return result;
     }
 
-    private static int RequireNonNegativeInt(string value, string option)
+    private static string DescribeIntegerRequirement(int? minimumValue)
     {
-        if (!int.TryParse(value, out var result) || result < 0)
+        return minimumValue switch
         {
-            throw new CliUsageException($"{option} 값은 0 이상의 정수여야 합니다.");
-        }
-
-        return result;
+            null => "정수",
+            0 => "0 이상의 정수",
+            1 => "1 이상의 정수",
+            _ => minimumValue.Value + " 이상의 정수",
+        };
     }
 
     private static string RequireValue(Queue<string> tokens, string option)
@@ -616,7 +613,7 @@ public static class CliArgumentParser
         return normalized;
     }
 
-    private static string RequireSubcommand(Queue<string> tokens, string command, params string[] available)
+    private static string RequireSubcommand(Queue<string> tokens, string command)
     {
         if (tokens.Count == 0)
         {
@@ -742,6 +739,26 @@ public static class CliArgumentParser
         }
     }
 
+    private static void ValidateExecuteMenuOptions(ParsedCommand parsed)
+    {
+        if (parsed.Kind != CommandKind.ExecuteMenu)
+        {
+            return;
+        }
+
+        bool hasPath = !string.IsNullOrWhiteSpace(parsed.MenuPath);
+        bool hasList = parsed.MenuList;
+        if (hasPath == hasList)
+        {
+            throw new CliUsageException("`execute-menu`에는 `--path` 또는 `--list <prefix>` 중 하나만 필요합니다.");
+        }
+
+        if (parsed.MenuList && string.IsNullOrWhiteSpace(parsed.MenuListPrefix))
+        {
+            throw new CliUsageException("`execute-menu --list`에는 prefix가 필요합니다.");
+        }
+    }
+
     private static void ValidatePackageOptions(ParsedCommand parsed)
     {
         switch (parsed.Kind)
@@ -800,6 +817,10 @@ public static class CliArgumentParser
                 throw new CliUsageException("`qa tap`에는 `--x`와 `--y`가 모두 필요합니다.");
             case CommandKind.QaSwipe when string.IsNullOrWhiteSpace(parsed.QaSwipeFrom) || string.IsNullOrWhiteSpace(parsed.QaSwipeTo):
                 throw new CliUsageException("`qa swipe`에는 `--from`과 `--to`가 모두 필요합니다.");
+            case CommandKind.QaSwipe:
+                RequireCoordinatePair(parsed.QaSwipeFrom!, "--from");
+                RequireCoordinatePair(parsed.QaSwipeTo!, "--to");
+                break;
             case CommandKind.QaKey when string.IsNullOrWhiteSpace(parsed.QaKeyName):
                 throw new CliUsageException("`qa key`에는 `--key`가 필요합니다.");
             case CommandKind.QaWait when parsed.QaWaitMs <= 0:
@@ -826,6 +847,15 @@ public static class CliArgumentParser
 
                 break;
             }
+        }
+    }
+
+    private static void RequireCoordinatePair(string value, string option)
+    {
+        string[] parts = value.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[0], out _) || !int.TryParse(parts[1], out _))
+        {
+            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
         }
     }
 
