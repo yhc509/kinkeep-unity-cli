@@ -80,7 +80,20 @@ public static partial class CliArgumentParser
 
     public static string BuildHelpText()
     {
-        return CliCommandMetadata.BuildHelpText();
+        string[] notes =
+        [
+            "qa swipe --from/--to use absolute screen pixel coordinates unless --target is supplied; with --target they become pixel offsets from the target RectTransform center.",
+            "screenshot --view game in Play Mode captures at the native Game View size first; --width/--height only downscale it, and larger requests save at native size with a warning."
+        ];
+
+        return string.Join(
+            Environment.NewLine,
+            [
+                CliCommandMetadata.BuildHelpText(),
+                "notes:",
+                ..notes,
+                string.Empty,
+            ]);
     }
 
     private static ParsedCommand ParseInstances(Queue<string> tokens)

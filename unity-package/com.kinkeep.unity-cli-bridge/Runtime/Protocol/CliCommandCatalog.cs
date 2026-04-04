@@ -141,13 +141,17 @@ namespace UnityCli.Protocol
             new CliCommandDescriptor(
                 "screenshot",
                 "screenshot (--view game|scene | --camera <name>) [--path <output.png>] [--width N] [--height N]",
-                "Captures a screenshot from the Game View, Scene View, or a named camera.",
+                "Captures a screenshot from the Game View, Scene View, or a named camera. In Play Mode, --view game can downscale the native Game View capture but does not upscale it.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandScreenshot,
                 canUseLocal: false,
                 canUseLive: true,
                 isAllowedWhileBusy: false,
-                notes: new[] { "Live-only." }),
+                notes: new[]
+                {
+                    "Live-only.",
+                    "Play Mode --view game captures at the native Game View size first; larger --width/--height requests warn and save at native resolution instead of upscaling.",
+                }),
             new CliCommandDescriptor(
                 "execute",
                 "execute (--code <csharp> | --file <path>) --force",
@@ -428,8 +432,8 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false),
             new CliCommandDescriptor(
                 "qa swipe",
-                "qa swipe --from <x,y> --to <x,y> [--duration <ms>]",
-                "Swipes between two screen coordinates; requires Play Mode.",
+                "qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]",
+                "Swipes over multiple frames; when --target is supplied, --from/--to become pixel offsets from the target RectTransform center before resolving to screen coordinates; requires Play Mode.",
                 CliCommandGroup.QaWorkflows,
                 ProtocolConstants.CommandQaSwipe,
                 canUseLocal: false,

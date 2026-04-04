@@ -37,7 +37,7 @@ Commands for editor state, compilation, play state, menus, arbitrary code execut
 | `pause` | `pause` | live | Pauses Play Mode in a running editor. |
 | `stop` | `stop` | live | Stops Play Mode in a running editor. |
 | `execute-menu` | `execute-menu (--path "Menu/Item" \| --list "Prefix")` | live | Executes a Unity menu item or lists registered menu items matching a prefix in a running editor. |
-| `screenshot` | `screenshot (--view game\|scene \| --camera <name>) [--path <output.png>] [--width N] [--height N]` | live | Captures a screenshot from the Game View, Scene View, or a named camera. |
+| `screenshot` | `screenshot (--view game\|scene \| --camera <name>) [--path <output.png>] [--width N] [--height N]` | live | Captures a screenshot from the Game View, Scene View, or a named camera. In Play Mode, --view game can downscale the native Game View capture but does not upscale it. |
 | `execute` | `execute (--code <csharp> \| --file <path>) --force` | live | Executes arbitrary C# code in the running editor context; always requires --force. |
 | `custom` | `custom <command-name> [--json <args>]` | live | Invokes a project-defined custom command registered via [PucCommand] attribute. |
 
@@ -109,7 +109,7 @@ Commands for Play Mode QA interactions such as click, tap, swipe, key input, and
 | --- | --- | --- | --- |
 | `qa click` | `qa click (--qa-id <id> \| --target <path>)` | live | Clicks a UI element identified by QA ID or GameObject path; requires Play Mode. |
 | `qa tap` | `qa tap --x <int> --y <int>` | live | Taps at a screen coordinate; requires Play Mode. |
-| `qa swipe` | `qa swipe --from <x,y> --to <x,y> [--duration <ms>]` | live | Swipes between two screen coordinates; requires Play Mode. |
+| `qa swipe` | `qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]` | live | Swipes over multiple frames; when --target is supplied, --from/--to become pixel offsets from the target RectTransform center before resolving to screen coordinates; requires Play Mode. |
 | `qa key` | `qa key --key <keyName>` | live | Simulates a key press via Input System; requires Play Mode. |
 | `qa wait` | `qa wait --ms <int>` | local | Waits for the specified number of milliseconds (local only, does not contact the editor). |
 | `qa wait-until` | `qa wait-until (--scene <name> \| --log-contains <text> \| --object-exists <qa-id\|path>) [--timeout <ms>]` | live | Polls the editor until a condition is met or timeout expires; requires Play Mode. |

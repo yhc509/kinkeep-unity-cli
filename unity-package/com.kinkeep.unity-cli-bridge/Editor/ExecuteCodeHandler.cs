@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.CSharp;
 using UnityCli.Protocol;
 using UnityEngine;
@@ -43,10 +42,6 @@ public static class PucExecuteWrapper
         return __sb.ToString();
     }
 }";
-        private static readonly Regex UsingDirectiveLineRegex = new Regex(
-            @"^[ \t]*using[ \t]+([A-Za-z][\w.]*)[ \t]*;[ \t]*(?:\r?\n|$)",
-            RegexOptions.Multiline | RegexOptions.CultureInvariant);
-
         public bool CanHandle(string command)
         {
             return string.Equals(command, ProtocolConstants.CommandExecuteCode, StringComparison.Ordinal);
@@ -127,8 +122,8 @@ public static class PucExecuteWrapper
 
         private static string BuildWrappedCode(string userCode)
         {
-            string templateBody = StripUsingDirectives(WrapperTemplate, out string[] templateUsings);
-            string userCodeBody = StripUsingDirectives(userCode, out string[] userUsings);
+            string templateBody = UsingDirectiveUtility.StripUsingDirectives(WrapperTemplate, out string[] templateUsings);
+            string userCodeBody = UsingDirectiveUtility.StripUsingDirectives(userCode, out string[] userUsings);
             string[] mergedUsings = MergeUsingDirectives(templateUsings, userUsings);
             string usingBlock = string.Join(Environment.NewLine, mergedUsings);
 
@@ -136,19 +131,6 @@ public static class PucExecuteWrapper
                 + Environment.NewLine
                 + Environment.NewLine
                 + templateBody.Replace(UserCodePlaceholder, userCodeBody);
-        }
-
-        private static string StripUsingDirectives(string source, out string[] usings)
-        {
-            var extractedUsings = new List<string>();
-            string stripped = UsingDirectiveLineRegex.Replace(source, delegate(Match match)
-            {
-                extractedUsings.Add("using " + match.Groups[1].Value + ";");
-                return string.Empty;
-            });
-
-            usings = extractedUsings.ToArray();
-            return stripped.TrimStart('\r', '\n');
         }
 
         private static string[] MergeUsingDirectives(IEnumerable<string> templateUsings, IEnumerable<string> userUsings)

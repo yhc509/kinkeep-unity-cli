@@ -1,6 +1,6 @@
 ---
 name: unity-cli-operator
-description: "Use when the user wants to operate Unity through `unity-cli`, including live command selection, asset commands, scene/prefab inspect/patch flows, console-log verification, or Unity CLI Bridge troubleshooting."
+description: "Use when the user wants to operate Unity through `unity-cli`, including live command selection, asset commands, scene/prefab inspect/patch flows, QA test automation (Play Mode input simulation), console-log verification, or Unity CLI Bridge troubleshooting."
 ---
 
 # Unity CLI Operator
@@ -45,5 +45,6 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 
 - 일반 운용, 에셋 생성, scene inspect/patch: [references/command-flows.md](references/command-flows.md)
 - prefab create/inspect/patch와 spec 작성: [references/prefab-workflows.md](references/prefab-workflows.md)
+- QA 테스트 자동화 (Play Mode 입력 시뮬레이션): [references/qa-testing.md](references/qa-testing.md)
 - stale instance, busy, liveReachable, 로그 확인: [references/troubleshooting.md](references/troubleshooting.md)
 - 빠르게 시작할 JSON 템플릿: `assets/`

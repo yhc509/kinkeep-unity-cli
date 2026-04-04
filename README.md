@@ -244,6 +244,7 @@ Unity integration:
 ## Current Limits
 
 - Release automation is still centered on `macOS arm64`.
+- In Play Mode, `screenshot --view game` uses `ScreenCapture.CaptureScreenshotAsTexture()`. `--width` and `--height` can downscale the native Game View capture, but larger requests log a warning and save the native capture without upscaling.
 - Scene patching currently targets saved `Assets/...unity` scenes. Multi-scene orchestration and generalized scene object references are still out of scope.
 - Advanced editing for prefab-internal object references and nested prefab variants is still out of scope.
 - The root prefab object name is normalized to the prefab file name when saved by Unity.

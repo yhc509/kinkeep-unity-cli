@@ -13,7 +13,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class QaCommandHandler
     {
-        private static readonly Dictionary<int, ScreenPositionContext> ScreenPositionContextCache = new();
+        private static readonly Dictionary<int, ScreenPositionContext> _screenPositionContextCache = new();
         private static bool _isScreenPositionCacheSubscribed;
 
         public QaCommandHandler()
@@ -63,6 +63,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             throw new InvalidOperationException("Unhandled QA command: " + command);
         }
 
+        // argumentsJson is retained for interface compatibility with BridgeHost command dispatch.
         public bool IsDeferred(string command, string? argumentsJson = null)
         {
             if (string.Equals(command, ProtocolConstants.CommandQaWaitUntil, StringComparison.Ordinal))
@@ -70,21 +71,25 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 return true;
             }
 
-            if (string.Equals(command, ProtocolConstants.CommandQaSwipe, StringComparison.Ordinal))
+            if (!string.Equals(command, ProtocolConstants.CommandQaSwipe, StringComparison.Ordinal))
             {
-                if (!string.IsNullOrWhiteSpace(argumentsJson))
-                {
-                    QaSwipeArgs? args = ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson);
-                    if (args != null && !string.IsNullOrWhiteSpace(args.target))
-                    {
-                        return false;
-                    }
-                }
+                return false;
+            }
 
+            QaSwipeArgs args = string.IsNullOrWhiteSpace(argumentsJson)
+                ? new QaSwipeArgs()
+                : ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson) ?? new QaSwipeArgs();
+
+            if (string.IsNullOrWhiteSpace(args.target))
+            {
                 return true;
             }
 
+#if ENABLE_INPUT_SYSTEM
+            return true;
+#else
             return false;
+#endif
         }
 
         public void StartDeferred(
@@ -286,9 +291,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string requestId)
         {
             QaSwipeArgs args = ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson) ?? new QaSwipeArgs();
+            SwipeScreenPositions swipeScreenPositions = ResolveSwipeScreenPositions(args);
             QaInputSimulator.SwipeOperation swipe = QaInputSimulator.BeginSwipe(
-                new Vector2(args.fromX, args.fromY),
-                new Vector2(args.toX, args.toY),
+                swipeScreenPositions.FromScreenPosition,
+                swipeScreenPositions.ToScreenPosition,
                 args.durationMs);
             var stopwatch = Stopwatch.StartNew();
 
@@ -427,24 +433,63 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleSwipeOnTarget(string argumentsJson)
         {
             QaSwipeArgs args = ProtocolJson.Deserialize<QaSwipeArgs>(argumentsJson) ?? new QaSwipeArgs();
+            GameObject target = ResolveSwipeTarget(args);
+            SwipeScreenPositions swipeScreenPositions = ResolveTargetSwipeScreenPositions(target, args);
+            int steps = Mathf.Max(1, Mathf.CeilToInt(args.durationMs / 16f));
 
+            DragGameObject(target, swipeScreenPositions.FromScreenPosition, swipeScreenPositions.ToScreenPosition, steps);
+
+            return ProtocolJson.Serialize(new QaSwipePayload
+            {
+                completed = true,
+            });
+        }
+
+        private static SwipeScreenPositions ResolveSwipeScreenPositions(QaSwipeArgs args)
+        {
+            if (string.IsNullOrWhiteSpace(args.target))
+            {
+                return new SwipeScreenPositions(
+                    new Vector2(args.fromX, args.fromY),
+                    new Vector2(args.toX, args.toY));
+            }
+
+            GameObject target = ResolveSwipeTarget(args);
+            return ResolveTargetSwipeScreenPositions(target, args);
+        }
+
+        private static GameObject ResolveSwipeTarget(QaSwipeArgs args)
+        {
             if (string.IsNullOrWhiteSpace(args.target))
             {
                 throw new CommandFailureException("QA_MISSING_TARGET", "qa swipe --target requires a target path.", false, null);
             }
 
-            if (!QaTargetRegistry.TryResolvePath(args.target!, out GameObject? target) || target == null)
+            if (!QaTargetRegistry.TryResolvePath(args.target, out GameObject? target) || target == null)
             {
                 throw new CommandFailureException("QA_TARGET_NOT_FOUND", $"No active GameObject found at path '{args.target}'.", false, null);
             }
 
-            Vector2 from = new Vector2(args.fromX, args.fromY);
-            Vector2 to = new Vector2(args.toX, args.toY);
-            int steps = Mathf.Max(1, Mathf.CeilToInt(args.durationMs / 16f));
+            return target;
+        }
 
-            DragGameObject(target, from, to, steps);
+        private static SwipeScreenPositions ResolveTargetSwipeScreenPositions(GameObject target, QaSwipeArgs args)
+        {
+            ScreenPositionContext context = GetScreenPositionContext(target);
+            RectTransform? rectTransform = context.RectTransform;
+            if (rectTransform == null)
+            {
+                throw new CommandFailureException(
+                    "QA_TARGET_NOT_RECT_TRANSFORM",
+                    $"qa swipe --target requires a RectTransform target. '{args.target}' does not have one.",
+                    false,
+                    null);
+            }
 
-            return ProtocolJson.Serialize(new QaSwipePayload { completed = true });
+            Vector2 targetCenterScreenPosition = GetScreenCenterPosition(rectTransform, context);
+            return new SwipeScreenPositions(
+                targetCenterScreenPosition + new Vector2(args.fromX, args.fromY),
+                targetCenterScreenPosition + new Vector2(args.toX, args.toY));
         }
 
         private static void DragGameObject(GameObject target, Vector2 from, Vector2 to, int steps)
@@ -464,9 +509,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             for (int i = 1; i <= steps; i++)
             {
                 float t = (float)i / steps;
-                Vector2 pos = Vector2.Lerp(from, to, t);
-                pointerData.position = pos;
-                pointerData.delta = pos - Vector2.Lerp(from, to, (float)(i - 1) / steps);
+                Vector2 position = Vector2.Lerp(from, to, t);
+                pointerData.position = position;
+                pointerData.delta = position - Vector2.Lerp(from, to, (float)(i - 1) / steps);
                 ExecuteEvents.Execute(target, pointerData, ExecuteEvents.dragHandler);
             }
 
@@ -556,21 +601,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             RectTransform? rectTransform = context.RectTransform;
             if (rectTransform != null)
             {
-                var corners = new Vector3[4];
-                rectTransform.GetWorldCorners(corners);
-                Vector3 center = (corners[0] + corners[2]) * 0.5f;
-
-                Canvas? canvas = context.ParentCanvas;
-                if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                {
-                    Camera? canvasCamera = canvas.worldCamera ?? Camera.main;
-                    if (canvasCamera != null)
-                    {
-                        return RectTransformUtility.WorldToScreenPoint(canvasCamera, center);
-                    }
-                }
-
-                return new Vector2(center.x, center.y);
+                return GetScreenCenterPosition(rectTransform, context);
             }
 
             Camera? mainCamera = Camera.main;
@@ -581,6 +612,31 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return Vector2.zero;
+        }
+
+        private static Vector2 GetScreenCenterPosition(
+            RectTransform rectTransform,
+            ScreenPositionContext context)
+        {
+            var corners = new Vector3[4];
+            rectTransform.GetWorldCorners(corners);
+            Vector3 worldPoint = (corners[0] + corners[2]) * 0.5f;
+            return WorldToScreenPoint(worldPoint, context);
+        }
+
+        private static Vector2 WorldToScreenPoint(Vector3 worldPoint, ScreenPositionContext context)
+        {
+            Canvas? canvas = context.ParentCanvas;
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                Camera? canvasCamera = context.CanvasCamera;
+                if (canvasCamera != null)
+                {
+                    return RectTransformUtility.WorldToScreenPoint(canvasCamera, worldPoint);
+                }
+            }
+
+            return new Vector2(worldPoint.x, worldPoint.y);
         }
 
         private static void EnsureScreenPositionCacheSubscribed()
@@ -598,7 +654,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static ScreenPositionContext GetScreenPositionContext(GameObject gameObject)
         {
             int instanceId = gameObject.GetInstanceID();
-            if (ScreenPositionContextCache.TryGetValue(instanceId, out ScreenPositionContext? context))
+            if (_screenPositionContextCache.TryGetValue(instanceId, out ScreenPositionContext? context))
             {
                 return context;
             }
@@ -607,15 +663,18 @@ namespace KinKeep.UnityCli.Bridge.Editor
             Canvas? parentCanvas = rectTransform != null
                 ? gameObject.GetComponentInParent<Canvas>()
                 : null;
+            Camera? canvasCamera = parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? parentCanvas.worldCamera ?? Camera.main
+                : null;
 
-            context = new ScreenPositionContext(rectTransform, parentCanvas);
-            ScreenPositionContextCache[instanceId] = context;
+            context = new ScreenPositionContext(rectTransform, parentCanvas, canvasCamera);
+            _screenPositionContextCache[instanceId] = context;
             return context;
         }
 
         private static void ClearScreenPositionCache()
         {
-            ScreenPositionContextCache.Clear();
+            _screenPositionContextCache.Clear();
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -638,15 +697,31 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private sealed class ScreenPositionContext
         {
-            public ScreenPositionContext(RectTransform? rectTransform, Canvas? parentCanvas)
+            public ScreenPositionContext(RectTransform? rectTransform, Canvas? parentCanvas, Camera? canvasCamera)
             {
                 RectTransform = rectTransform;
                 ParentCanvas = parentCanvas;
+                CanvasCamera = canvasCamera;
             }
 
             public RectTransform? RectTransform { get; }
 
             public Canvas? ParentCanvas { get; }
+
+            public Camera? CanvasCamera { get; }
+        }
+
+        private readonly struct SwipeScreenPositions
+        {
+            public SwipeScreenPositions(Vector2 fromScreenPosition, Vector2 toScreenPosition)
+            {
+                FromScreenPosition = fromScreenPosition;
+                ToScreenPosition = toScreenPosition;
+            }
+
+            public Vector2 FromScreenPosition { get; }
+
+            public Vector2 ToScreenPosition { get; }
         }
     }
 }

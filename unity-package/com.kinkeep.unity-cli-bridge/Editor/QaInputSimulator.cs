@@ -57,9 +57,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
         }
 
         /// <summary>
-        /// Creates a swipe operation that advances one input step per editor update.
+        /// Creates a swipe operation that advances one screen-space input step per editor update.
         /// </summary>
-        public static SwipeOperation BeginSwipe(Vector2 from, Vector2 to, int durationMs)
+        public static SwipeOperation BeginSwipe(Vector2 fromScreenPosition, Vector2 toScreenPosition, int durationMs)
         {
             int normalizedDurationMs = durationMs > 0 ? durationMs : ProtocolConstants.DefaultQaSwipeDurationMs;
             int totalSteps = Mathf.Max(1, Mathf.CeilToInt(normalizedDurationMs / (float)DefaultFrameDurationMs));
@@ -67,13 +67,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             Touchscreen? touchscreen = Touchscreen.current;
             if (touchscreen != null)
             {
-                return new SwipeOperation(from, to, totalSteps, touchscreen);
+                return new SwipeOperation(fromScreenPosition, toScreenPosition, totalSteps, touchscreen);
             }
 
             Mouse? mouse = Mouse.current;
             if (mouse != null)
             {
-                return new SwipeOperation(from, to, totalSteps, mouse);
+                return new SwipeOperation(fromScreenPosition, toScreenPosition, totalSteps, mouse);
             }
 
             throw new CommandFailureException("QA_NO_POINTER_DEVICE", "No pointer device found in Input System.", false, null);

@@ -52,6 +52,7 @@ The CLI executable and Codex skill are not included in the UPM package payload. 
 ## Notes
 
 - This package includes `Newtonsoft.Json.dll` in `Editor/Plugins` for scene/prefab spec parsing.
+- In Play Mode, `screenshot --view game` uses `ScreenCapture.CaptureScreenshotAsTexture()`. `--width` and `--height` can downscale the native Game View capture, but larger requests log a warning and save the native capture without upscaling.
 - `input-actions` assets are created as JSON files that Unity's Input System importer reads.
 - `scene inspect --with-values` is meant to be used as the source of truth when authoring `scene patch` specs.
 - `scene patch` uses `/Root[0]/Child[0]` paths, treats `/` as the virtual scene root, and requires `--force` for destructive ops.

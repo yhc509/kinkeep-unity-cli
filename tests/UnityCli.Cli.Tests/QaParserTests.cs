@@ -165,7 +165,21 @@ public sealed class QaParserTests
         ]));
 
         Assert.Contains("--from", ex.Message);
-        Assert.Contains("x,y", ex.Message);
+        Assert.Contains("절대 화면 픽셀 좌표", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaSwipe_WithTargetAndInvalidCoordinate_ThrowsTargetRelativeUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "swipe",
+            "--target", "/Canvas/Slider",
+            "--from", "100,down",
+            "--to", "300,400"
+        ]));
+
+        Assert.Contains("--from", ex.Message);
+        Assert.Contains("target 중심 기준 픽셀 오프셋", ex.Message);
     }
 
     [Fact]
@@ -275,20 +289,48 @@ public sealed class QaParserTests
         var ex = Assert.Throws<CliUsageException>(() => parsed.ToEnvelope());
 
         Assert.Contains("--from", ex.Message);
-        Assert.Contains("x,y", ex.Message);
+        Assert.Contains("절대 화면 픽셀 좌표", ex.Message);
+    }
+
+    [Fact]
+    public void ToEnvelope_QaSwipe_WithTargetAndInvalidCoordinate_ThrowsTargetRelativeUsage()
+    {
+        var parsed = new ParsedCommand(CommandKind.QaSwipe)
+        {
+            QaTarget = "/Canvas/Slider",
+            QaSwipeFrom = "100,down",
+            QaSwipeTo = "300,400",
+        };
+
+        var ex = Assert.Throws<CliUsageException>(() => parsed.ToEnvelope());
+
+        Assert.Contains("--from", ex.Message);
+        Assert.Contains("target 중심 기준 픽셀 오프셋", ex.Message);
     }
 
     [Fact]
     public void BuildHelpText_IncludesQaCommands()
     {
-        var helpText = CliCommandMetadata.BuildHelpText();
+        var helpText = CliArgumentParser.BuildHelpText();
 
         Assert.Contains("qa click", helpText);
         Assert.Contains("qa tap", helpText);
-        Assert.Contains("qa swipe", helpText);
+        Assert.Contains("qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]", helpText);
         Assert.Contains("qa key", helpText);
         Assert.Contains("qa wait --ms <int>", helpText);
         Assert.Contains("qa wait-until", helpText);
+        Assert.Contains("qa swipe --from/--to use absolute screen pixel coordinates unless --target is supplied; with --target they become pixel offsets from the target RectTransform center.", helpText);
+    }
+
+    [Fact]
+    public void QaSwipe_CommandCatalog_DescribesTargetRelativeOffsets()
+    {
+        CliCommandDescriptor? descriptor = CliCommandCatalog.FindByCommand("qa swipe");
+
+        Assert.NotNull(descriptor);
+        Assert.Contains("--target <path>", descriptor!.Synopsis);
+        Assert.Contains("pixel offsets from the target RectTransform center", descriptor.Summary);
+        Assert.Contains("multiple frames", descriptor.Summary);
     }
 
     private static JsonElement ParseArguments(string argumentsJson)

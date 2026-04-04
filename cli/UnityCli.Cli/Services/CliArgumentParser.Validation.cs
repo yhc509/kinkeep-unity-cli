@@ -281,8 +281,9 @@ public static partial class CliArgumentParser
             case CommandKind.QaSwipe when string.IsNullOrWhiteSpace(parsed.QaSwipeFrom) || string.IsNullOrWhiteSpace(parsed.QaSwipeTo):
                 throw new CliUsageException("`qa swipe`에는 `--from`과 `--to`가 모두 필요합니다.");
             case CommandKind.QaSwipe:
-                RequireCoordinatePair(parsed.QaSwipeFrom!, "--from");
-                RequireCoordinatePair(parsed.QaSwipeTo!, "--to");
+                bool usesTargetRelativeOffsets = !string.IsNullOrWhiteSpace(parsed.QaTarget);
+                RequireQaSwipeCoordinatePair(parsed.QaSwipeFrom!, "--from", usesTargetRelativeOffsets);
+                RequireQaSwipeCoordinatePair(parsed.QaSwipeTo!, "--to", usesTargetRelativeOffsets);
                 break;
             case CommandKind.QaKey when string.IsNullOrWhiteSpace(parsed.QaKeyName):
                 throw new CliUsageException("`qa key`에는 `--key`가 필요합니다.");
@@ -313,13 +314,20 @@ public static partial class CliArgumentParser
         }
     }
 
-    private static void RequireCoordinatePair(string value, string option)
+    private static void RequireQaSwipeCoordinatePair(string value, string option, bool usesTargetRelativeOffsets)
     {
         string[] parts = value.Split(',', StringSplitOptions.TrimEntries);
         if (parts.Length != 2 || !int.TryParse(parts[0], out _) || !int.TryParse(parts[1], out _))
         {
-            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
+            throw new CliUsageException($"{option} 값은 {GetQaSwipeCoordinateDescription(usesTargetRelativeOffsets)}이어야 합니다.");
         }
+    }
+
+    private static string GetQaSwipeCoordinateDescription(bool usesTargetRelativeOffsets)
+    {
+        return usesTargetRelativeOffsets
+            ? "`x,y` 형식의 target 중심 기준 픽셀 오프셋"
+            : "`x,y` 형식의 절대 화면 픽셀 좌표";
     }
 
     private static void ValidateExecuteOptions(ParsedCommand parsed)

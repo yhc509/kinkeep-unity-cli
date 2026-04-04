@@ -300,10 +300,10 @@ public sealed class ParsedCommand
             CommandKind.QaSwipe => new QaSwipeArgs
             {
                 target = QaTarget ?? string.Empty,
-                fromX = ParseCoordinate(QaSwipeFrom, 0, "--from"),
-                fromY = ParseCoordinate(QaSwipeFrom, 1, "--from"),
-                toX = ParseCoordinate(QaSwipeTo, 0, "--to"),
-                toY = ParseCoordinate(QaSwipeTo, 1, "--to"),
+                fromX = ParseCoordinate(QaSwipeFrom, 0, "--from", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
+                fromY = ParseCoordinate(QaSwipeFrom, 1, "--from", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
+                toX = ParseCoordinate(QaSwipeTo, 0, "--to", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
+                toY = ParseCoordinate(QaSwipeTo, 1, "--to", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
                 durationMs = QaSwipeDuration,
             },
             CommandKind.QaKey => new QaKeyArgs
@@ -488,20 +488,27 @@ public sealed class ParsedCommand
         return ExecuteCodeSnippet ?? string.Empty;
     }
 
-    private static int ParseCoordinate(string? csv, int index, string option)
+    private static int ParseCoordinate(string? csv, int index, string option, bool usesTargetRelativeOffsets)
     {
         if (string.IsNullOrWhiteSpace(csv))
         {
-            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
+            throw new CliUsageException($"{option} 값은 {GetQaSwipeCoordinateDescription(usesTargetRelativeOffsets)}이어야 합니다.");
         }
 
         var parts = csv.Split(',', StringSplitOptions.TrimEntries);
         if (parts.Length != 2 || index >= parts.Length || !int.TryParse(parts[index], out var value))
         {
-            throw new CliUsageException($"{option} 값은 `x,y` 형식이어야 합니다.");
+            throw new CliUsageException($"{option} 값은 {GetQaSwipeCoordinateDescription(usesTargetRelativeOffsets)}이어야 합니다.");
         }
 
         return value;
+    }
+
+    private static string GetQaSwipeCoordinateDescription(bool usesTargetRelativeOffsets)
+    {
+        return usesTargetRelativeOffsets
+            ? "`x,y` 형식의 target 중심 기준 픽셀 오프셋"
+            : "`x,y` 형식의 절대 화면 픽셀 좌표";
     }
 
     private string ResolvePrefabSpecJson()
