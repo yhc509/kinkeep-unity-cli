@@ -66,6 +66,7 @@ public sealed class LocalIpcClient
             throw new IOException("Unity IPC 응답을 파싱하지 못했습니다.");
         }
 
+        response.EnsureData();
         return response;
     }
 }

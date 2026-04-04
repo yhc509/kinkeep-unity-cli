@@ -1,3 +1,4 @@
+using System.Text.Json;
 using UnityCli.Cli.Models;
 using UnityCli.Cli.Services;
 using UnityCli.Protocol;
@@ -7,14 +8,18 @@ namespace UnityCli.Cli.Tests;
 public sealed class ResponseFormatterTests
 {
     [Fact]
-    public void Format_PrettyTextOutput_PreservesUnicodeCharacters()
+    public void Format_PrettyTextOutput_UsesDataFieldAndPreservesUnicodeCharacters()
     {
         var parsed = new ParsedCommand(CommandKind.Refresh);
         var response = ResponseEnvelope.Success(
             requestId: "req-1",
             target: "target-1",
-            dataJson: "{\"message\":\"AssetDatabase.Refresh 완료\"}",
-            durationMs: 12);
+            dataJson: null,
+            durationMs: 12,
+            data: new
+            {
+                message = "AssetDatabase.Refresh 완료",
+            });
 
         var text = ResponseFormatter.Format(parsed, response);
 
@@ -23,13 +28,100 @@ public sealed class ResponseFormatterTests
     }
 
     [Fact]
-    public void Format_CompactOutput_ReturnsPayloadOnlyJson()
+    public void Format_JsonOutput_UsesDataFieldWithoutDoubleEscaping()
     {
         var response = ResponseEnvelope.Success(
             requestId: "req-1",
             target: "target-1",
-            dataJson: "{\"path\":\"Assets/Prefab.prefab\",\"type\":\"GameObject\"}",
-            durationMs: 42);
+            dataJson: null,
+            durationMs: 42,
+            data: new
+            {
+                path = "Assets/Prefab.prefab",
+                type = "GameObject",
+            });
+
+        var text = ResponseFormatter.Format(OutputMode.Json, response);
+        var payload = JsonSerializer.Deserialize<JsonElement>(text);
+
+        Assert.Equal("Assets/Prefab.prefab", payload.GetProperty("data").GetProperty("path").GetString());
+        Assert.Equal("GameObject", payload.GetProperty("data").GetProperty("type").GetString());
+        Assert.False(payload.TryGetProperty("dataJson", out _));
+    }
+
+    [Fact]
+    public void Format_JsonOutput_SuppressesLegacyDataJsonWhenDataIsPresent()
+    {
+        var response = ResponseEnvelope.Success(
+            requestId: "req-1",
+            target: "target-1",
+            dataJson: "{\"path\":\"Assets/Legacy.prefab\",\"type\":\"Legacy\"}",
+            durationMs: 42,
+            data: new
+            {
+                path = "Assets/Prefab.prefab",
+                type = "GameObject",
+            });
+
+        var text = ResponseFormatter.Format(OutputMode.Json, response);
+        var payload = JsonSerializer.Deserialize<JsonElement>(text);
+
+        Assert.Equal("Assets/Prefab.prefab", payload.GetProperty("data").GetProperty("path").GetString());
+        Assert.Equal("GameObject", payload.GetProperty("data").GetProperty("type").GetString());
+        Assert.False(payload.TryGetProperty("dataJson", out _));
+    }
+
+    [Fact]
+    public void Format_CompactOutput_UsesDataFieldWhenPresent()
+    {
+        var response = ResponseEnvelope.Success(
+            requestId: "req-1",
+            target: "target-1",
+            dataJson: null,
+            durationMs: 42,
+            data: new
+            {
+                path = "Assets/Prefab.prefab",
+                type = "GameObject",
+            });
+
+        var text = ResponseFormatter.Format(OutputMode.Compact, response);
+
+        Assert.Equal("{\"path\":\"Assets/Prefab.prefab\",\"type\":\"GameObject\"}", text);
+    }
+
+    [Fact]
+    public void Format_DefaultOutput_FallsBackToDataJsonWhenDataIsMissing()
+    {
+        var response = new ResponseEnvelope
+        {
+            requestId = "req-1",
+            target = "target-1",
+            status = ProtocolConstants.StatusSuccess,
+            durationMs = 42,
+            dataJson = "{\"path\":\"Assets/Prefab.prefab\",\"type\":\"GameObject\"}",
+            transport = ProtocolConstants.TransportLive,
+        };
+
+        var text = ResponseFormatter.Format(OutputMode.Default, response);
+
+        Assert.Contains("data:", text);
+        Assert.Contains("\"path\": \"Assets/Prefab.prefab\"", text);
+        Assert.Contains("\"type\": \"GameObject\"", text);
+    }
+
+    [Fact]
+    public void Format_CompactOutput_FallsBackToDataJsonWhenDataIsMissing()
+    {
+        var response = new ResponseEnvelope
+        {
+            requestId = "req-1",
+            target = "target-1",
+            status = ProtocolConstants.StatusSuccess,
+            durationMs = 42,
+            dataJson = "{\"path\":\"Assets/Prefab.prefab\",\"type\":\"GameObject\"}",
+            transport = ProtocolConstants.TransportLive,
+        };
 
         var text = ResponseFormatter.Format(OutputMode.Compact, response);
 

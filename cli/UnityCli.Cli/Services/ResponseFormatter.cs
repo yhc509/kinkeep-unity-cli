@@ -28,7 +28,7 @@ public static class ResponseFormatter
     {
         if (outputMode == OutputMode.Json)
         {
-            return ProtocolJson.Serialize(response);
+            return ProtocolJson.Serialize(BuildJsonEnvelope(response));
         }
 
         if (outputMode == OutputMode.Compact)
@@ -62,7 +62,12 @@ public static class ResponseFormatter
             lines.Add($"durationMs: {response.durationMs}");
         }
 
-        if (!string.IsNullOrWhiteSpace(response.dataJson))
+        if (response.data is not null)
+        {
+            lines.Add("data:");
+            lines.Add(PrettyData(response.data));
+        }
+        else if (!string.IsNullOrWhiteSpace(response.dataJson))
         {
             lines.Add("data:");
             lines.Add(PrettyJson(response.dataJson));
@@ -82,6 +87,11 @@ public static class ResponseFormatter
                     message = response.error?.message ?? "Unknown error.",
                 },
                 CompactPrintOptions);
+        }
+
+        if (response.data is not null)
+        {
+            return CompactData(response.data);
         }
 
         return CompactJson(response.dataJson);
@@ -130,6 +140,49 @@ public static class ResponseFormatter
     {
         var element = JsonSerializer.Deserialize<JsonElement>(json, ProtocolJson.Default);
         return JsonSerializer.Serialize(element, PrettyPrintOptions);
+    }
+
+    private static string CompactData(object data)
+    {
+        return SerializeData(data, CompactPrintOptions);
+    }
+
+    private static string PrettyData(object data)
+    {
+        return SerializeData(data, PrettyPrintOptions);
+    }
+
+    // data is expected to be JsonElement (from EnsureData). The runtime-type
+    // fallback path (data.GetType()) is a safety net for future Bridge-native data.
+    private static string SerializeData(object data, JsonSerializerOptions options)
+    {
+        if (data is JsonElement element)
+        {
+            return JsonSerializer.Serialize(element, options);
+        }
+
+        return JsonSerializer.Serialize(data, data.GetType(), options);
+    }
+
+    private static ResponseEnvelope BuildJsonEnvelope(ResponseEnvelope response)
+    {
+        if (response.data is null || response.dataJson is null)
+        {
+            return response;
+        }
+
+        return new ResponseEnvelope
+        {
+            requestId = response.requestId,
+            target = response.target,
+            status = response.status,
+            durationMs = response.durationMs,
+            data = response.data,
+            dataJson = null,
+            error = response.error,
+            retryable = response.retryable,
+            transport = response.transport,
+        };
     }
 
     private static string TryPrettyJson(string input)
