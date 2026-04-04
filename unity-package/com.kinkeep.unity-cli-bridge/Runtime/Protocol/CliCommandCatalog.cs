@@ -513,9 +513,11 @@ namespace UnityCli.Protocol
         public static string BuildHelpText()
         {
             var builder = new StringBuilder();
-            builder.AppendLine("usage: unity-cli [--json] [--project <path|name>] <command> [options]");
+            builder.AppendLine("usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] <command> [options]");
             builder.AppendLine();
             builder.AppendLine("options:");
+            builder.AppendLine("  --json                Equivalent to --output json. If both --json and --output are specified, the last one wins.");
+            builder.AppendLine("  --output <mode>       Response format: default, json (full envelope), or compact (data payload / compact error JSON).");
             builder.AppendLine("  --project <path|name>  Existing directory paths take precedence over registered project names. Project-name matches are case-insensitive.");
             builder.AppendLine();
             builder.AppendLine("commands:");

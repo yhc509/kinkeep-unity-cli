@@ -9,6 +9,7 @@ namespace UnityCli.Cli.Tests;
 public sealed class CliAppTests
 {
     private static readonly SemaphoreSlim ConsoleLock = new(1, 1);
+    private const string GlobalUsage = "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] <command> [options]";
 
     [Fact]
     public async Task RunAsync_JsonUnknownCommand_WritesStructuredErrorToStdoutOnly()
@@ -24,7 +25,7 @@ public sealed class CliAppTests
         Assert.Contains("알 수 없는 명령", response.error?.message);
 
         var details = ParseDetails(response.error?.details);
-        Assert.Equal("usage: unity-cli [--json] [--project <path|name>] <command> [options]", details.GetProperty("usage").GetString());
+        Assert.Equal(GlobalUsage, details.GetProperty("usage").GetString());
         Assert.Equal("status", details.GetProperty("suggestions")[0].GetString());
     }
 
@@ -59,7 +60,7 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path|name>] asset delete --path <Assets/...> --force",
+            "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] asset delete --path <Assets/...> --force",
             details.GetProperty("usage").GetString());
     }
 
@@ -77,8 +78,21 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path|name>] status",
+            "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] status",
             details.GetProperty("usage").GetString());
+    }
+
+    [Fact]
+    public async Task RunAsync_CompactUnknownCommand_WritesReducedErrorJsonToStdoutOnly()
+    {
+        var result = await InvokeAsync(["--output", "compact", "stats"]);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
+
+        JsonElement response = ParseJson(result.Stdout);
+        Assert.Equal("CLI_USAGE", response.GetProperty("error").GetString());
+        Assert.Contains("알 수 없는 명령", response.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -118,7 +132,9 @@ public sealed class CliAppTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(string.Empty, result.Stderr);
-        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", result.Stdout);
+        Assert.Contains(GlobalUsage, result.Stdout);
+        Assert.Contains("--json                Equivalent to --output json. If both --json and --output are specified, the last one wins.", result.Stdout);
+        Assert.Contains("--output <mode>       Response format: default, json (full envelope), or compact (data payload / compact error JSON).", result.Stdout);
         Assert.Contains("--project <path|name>  Existing directory paths take precedence over registered project names.", result.Stdout);
         Assert.Contains("Project-name matches are case-insensitive.", result.Stdout);
     }
@@ -300,7 +316,7 @@ public sealed class CliAppTests
 
         var details = ParseDetails(response.error?.details);
         Assert.Equal(
-            "usage: unity-cli [--json] [--project <path|name>] raw --json '{\"command\":\"status\",\"arguments\":{}}'",
+            "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] raw --json '{\"command\":\"status\",\"arguments\":{}}'",
             details.GetProperty("usage").GetString());
     }
 
@@ -339,7 +355,7 @@ public sealed class CliAppTests
         Assert.Equal(string.Empty, result.Stdout);
         Assert.Contains("--force", result.Stderr);
         Assert.Contains(
-            "usage: unity-cli [--json] [--project <path|name>] asset delete --path <Assets/...> --force",
+            "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] asset delete --path <Assets/...> --force",
             result.Stderr);
     }
 
@@ -351,7 +367,7 @@ public sealed class CliAppTests
         Assert.Equal(2, result.ExitCode);
         Assert.Equal(string.Empty, result.Stdout);
         Assert.Contains("지원하지 않는 옵션입니다: --verbose", result.Stderr);
-        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] status", result.Stderr);
+        Assert.Contains("usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] status", result.Stderr);
     }
 
     [Fact]
@@ -359,7 +375,8 @@ public sealed class CliAppTests
     {
         var helpText = CliCommandMetadata.BuildHelpText();
 
-        Assert.Contains("usage: unity-cli [--json] [--project <path|name>] <command> [options]", helpText);
+        Assert.Contains(GlobalUsage, helpText);
+        Assert.Contains("--json                Equivalent to --output json. If both --json and --output are specified, the last one wins.", helpText);
         Assert.Contains("Existing directory paths take precedence over registered project names.", helpText);
         Assert.Contains("Project-name matches are case-insensitive.", helpText);
     }
@@ -374,6 +391,12 @@ public sealed class CliAppTests
     {
         Assert.False(string.IsNullOrWhiteSpace(details));
         return JsonSerializer.Deserialize<JsonElement>(details!);
+    }
+
+    private static JsonElement ParseJson(string json)
+    {
+        Assert.False(string.IsNullOrWhiteSpace(json));
+        return JsonSerializer.Deserialize<JsonElement>(json.Trim());
     }
 
     private static async Task<CliInvocationResult> InvokeAsync(

@@ -8,12 +8,13 @@ public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args)
     {
-        var jsonOutputRequested = CliCommandMetadata.DetectJsonOutput(args);
+        var outputMode = CliCommandMetadata.DetectOutputMode(args);
         ParsedCommand? parsed = null;
 
         try
         {
             parsed = CliArgumentParser.Parse(args);
+            outputMode = parsed.OutputMode;
             if (parsed.Kind == CommandKind.Help)
             {
                 Console.WriteLine(CliArgumentParser.BuildHelpText());
@@ -34,7 +35,7 @@ public static class CliApp
                 _ => await ExecuteUnityCommandAsync(parsed, registryStore, projectRoot),
             };
 
-            Console.WriteLine(ResponseFormatter.Format(parsed, response));
+            Console.WriteLine(ResponseFormatter.Format(parsed.OutputMode, response));
             return response.status == "success" ? 0 : 1;
         }
         catch (CliUsageException ex)
@@ -49,7 +50,7 @@ public static class CliApp
                 details: presentation.BuildDetailsJson(),
                 transport: "cli");
 
-            WriteUsageError(jsonOutputRequested, response, presentation);
+            WriteUsageError(outputMode, response, presentation);
             return 2;
         }
         catch (Exception ex)
@@ -63,7 +64,7 @@ public static class CliApp
                 details: ex.ToString(),
                 transport: "cli");
 
-            WriteErrorResponse(jsonOutputRequested, response);
+            WriteErrorResponse(outputMode, response);
             return 1;
         }
     }
@@ -340,11 +341,11 @@ public static class CliApp
         return null;
     }
 
-    private static void WriteErrorResponse(bool jsonOutputRequested, ResponseEnvelope response)
+    private static void WriteErrorResponse(OutputMode outputMode, ResponseEnvelope response)
     {
-        if (jsonOutputRequested)
+        if (outputMode != OutputMode.Default)
         {
-            Console.Out.WriteLine(ProtocolJson.Serialize(response));
+            Console.Out.WriteLine(ResponseFormatter.Format(outputMode, response));
             return;
         }
 
@@ -361,14 +362,14 @@ public static class CliApp
             return;
         }
 
-        Console.Error.WriteLine(ResponseFormatter.Format(new ParsedCommand(CommandKind.Help), response));
+        Console.Error.WriteLine(ResponseFormatter.Format(OutputMode.Default, response));
     }
 
-    private static void WriteUsageError(bool jsonOutputRequested, ResponseEnvelope response, CliUsagePresentation presentation)
+    private static void WriteUsageError(OutputMode outputMode, ResponseEnvelope response, CliUsagePresentation presentation)
     {
-        if (jsonOutputRequested)
+        if (outputMode != OutputMode.Default)
         {
-            Console.Out.WriteLine(ProtocolJson.Serialize(response));
+            Console.Out.WriteLine(ResponseFormatter.Format(outputMode, response));
             return;
         }
 

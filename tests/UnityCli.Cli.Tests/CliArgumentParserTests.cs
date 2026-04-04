@@ -21,6 +21,95 @@ public sealed class CliArgumentParserTests
 
         Assert.Equal(CommandKind.Status, parsed.Kind);
         Assert.True(parsed.JsonOutput);
+        Assert.Equal(OutputMode.Json, parsed.OutputMode);
+    }
+
+    [Fact]
+    public void Parse_AcceptsCompactOutputFlagAfterCommand()
+    {
+        var parsed = CliArgumentParser.Parse(["status", "--output", "compact"]);
+
+        Assert.Equal(CommandKind.Status, parsed.Kind);
+        Assert.False(parsed.JsonOutput);
+        Assert.Equal(OutputMode.Compact, parsed.OutputMode);
+    }
+
+    [Fact]
+    public void Parse_OutputOptionBeforeAnotherOption_ThrowsMissingValueMessage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse(["status", "--output", "--json"]));
+
+        Assert.Equal("`--output`에 값이 필요합니다. `default`, `json`, `compact` 중 하나를 지정하세요.", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_RawPayload_CanUseCompactOutputMode()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "raw",
+            "--output", "compact",
+            "--json", "{\"command\":\"status\",\"arguments\":{}}"
+        ]);
+
+        Assert.Equal(CommandKind.Raw, parsed.Kind);
+        Assert.Equal(OutputMode.Compact, parsed.OutputMode);
+        Assert.Equal("{\"command\":\"status\",\"arguments\":{}}", parsed.RawJson);
+    }
+
+    [Fact]
+    public void DetectOutputMode_OutputBeforeCommand_ReturnsCompact()
+    {
+        var outputMode = CliArgumentParser.DetectOutputMode(["--output", "compact", "status"]);
+
+        Assert.Equal(OutputMode.Compact, outputMode);
+    }
+
+    [Fact]
+    public void DetectOutputMode_OutputAfterCommand_ReturnsCompact()
+    {
+        var outputMode = CliArgumentParser.DetectOutputMode(["status", "--output", "compact"]);
+
+        Assert.Equal(OutputMode.Compact, outputMode);
+    }
+
+    [Fact]
+    public void DetectOutputMode_InvalidOutputValue_IsIgnored()
+    {
+        var outputMode = CliArgumentParser.DetectOutputMode(["--output", "invalid", "status"]);
+
+        Assert.Equal(OutputMode.Default, outputMode);
+    }
+
+    [Fact]
+    public void DetectOutputMode_JsonFlag_ReturnsJson()
+    {
+        var outputMode = CliArgumentParser.DetectOutputMode(["--json", "status"]);
+
+        Assert.Equal(OutputMode.Json, outputMode);
+    }
+
+    [Fact]
+    public void DetectOutputMode_NoOutputFlags_ReturnsDefault()
+    {
+        var outputMode = CliArgumentParser.DetectOutputMode(["status"]);
+
+        Assert.Equal(OutputMode.Default, outputMode);
+    }
+
+    [Fact]
+    public void Parse_OutputMode_LastWriteWinsWhenOutputComesAfterJson()
+    {
+        var parsed = CliArgumentParser.Parse(["status", "--json", "--output", "compact"]);
+
+        Assert.Equal(OutputMode.Compact, parsed.OutputMode);
+    }
+
+    [Fact]
+    public void Parse_OutputMode_LastWriteWinsWhenJsonComesAfterOutput()
+    {
+        var parsed = CliArgumentParser.Parse(["status", "--output", "compact", "--json"]);
+
+        Assert.Equal(OutputMode.Json, parsed.OutputMode);
     }
 
     [Fact]

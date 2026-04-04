@@ -62,7 +62,7 @@ internal sealed class CliUsagePresentation
 
 internal static class CliUsageHelp
 {
-    private const string GlobalUsage = "usage: unity-cli [--json] [--project <path|name>] <command> [options]";
+    private const string GlobalUsage = "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] <command> [options]";
     private static readonly Regex OptionPattern = new(@"--[a-z0-9-]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static CliUsagePresentation Build(string[] args, string message, ParsedCommand? parsed)
@@ -167,7 +167,7 @@ internal static class CliUsageHelp
 
     private static string BuildRootUsage(string rootCommand)
     {
-        return $"usage: unity-cli [--json] [--project <path|name>] {rootCommand} <subcommand> [options]";
+        return $"usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] {rootCommand} <subcommand> [options]";
     }
 
     private static string? TryBuildCommandUsage(string commandPath)
@@ -178,7 +178,7 @@ internal static class CliUsageHelp
             return null;
         }
 
-        return "usage: unity-cli [--json] [--project <path|name>] " + descriptor.Synopsis;
+        return "usage: unity-cli [--json] [--output <default|json|compact>] [--project <path|name>] " + descriptor.Synopsis;
     }
 
     private static string[] GetTopLevelCommands()
@@ -216,6 +216,7 @@ internal static class CliUsageHelp
         var options = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "--json",
+            "--output",
             "--project",
             "--timeout-ms",
         };
@@ -345,6 +346,17 @@ internal static class CliUsageHelp
                 if (tokens.Peek() == "--json")
                 {
                     tokens.Dequeue();
+                    continue;
+                }
+
+                if (tokens.Peek() == "--output")
+                {
+                    tokens.Dequeue();
+                    if (tokens.Count > 0)
+                    {
+                        tokens.Dequeue();
+                    }
+
                     continue;
                 }
 

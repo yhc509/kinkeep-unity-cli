@@ -13,13 +13,34 @@ public static class ResponseFormatter
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    private static readonly JsonSerializerOptions CompactPrintOptions = new(ProtocolJson.Default)
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     public static string Format(ParsedCommand parsed, ResponseEnvelope response)
     {
-        if (parsed.JsonOutput)
+        return Format(parsed.OutputMode, response);
+    }
+
+    public static string Format(OutputMode outputMode, ResponseEnvelope response)
+    {
+        if (outputMode == OutputMode.Json)
         {
             return ProtocolJson.Serialize(response);
         }
 
+        if (outputMode == OutputMode.Compact)
+        {
+            return FormatCompact(response);
+        }
+
+        return FormatDefault(response);
+    }
+
+    private static string FormatDefault(ResponseEnvelope response)
+    {
         if (response.status != "success")
         {
             return BuildErrorText(response);
@@ -50,6 +71,22 @@ public static class ResponseFormatter
         return string.Join(Environment.NewLine, lines);
     }
 
+    private static string FormatCompact(ResponseEnvelope response)
+    {
+        if (response.status != "success")
+        {
+            return JsonSerializer.Serialize(
+                new
+                {
+                    error = response.error?.code ?? "UNKNOWN_ERROR",
+                    message = response.error?.message ?? "Unknown error.",
+                },
+                CompactPrintOptions);
+        }
+
+        return CompactJson(response.dataJson);
+    }
+
     private static string BuildErrorText(ResponseEnvelope response)
     {
         var lines = new List<string>
@@ -76,6 +113,17 @@ public static class ResponseFormatter
 
         lines.Add($"retryable: {response.retryable.ToString().ToLowerInvariant()}");
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string CompactJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return "{}";
+        }
+
+        var element = JsonSerializer.Deserialize<JsonElement>(json, ProtocolJson.Default);
+        return JsonSerializer.Serialize(element, CompactPrintOptions);
     }
 
     private static string PrettyJson(string json)

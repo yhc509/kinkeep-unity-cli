@@ -103,6 +103,12 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"KinKeep smoke\");" --force --json
 ```
 
+If you want only the `data` payload as compact JSON without the envelope metadata, use `--output compact`. Keep using `--json` when you need the full response envelope. Compact-mode failures are reduced to `{"error":"CODE","message":"..."}`.
+
+```bash
+./dist/unity-cli/UnityCli.Cli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --output compact
+```
+
 QA smoke tests:
 
 ```bash

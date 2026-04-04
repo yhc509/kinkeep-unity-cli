@@ -17,15 +17,22 @@ public static partial class CliArgumentParser
 
         var tokens = new Queue<string>(args);
         var parsed = new ParsedCommand(CommandKind.Help);
-        var outputJson = false;
+        var outputMode = OutputMode.Default;
         string? projectOverride = null;
 
         while (tokens.Count > 0)
         {
             if (tokens.Peek() == "--json")
             {
-                outputJson = true;
+                outputMode = OutputMode.Json;
                 tokens.Dequeue();
+                continue;
+            }
+
+            if (tokens.Peek() == "--output")
+            {
+                tokens.Dequeue();
+                outputMode = RequireOutputMode(RequireValue(tokens, "--output"));
                 continue;
             }
 
@@ -41,6 +48,7 @@ public static partial class CliArgumentParser
 
         if (tokens.Count == 0)
         {
+            parsed.OutputMode = outputMode;
             return parsed;
         }
 
@@ -71,7 +79,7 @@ public static partial class CliArgumentParser
             _ => throw new CliUsageException($"알 수 없는 명령입니다: {command}"),
         };
 
-        parsed.JsonOutput = outputJson;
+        parsed.OutputMode = outputMode;
         parsed.ProjectOverride = projectOverride;
 
         ParseCommandOptions(parsed, tokens);
@@ -94,6 +102,80 @@ public static partial class CliArgumentParser
                 ..notes,
                 string.Empty,
             ]);
+    }
+
+    // Best-effort pre-parse for early error formatting before full command parsing.
+    // Structural limitation: positional values can be mistaken for `--output` values,
+    // so `execute --code --output compact` is detected as compact even though `--output`
+    // should be consumed as the `--code` value. The old `DetectJsonOutput` pre-parse had
+    // the same limitation, so this does not introduce a new regression.
+    public static OutputMode DetectOutputMode(string[] args)
+    {
+        var tokens = new Queue<string>(args);
+        var outputMode = OutputMode.Default;
+
+        while (tokens.Count > 0)
+        {
+            if (tokens.Peek() == "--json")
+            {
+                outputMode = OutputMode.Json;
+                tokens.Dequeue();
+                continue;
+            }
+
+            if (tokens.Peek() == "--output")
+            {
+                tokens.Dequeue();
+                if (tokens.Count == 0)
+                {
+                    break;
+                }
+
+                outputMode = TryGetOutputMode(tokens.Dequeue()) ?? outputMode;
+                continue;
+            }
+
+            if (tokens.Peek() == "--project")
+            {
+                tokens.Dequeue();
+                if (tokens.Count > 0)
+                {
+                    tokens.Dequeue();
+                }
+
+                continue;
+            }
+
+            break;
+        }
+
+        if (tokens.Count == 0)
+        {
+            return outputMode;
+        }
+
+        var command = tokens.Dequeue().ToLowerInvariant();
+        while (tokens.Count > 0)
+        {
+            var token = tokens.Dequeue();
+            if (token == "--output")
+            {
+                if (tokens.Count == 0)
+                {
+                    break;
+                }
+
+                outputMode = TryGetOutputMode(tokens.Dequeue()) ?? outputMode;
+                continue;
+            }
+
+            if (token == "--json" && command is not ("raw" or "custom"))
+            {
+                outputMode = OutputMode.Json;
+            }
+        }
+
+        return outputMode;
     }
 
     private static ParsedCommand ParseInstances(Queue<string> tokens)
@@ -256,9 +338,15 @@ public static partial class CliArgumentParser
                 continue;
             }
 
+            if (token == "--output")
+            {
+                parsed.OutputMode = RequireOutputMode(RequireValue(tokens, "--output"));
+                continue;
+            }
+
             if (token == "--json" && parsed.Kind != CommandKind.Raw && parsed.Kind != CommandKind.Custom)
             {
-                parsed.JsonOutput = true;
+                parsed.OutputMode = OutputMode.Json;
                 continue;
             }
 
@@ -637,6 +725,28 @@ public static partial class CliArgumentParser
         }
 
         return builder.ToString();
+    }
+
+    private static OutputMode RequireOutputMode(string value)
+    {
+        if (value.StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new CliUsageException("`--output`에 값이 필요합니다. `default`, `json`, `compact` 중 하나를 지정하세요.");
+        }
+
+        return TryGetOutputMode(value)
+            ?? throw new CliUsageException("`--output`은 `default`, `json`, `compact` 중 하나여야 합니다.");
+    }
+
+    private static OutputMode? TryGetOutputMode(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "default" => OutputMode.Default,
+            "json" => OutputMode.Json,
+            "compact" => OutputMode.Compact,
+            _ => null,
+        };
     }
 
 }

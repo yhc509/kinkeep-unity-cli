@@ -64,7 +64,8 @@ public sealed class ParsedCommand
     }
 
     public CommandKind Kind { get; }
-    public bool JsonOutput { get; set; }
+    public bool JsonOutput => OutputMode == OutputMode.Json;
+    public OutputMode OutputMode { get; set; }
     public string? ProjectOverride { get; set; }
     public int TimeoutMs { get; set; } = ProtocolConstants.DefaultLiveTimeoutMs;
     public int ConsoleLimit { get; set; } = ProtocolConstants.DefaultConsoleLimit;
