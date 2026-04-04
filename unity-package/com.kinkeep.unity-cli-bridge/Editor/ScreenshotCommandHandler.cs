@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Reflection;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
@@ -135,14 +136,24 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             Texture2D? capturedTexture = null;
             Texture2D? outputTexture = null;
+            EditorWindow? gameViewWindow = null;
 
             try
             {
-                capturedTexture = ScreenCapture.CaptureScreenshotAsTexture();
+                gameViewWindow = GetGameViewWindow(focus: true);
+                if (gameViewWindow == null)
+                {
+                    throw new CommandFailureException("SCREENSHOT_FAILED", "Play Mode Game View 창을 찾지 못했습니다.", false, null);
+                }
+
+                capturedTexture = TryCaptureGameViewRenderTexture(gameViewWindow)
+                    ?? ScreenCapture.CaptureScreenshotAsTexture();
                 if (capturedTexture == null)
                 {
                     throw new CommandFailureException("SCREENSHOT_FAILED", "Play Mode Game View 캡처에 실패했습니다.", false, null);
                 }
+
+                WarnIfSuspiciousPlayModeCapture(capturedTexture, gameViewWindow);
 
                 var outputSize = ResolvePlayModeGameViewOutputSize(capturedTexture, requestedWidth, requestedHeight);
                 int width = outputSize.width;
@@ -184,11 +195,104 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (width > capturedTexture.width || height > capturedTexture.height)
             {
                 UnityEngine.Debug.LogWarning(
-                    $"[KinKeep] Play Mode Game View screenshot requested {width}x{height}, but ScreenCapture.CaptureScreenshotAsTexture() only captures the native Game View size {capturedTexture.width}x{capturedTexture.height}. Saving the native capture without upscaling.");
+                    $"[KinKeep] Play Mode Game View screenshot requested {width}x{height}, but the capture only returned the native Game View size {capturedTexture.width}x{capturedTexture.height}. Saving the native capture without upscaling.");
                 return (capturedTexture.width, capturedTexture.height, false);
             }
 
             return (width, height, width != capturedTexture.width || height != capturedTexture.height);
+        }
+
+        private static void WarnIfSuspiciousPlayModeCapture(Texture2D capturedTexture, EditorWindow gameViewWindow)
+        {
+            if (capturedTexture.height >= 100)
+            {
+                return;
+            }
+
+            UnityEngine.Debug.LogWarning(
+                $"[KinKeep] Play Mode Game View screenshot produced an unusually small image {capturedTexture.width}x{capturedTexture.height}. Game View focus may not have settled before capture. Current Game View window size is {(int)gameViewWindow.position.width}x{(int)gameViewWindow.position.height}.");
+        }
+
+        private static Texture2D? TryCaptureGameViewRenderTexture(EditorWindow gameViewWindow)
+        {
+            try
+            {
+                // Read the Game View render target directly so Play Mode captures exclude editor chrome.
+                RenderTexture? renderTexture = GetGameViewRenderTexture(gameViewWindow);
+                if (renderTexture == null || !renderTexture.IsCreated() || renderTexture.width <= 0 || renderTexture.height <= 0)
+                {
+                    return null;
+                }
+
+                RenderTexture? previousActive = RenderTexture.active;
+                Texture2D? texture = null;
+
+                try
+                {
+                    RenderTexture.active = renderTexture;
+                    texture = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.RGBA32, false);
+                    texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+                    FlipTextureVertically(texture);
+                    texture.Apply();
+                    return texture;
+                }
+                catch (Exception exception)
+                {
+                    if (texture != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(texture);
+                    }
+
+                    UnityEngine.Debug.LogWarning(
+                        $"[KinKeep] Failed to capture the Game View render texture directly. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
+                    return null;
+                }
+                finally
+                {
+                    RenderTexture.active = previousActive;
+                }
+            }
+            catch (Exception exception)
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[KinKeep] Failed to inspect the Game View render texture. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
+                return null;
+            }
+        }
+
+        private static void FlipTextureVertically(Texture2D texture)
+        {
+            int width = texture.width;
+            int height = texture.height;
+            Color32[] pixels = texture.GetPixels32();
+            var flippedPixels = new Color32[pixels.Length];
+
+            for (int y = 0; y < height; y++)
+            {
+                Array.Copy(pixels, y * width, flippedPixels, (height - y - 1) * width, width);
+            }
+
+            texture.SetPixels32(flippedPixels);
+        }
+
+        private static RenderTexture? GetGameViewRenderTexture(EditorWindow gameViewWindow)
+        {
+            string[] memberNames =
+            {
+                "m_TargetTexture",
+                "m_RenderTexture",
+                "targetTexture",
+            };
+
+            foreach (string memberName in memberNames)
+            {
+                if (GetMemberValue(gameViewWindow, memberName) is RenderTexture renderTexture)
+                {
+                    return renderTexture;
+                }
+            }
+
+            return null;
         }
 
         private static (string path, int width, int height) CaptureGameViewFromCamera(string path, int requestedWidth, int requestedHeight)
@@ -294,15 +398,59 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return null;
         }
 
-        private static (int width, int height) GetMainGameViewSize()
+        private static Type? GetGameViewType()
         {
-            var gameViewType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView");
+            return Type.GetType("UnityEditor.GameView,UnityEditor")
+                ?? typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView");
+        }
+
+        private static EditorWindow? GetGameViewWindow(bool focus)
+        {
+            Type? gameViewType = GetGameViewType();
             if (gameViewType == null)
             {
-                return (1920, 1080);
+                return null;
             }
 
-            var window = EditorWindow.GetWindow(gameViewType, false, null, false);
+            EditorWindow? window = focus
+                ? EditorWindow.GetWindow(gameViewType)
+                : EditorWindow.GetWindow(gameViewType, false, null, false);
+
+            if (window != null && focus)
+            {
+                window.Focus();
+                window.Repaint();
+            }
+
+            return window;
+        }
+
+        private static object? GetMemberValue(object target, string memberName)
+        {
+            Type? type = target.GetType();
+            while (type != null)
+            {
+                FieldInfo? field = type.GetField(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (field != null)
+                {
+                    return field.GetValue(target);
+                }
+
+                PropertyInfo? property = type.GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (property != null && property.GetIndexParameters().Length == 0)
+                {
+                    return property.GetValue(target, null);
+                }
+
+                type = type.BaseType;
+            }
+
+            return null;
+        }
+
+        private static (int width, int height) GetMainGameViewSize()
+        {
+            EditorWindow? window = GetGameViewWindow(focus: false);
             if (window == null)
             {
                 return (1920, 1080);

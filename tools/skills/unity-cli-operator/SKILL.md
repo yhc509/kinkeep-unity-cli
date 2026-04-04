@@ -14,12 +14,19 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 - `ucli`가 PATH에 있으면 그대로 사용한다. 매 호출마다 변수를 재정의하지 않는다.
 - 셋 다 없으면 `ln -s ~/dev/unity/unity-cli/dist/unity-cli/UnityCli.Cli ~/bin/ucli`로 symlink을 만든다.
 
-2. 프로젝트 루트를 실제 경로로 맞춘다.
-- macOS에서는 항상 `pwd -P`를 우선한다.
-- 필요하면 `--project "<real-path>"`를 명시한다.
+2. **대상 프로젝트를 결정하고 `--project`를 항상 명시한다.**
+- CLI는 `--project` 없이 호출하면 아무 live 인스턴스에 연결한다. **의도하지 않은 프로젝트에 명령이 실행될 수 있으므로 반드시 명시한다.**
+- 프로젝트 결정 우선순위:
+  1. 사용자가 프로젝트를 명시적으로 지정한 경우 → 그대로 사용
+  2. 현재 작업 디렉터리(`pwd -P`)가 Unity 프로젝트 내부인 경우 → 해당 프로젝트
+  3. 현재 작업 디렉터리가 unity-cli 레포인 경우 → 샘플 프로젝트 `kinkeep-unity-cli-sample` (개발/테스트 용도)
+  4. 여러 프로젝트가 실행 중이면 `instances list`로 확인 후 사용자에게 물어본다
+- macOS에서는 항상 `pwd -P`로 실제 경로를 사용한다.
+- `--project`는 프로젝트 이름(예: `kinkeep-unity-cli-sample`)이나 전체 경로 모두 가능하다.
 
 3. 쓰기 작업 전에는 상태를 본다.
-- 먼저 `status --json`으로 live 연결, busy 상태, 현재 프로젝트가 맞는지 확인한다.
+- 먼저 `status --json --project <name>`으로 live 연결, busy 상태, 현재 프로젝트가 맞는지 확인한다.
+- 응답의 `projectName`이 의도한 프로젝트가 맞는지 반드시 확인한다.
 
 4. 작업 종류에 맞는 흐름을 고른다.
 - 일반 명령, 에셋 작업, scene inspect/patch는 `references/command-flows.md`

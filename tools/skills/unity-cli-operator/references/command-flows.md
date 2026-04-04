@@ -7,18 +7,39 @@
 - 둘 다 없으면 `command -v unity-cli` 결과를 사용한다.
 - 셋 다 없으면 빌드나 설치가 필요하다고 보고 진행을 멈춘다.
 
+## 프로젝트 결정
+
+**모든 명령에 `--project`를 반드시 붙인다.** 생략하면 CLI가 임의의 live 인스턴스에 연결하여 잘못된 프로젝트에 명령이 실행될 수 있다.
+
+```bash
+# 현재 디렉터리가 Unity 프로젝트라면
+PROJECT="$(pwd -P)"
+
+# unity-cli 레포에서 개발/테스트 중이라면
+PROJECT="kinkeep-unity-cli-sample"
+
+# 특정 프로젝트를 지정하려면 (이름 또는 경로)
+PROJECT="kinkeep-hd2d-tilemap-sample"
+```
+
+여러 프로젝트가 동시에 열려 있을 때 확인:
+
+```bash
+ucli instances list
+```
+
 ## 상태 확인
 
 가장 먼저 아래 흐름을 기준으로 본다.
 
 ```bash
-PROJECT_ROOT="$(pwd -P)"
-"$UNITY_CLI_BIN" status --project "$PROJECT_ROOT" --json
+"$UNITY_CLI_BIN" status --project "$PROJECT" --json
 ```
 
 중요하게 볼 값:
 
 - `transport`
+- `projectName` — **의도한 프로젝트가 맞는지 반드시 확인**
 - `projectRoot`
 - `isCompiling`
 - `isUpdating`
