@@ -64,7 +64,7 @@ Commands for opening, inspecting, and patching saved scene assets.
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
 | `scene open` | `scene open --path <Assets/...> [--force]` | live | Opens a saved scene asset; use --force to discard dirty loaded scenes. |
-| `scene inspect` | `scene inspect --path <Assets/...> [--with-values]` | live | Inspects a saved scene hierarchy; use --with-values when authoring scene patch specs. |
+| `scene inspect` | `scene inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]` | live | Inspects a saved scene hierarchy; use --with-values when authoring scene patch specs and the other options to reduce payload size. |
 | `scene patch` | `scene patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Applies a deterministic scene patch spec; destructive operations require --force. |
 | `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--components "Type1,Type2"]` | live | Adds a new GameObject to a scene; shortcut for a single add-gameobject scene patch operation. |
 | `scene set-transform` | `scene set-transform --path <Assets/...> --target <scenePath> (--position x,y,z \| --rotation x,y,z \| --scale x,y,z)` | live | Sets the transform of a GameObject; shortcut for a single modify-gameobject scene patch operation. |
@@ -77,7 +77,7 @@ Commands for inspecting, creating, and patching prefab assets.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values]` | live | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs. |
+| `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]` | live | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs and the other options to reduce payload size. |
 | `prefab create` | `prefab create --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Creates a prefab from a JSON structure spec; use --force to overwrite an existing asset. |
 | `prefab patch` | `prefab patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>)` | live | Applies a deterministic patch spec to an existing prefab. |
 

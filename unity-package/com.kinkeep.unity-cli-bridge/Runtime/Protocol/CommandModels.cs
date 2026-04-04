@@ -285,6 +285,8 @@ namespace UnityCli.Protocol
     {
         public string path = string.Empty;
         public bool withValues;
+        public int? maxDepth;
+        public bool omitDefaults;
     }
 
     [Serializable]
@@ -300,6 +302,8 @@ namespace UnityCli.Protocol
     {
         public string path = string.Empty;
         public bool withValues;
+        public int? maxDepth;
+        public bool omitDefaults;
     }
 
     [Serializable]

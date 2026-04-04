@@ -9,12 +9,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class PrefabInspector
     {
-        internal static string BuildInspectPayload(string path, GameObject root, bool withValues)
+        internal static string BuildInspectPayload(string path, GameObject root, bool withValues, int? maxDepth, bool omitDefaults)
         {
             JObject payload = new JObject
             {
                 ["asset"] = InspectorUtility.BuildAssetToken(path),
-                ["root"] = BuildNodeToken(root, withValues),
+                ["root"] = BuildNodeToken(root, withValues, maxDepth, omitDefaults, 0),
             };
 
             return payload.ToString(Formatting.None);
@@ -109,7 +109,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 "PREFAB");
         }
 
-        private static JObject BuildNodeToken(GameObject gameObject, bool withValues)
+        private static JObject BuildNodeToken(GameObject gameObject, bool withValues, int? maxDepth, bool omitDefaults, int currentDepth)
         {
             var node = new JObject
             {
@@ -118,12 +118,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 ["active"] = gameObject.activeSelf,
                 ["tag"] = gameObject.tag,
                 ["layer"] = InspectorUtility.BuildLayerToken(gameObject.layer),
-                ["transform"] = new JObject
-                {
-                    ["localPosition"] = InspectorUtility.BuildVector3Token(gameObject.transform.localPosition),
-                    ["localRotationEuler"] = InspectorUtility.BuildVector3Token(gameObject.transform.localEulerAngles),
-                    ["localScale"] = InspectorUtility.BuildVector3Token(gameObject.transform.localScale),
-                },
+                ["transform"] = InspectorUtility.BuildTransformToken(gameObject.transform, omitDefaults),
             };
 
             var components = new JArray();
@@ -147,7 +142,16 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 };
                 if (withValues)
                 {
-                    componentToken["values"] = SerializedValueApplier.BuildInspectableValues(component);
+                    JObject values = SerializedValueApplier.BuildInspectableValues(component);
+                    if (omitDefaults)
+                    {
+                        InspectorUtility.PruneDefaultInspectableValues(values);
+                    }
+
+                    if (!omitDefaults || values.HasValues)
+                    {
+                        componentToken["values"] = values;
+                    }
                 }
 
                 components.Add(componentToken);
@@ -155,13 +159,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             node["components"] = components;
 
-            var children = new JArray();
-            for (int index = 0; index < gameObject.transform.childCount; index++)
+            JArray children;
+            if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
             {
-                children.Add(BuildNodeToken(gameObject.transform.GetChild(index).gameObject, withValues));
+                children = InspectorUtility.BuildChildStubTokens(gameObject.transform, BuildNodePath);
+            }
+            else
+            {
+                children = new JArray();
+                for (int index = 0; index < gameObject.transform.childCount; index++)
+                {
+                    children.Add(BuildNodeToken(gameObject.transform.GetChild(index).gameObject, withValues, maxDepth, omitDefaults, currentDepth + 1));
+                }
+            }
+            node["children"] = children;
+
+            if (omitDefaults)
+            {
+                InspectorUtility.ApplyNodeDefaultOmissions(node, gameObject);
             }
 
-            node["children"] = children;
             return node;
         }
 

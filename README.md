@@ -103,6 +103,12 @@ PROJECT_ROOT="/absolute/path/to/your-unity-project"
 ./dist/unity-cli/UnityCli.Cli execute --project "$PROJECT_ROOT" --code "Debug.Log(\"KinKeep smoke\");" --force --json
 ```
 
+Use `scene inspect` or `prefab inspect` with `--max-depth <N>` to cap recursive traversal and `--omit-defaults` to strip identity/default fields from the response when you want smaller IPC payloads.
+
+```bash
+./dist/unity-cli/UnityCli.Cli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --max-depth 2 --omit-defaults --json
+```
+
 If you want only the `data` payload as compact JSON without the envelope metadata, use `--output compact`. Keep using `--json` when you need the full response envelope. Compact-mode failures are reduced to `{"error":"CODE","message":"..."}`.
 
 ```bash

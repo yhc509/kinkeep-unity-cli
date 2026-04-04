@@ -34,12 +34,17 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleInspect(string argumentsJson)
         {
             PrefabInspectArgs args = ProtocolJson.Deserialize<PrefabInspectArgs>(argumentsJson) ?? new PrefabInspectArgs();
+            int? maxDepth = args.maxDepth ?? InspectorUtility.ParseOptionalMaxDepth(argumentsJson, "PREFAB_INSPECT_INVALID");
             string path = RequireExistingPrefabPath(args.path, "prefab-inspect");
+            if (maxDepth.HasValue && maxDepth.Value <= 0)
+            {
+                throw new CommandFailureException("PREFAB_INSPECT_INVALID", "`--max-depth`는 1 이상의 정수여야 합니다.");
+            }
             GameObject root = PrefabUtility.LoadPrefabContents(path);
 
             try
             {
-                return PrefabInspector.BuildInspectPayload(path, root, args.withValues);
+                return PrefabInspector.BuildInspectPayload(path, root, args.withValues, maxDepth, args.omitDefaults);
             }
             finally
             {

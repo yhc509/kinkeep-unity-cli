@@ -118,6 +118,8 @@ public sealed class ParsedCommand
     public string? SceneSpecFile { get; set; }
     public string? SceneSpecJson { get; set; }
     public bool SceneWithValues { get; set; }
+    public int? MaxDepth { get; set; }
+    public bool OmitDefaults { get; set; }
     public string? SceneTarget { get; set; }
     public string? SceneParent { get; set; }
     public string? SceneObjectName { get; set; }
@@ -374,6 +376,8 @@ public sealed class ParsedCommand
             {
                 path = ScenePath ?? string.Empty,
                 withValues = SceneWithValues,
+                maxDepth = MaxDepth,
+                omitDefaults = OmitDefaults,
             },
             CommandKind.ScenePatch => new ScenePatchArgs
             {
@@ -409,6 +413,8 @@ public sealed class ParsedCommand
             {
                 path = PrefabPath ?? string.Empty,
                 withValues = PrefabWithValues,
+                maxDepth = MaxDepth,
+                omitDefaults = OmitDefaults,
             },
             CommandKind.PrefabCreate => new PrefabCreateArgs
             {

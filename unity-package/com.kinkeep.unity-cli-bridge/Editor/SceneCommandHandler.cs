@@ -58,10 +58,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleInspect(string argumentsJson)
         {
             SceneInspectArgs args = ProtocolJson.Deserialize<SceneInspectArgs>(argumentsJson) ?? new SceneInspectArgs();
+            int? maxDepth = args.maxDepth ?? InspectorUtility.ParseOptionalMaxDepth(argumentsJson, "SCENE_INSPECT_INVALID");
             string path = RequireExistingScenePath(args.path, "scene-inspect");
+            if (maxDepth.HasValue && maxDepth.Value <= 0)
+            {
+                throw new CommandFailureException("SCENE_INSPECT_INVALID", "`--max-depth`는 1 이상의 정수여야 합니다.");
+            }
 
             return WithLoadedScene(path, "scene-inspect", scene =>
-                SceneInspector.BuildInspectPayload(path, scene, args.withValues, EditorSceneManager.GetActiveScene().path));
+                SceneInspector.BuildInspectPayload(path, scene, args.withValues, maxDepth, args.omitDefaults, EditorSceneManager.GetActiveScene().path));
         }
 
         private static string HandlePatch(string argumentsJson)

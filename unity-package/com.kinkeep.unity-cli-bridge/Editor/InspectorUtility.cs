@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
 using UnityEngine;
@@ -50,6 +52,187 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 ["y"] = vector.y,
                 ["z"] = vector.z,
             };
+        }
+
+        internal static JObject BuildTransformToken(Transform transform, bool omitDefaults)
+        {
+            var transformToken = new JObject();
+            if (!omitDefaults || !IsExactlyZero(transform.localPosition))
+            {
+                transformToken["localPosition"] = BuildVector3Token(transform.localPosition);
+            }
+
+            if (!omitDefaults || !IsExactlyIdentity(transform.localRotation))
+            {
+                transformToken["localRotationEuler"] = BuildVector3Token(transform.localEulerAngles);
+            }
+
+            if (!omitDefaults || !IsExactlyOne(transform.localScale))
+            {
+                transformToken["localScale"] = BuildVector3Token(transform.localScale);
+            }
+
+            return transformToken;
+        }
+
+        internal static JArray BuildChildStubTokens(Transform parent, Func<Transform, string> buildPath)
+        {
+            var children = new JArray();
+            for (int index = 0; index < parent.childCount; index++)
+            {
+                Transform child = parent.GetChild(index);
+                children.Add(new JObject
+                {
+                    ["name"] = child.name,
+                    ["path"] = buildPath(child),
+                    ["childCount"] = child.childCount,
+                });
+            }
+
+            return children;
+        }
+
+        internal static int? ParseOptionalMaxDepth(string? argumentsJson, string errorCode)
+        {
+            if (string.IsNullOrWhiteSpace(argumentsJson))
+            {
+                return null;
+            }
+
+            JObject arguments = JObject.Parse(argumentsJson);
+            JToken? token = arguments["maxDepth"];
+            if (token == null || token.Type == JTokenType.Null || token.Type == JTokenType.Undefined)
+            {
+                return null;
+            }
+
+            if (token.Type != JTokenType.Integer)
+            {
+                throw new CommandFailureException(errorCode, "`--max-depth`는 정수여야 합니다.");
+            }
+
+            return token.Value<int>();
+        }
+
+        internal static void ApplyNodeDefaultOmissions(JObject node, GameObject gameObject)
+        {
+            if (gameObject.activeSelf)
+            {
+                node.Remove("active");
+            }
+
+            if (string.Equals(gameObject.tag, "Untagged", System.StringComparison.Ordinal))
+            {
+                node.Remove("tag");
+            }
+
+            if (gameObject.layer == 0)
+            {
+                node.Remove("layer");
+            }
+
+            RemoveIfEmptyArray(node, "components");
+            RemoveIfEmptyArray(node, "children");
+
+            JToken? transform = node["transform"];
+            if (transform is JObject transformObject && !transformObject.HasValues)
+            {
+                node.Remove("transform");
+            }
+        }
+
+        internal static void PruneDefaultInspectableValues(JObject values)
+        {
+            foreach (JProperty property in values.Properties().ToArray())
+            {
+                if (ShouldOmitInspectableValue(property.Value))
+                {
+                    property.Remove();
+                }
+            }
+        }
+
+        private static bool ShouldOmitInspectableValue(JToken token)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Null:
+                case JTokenType.Undefined:
+                    return true;
+                case JTokenType.Integer:
+                    return token.Value<long>() == 0L;
+                case JTokenType.Float:
+                    // Strict equality intentional — only exact 0.0 is omitted, not near-zero values.
+                    return token.Value<double>() == 0d;
+                case JTokenType.Boolean:
+                    return !token.Value<bool>();
+                case JTokenType.String:
+                    return string.IsNullOrEmpty(token.Value<string>());
+                case JTokenType.Object:
+                {
+                    var obj = (JObject)token;
+                    PruneDefaultInspectableValues(obj);
+                    return !obj.HasValues;
+                }
+                case JTokenType.Array:
+                {
+                    var array = (JArray)token;
+                    foreach (JToken item in array)
+                    {
+                        if (item is JObject itemObject)
+                        {
+                            PruneDefaultInspectableValues(itemObject);
+                        }
+                        else if (item is JArray itemArray)
+                        {
+                            PruneDefaultInspectableArray(itemArray);
+                        }
+                    }
+
+                    return array.Count == 0;
+                }
+                default:
+                    return false;
+            }
+        }
+
+        private static void PruneDefaultInspectableArray(JArray values)
+        {
+            foreach (JToken value in values)
+            {
+                if (value is JObject obj)
+                {
+                    PruneDefaultInspectableValues(obj);
+                }
+                else if (value is JArray array)
+                {
+                    PruneDefaultInspectableArray(array);
+                }
+            }
+        }
+
+        private static void RemoveIfEmptyArray(JObject node, string propertyName)
+        {
+            JToken? token = node[propertyName];
+            if (token is JArray array && array.Count == 0)
+            {
+                node.Remove(propertyName);
+            }
+        }
+
+        private static bool IsExactlyZero(Vector3 value)
+        {
+            return value.x == 0f && value.y == 0f && value.z == 0f;
+        }
+
+        private static bool IsExactlyOne(Vector3 value)
+        {
+            return value.x == 1f && value.y == 1f && value.z == 1f;
+        }
+
+        private static bool IsExactlyIdentity(Quaternion value)
+        {
+            return value.x == 0f && value.y == 0f && value.z == 0f && value.w == 1f;
         }
 
         internal static string RequireNodeName(string? name, string commandName, string errorPrefix)

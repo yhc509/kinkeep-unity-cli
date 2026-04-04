@@ -398,6 +398,50 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_PrefabInspect_AcceptsDepthAndOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab",
+            "inspect",
+            "--path", "Assets/Prefabs/Enemy.prefab",
+            "--with-values",
+            "--max-depth", "3",
+            "--omit-defaults"
+        ]);
+
+        Assert.Equal(CommandKind.PrefabInspect, parsed.Kind);
+        Assert.Equal("Assets/Prefabs/Enemy.prefab", parsed.PrefabPath);
+        Assert.True(parsed.PrefabWithValues);
+        Assert.Equal(3, parsed.MaxDepth);
+        Assert.True(parsed.OmitDefaults);
+    }
+
+    [Fact]
+    public void Parse_PrefabInspect_ToEnvelope_IncludesDepthAndOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab",
+            "inspect",
+            "--path", "Assets/Prefabs/Enemy.prefab",
+            "--max-depth", "2",
+            "--omit-defaults"
+        ]);
+
+        var args = ProtocolJson.Deserialize<PrefabInspectArgs>(parsed.ToEnvelope().argumentsJson);
+        Assert.NotNull(args);
+        Assert.Equal("Assets/Prefabs/Enemy.prefab", args.path);
+        Assert.Equal(2, args.maxDepth);
+        Assert.True(args.omitDefaults);
+    }
+
+    [Fact]
+    public void Parse_PrefabInspect_MaxDepthZeroThrows()
+    {
+        Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse(["prefab", "inspect", "--path", "Assets/P.prefab", "--max-depth", "0"]));
+    }
+
+    [Fact]
     public void Parse_PrefabCreate_RequiresExactlyOneSpecSource()
     {
         var ex = Assert.Throws<CliUsageException>(() =>
@@ -470,6 +514,57 @@ public sealed class CliArgumentParserTests
         Assert.Equal(CommandKind.SceneInspect, parsed.Kind);
         Assert.Equal("Assets/Scenes/System.unity", parsed.ScenePath);
         Assert.True(parsed.SceneWithValues);
+    }
+
+    [Fact]
+    public void Parse_SceneInspect_AcceptsDepthAndOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene",
+            "inspect",
+            "--path", "Assets/Scenes/System.unity",
+            "--max-depth", "3",
+            "--omit-defaults"
+        ]);
+
+        Assert.Equal(CommandKind.SceneInspect, parsed.Kind);
+        Assert.Equal("Assets/Scenes/System.unity", parsed.ScenePath);
+        Assert.Equal(3, parsed.MaxDepth);
+        Assert.True(parsed.OmitDefaults);
+    }
+
+    [Fact]
+    public void Parse_SceneInspect_MaxDepthZeroThrows()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "scene",
+                "inspect",
+                "--path", "Assets/Scenes/System.unity",
+                "--max-depth", "0"
+            ]));
+
+        Assert.Contains("--max-depth", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_SceneInspect_ToEnvelope_IncludesDepthAndOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene",
+            "inspect",
+            "--path", "Assets/Scenes/System.unity",
+            "--with-values",
+            "--max-depth", "4",
+            "--omit-defaults"
+        ]);
+
+        var args = ProtocolJson.Deserialize<SceneInspectArgs>(parsed.ToEnvelope().argumentsJson);
+        Assert.NotNull(args);
+        Assert.Equal("Assets/Scenes/System.unity", args.path);
+        Assert.True(args.withValues);
+        Assert.Equal(4, args.maxDepth);
+        Assert.True(args.omitDefaults);
     }
 
     [Fact]
