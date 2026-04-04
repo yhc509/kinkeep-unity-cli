@@ -41,8 +41,11 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 
 - 모든 asset 경로는 `Assets/...` 형식으로 다룬다.
 - 파괴 연산과 덮어쓰기는 `--force`가 있을 때만 허용된다고 가정한다.
+- **LLM이 소비하는 명령에는 `--output compact`를 기본으로 붙인다.** envelope 메타를 제거하여 토큰을 절약한다.
 - `scene patch` 전에는 가능하면 `scene inspect --with-values`를 먼저 실행해서 GameObject path와 field 이름을 확인한다.
 - `prefab patch` 전에는 가능하면 `prefab inspect --with-values`를 먼저 실행해서 path와 field 이름을 확인한다.
+- inspect 응답이 클 때는 `--max-depth N`으로 깊이를 제한하고 `--omit-defaults`로 기본값을 생략한다.
+- `--omit-defaults` 결과는 read-only이다. patch input으로 그대로 쓰면 생략된 필드가 복원되지 않는다.
 - `SerializedProperty.propertyPath`는 추측하지 말고 inspect 결과를 기준으로 쓴다.
 - live 편집 명령이 compile/update 중이면 읽기 전용 명령만 남기고 나머지는 재시도 흐름으로 본다.
 - scene path는 `/Root[0]/Child[0]` 형식으로 쓰고 `/`는 virtual scene root로 본다.

@@ -33,16 +33,17 @@ ucli instances list
 가장 먼저 아래 흐름을 기준으로 본다.
 
 ```bash
-"$UNITY_CLI_BIN" status --project "$PROJECT" --json
+ucli status --project "$PROJECT" --output compact
 ```
 
 중요하게 볼 값:
 
-- `transport`
 - `projectName` — **의도한 프로젝트가 맞는지 반드시 확인**
 - `projectRoot`
 - `isCompiling`
 - `isUpdating`
+
+> `--output compact`는 envelope 메타(status, transport, durationMs 등)를 제거하고 data payload만 반환한다. LLM이 소비하는 모든 명령에 기본으로 붙인다. 사람이 읽거나 전체 envelope이 필요하면 `--json`을 쓴다.
 
 ## 기본 운용
 
@@ -95,16 +96,16 @@ ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project
 ### 조회
 
 ```bash
-"$UNITY_CLI_BIN" asset find --project "$PROJECT_ROOT" --name Sample --folder Assets --limit 10
-"$UNITY_CLI_BIN" asset types --project "$PROJECT_ROOT" --json
-"$UNITY_CLI_BIN" asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity
+ucli asset find --project "$PROJECT_ROOT" --name Sample --folder Assets --limit 10 --output compact
+ucli asset types --project "$PROJECT_ROOT" --output compact
+ucli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --output compact
 ```
 
 ### 생성
 
 ```bash
-"$UNITY_CLI_BIN" asset create --project "$PROJECT_ROOT" --type material --path Assets/Materials/NewMaterial
-"$UNITY_CLI_BIN" asset create --project "$PROJECT_ROOT" --type scriptable-object --path Assets/Data/NewData --type-name MyNamespace.MyData --data-json '{"title":"hello"}'
+ucli asset create --project "$PROJECT_ROOT" --type material --path Assets/Materials/NewMaterial --output compact
+ucli asset create --project "$PROJECT_ROOT" --type scriptable-object --path Assets/Data/NewData --type-name MyNamespace.MyData --data-json '{"title":"hello"}' --output compact
 ```
 
 ### 안전 규칙
@@ -118,18 +119,23 @@ ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project
 ### 조회
 
 ```bash
-"$UNITY_CLI_BIN" scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --json
+# 기본 구조 확인 (깊이 제한 + 기본값 생략으로 토큰 절약)
+ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --max-depth 2 --omit-defaults --output compact
+
+# 특정 노드의 component 값까지 확인 (patch 전 필수)
+ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --output compact
 ```
 
 ### 수정
 
 ```bash
-"$UNITY_CLI_BIN" scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --spec-file ./tools/skills/unity-cli-operator/assets/scene-patch-basic.json --json
+ucli scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --spec-file ./tools/skills/unity-cli-operator/assets/scene-patch-basic.json --output compact
 ```
 
 ### 안전 규칙
 
 - 먼저 `scene inspect --with-values`로 GameObject path와 component field를 확인한다
+- `--omit-defaults` 결과는 read-only이다. patch input으로 그대로 쓰면 생략된 필드가 복원되지 않는다
 - node path는 `/Root[0]/Child[0]` 형식으로 쓴다
 - `/`는 virtual scene root이고, root GameObject 추가의 parent로만 쓴다
 - 대상 scene이 이미 열려 있다면 먼저 저장하거나 변경을 버려서 clean 상태로 맞춘다
@@ -140,8 +146,8 @@ ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project
 live 작업 뒤 기본 검증:
 
 ```bash
-"$UNITY_CLI_BIN" read-console --project "$PROJECT_ROOT" --type error --limit 10 --json
-"$UNITY_CLI_BIN" read-console --project "$PROJECT_ROOT" --type warning --limit 10 --json
+ucli read-console --project "$PROJECT_ROOT" --type error --limit 10 --output compact
+ucli read-console --project "$PROJECT_ROOT" --type warning --limit 10 --output compact
 ```
 
 에러나 경고가 있으면 성공으로 바로 닫지 않는다.

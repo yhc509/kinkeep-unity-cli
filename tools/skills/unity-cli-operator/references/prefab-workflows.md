@@ -10,7 +10,7 @@
 ## 생성 흐름
 
 ```bash
-"$UNITY_CLI_BIN" prefab create --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --spec-file /tmp/enemy-prefab.json --force --json
+ucli prefab create --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --spec-file /tmp/enemy-prefab.json --force --output compact
 ```
 
 빠르게 시작할 때는 `assets/prefab-create-basic.json`을 복사해서 수정한다.
@@ -18,7 +18,11 @@
 ## 조회 흐름
 
 ```bash
-"$UNITY_CLI_BIN" prefab inspect --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --with-values --json
+# 구조 확인 (깊이 제한 + 기본값 생략)
+ucli prefab inspect --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --max-depth 2 --omit-defaults --output compact
+
+# component 값까지 확인 (patch 전 필수)
+ucli prefab inspect --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --with-values --output compact
 ```
 
 inspect 결과에서 꼭 보는 값:
@@ -27,10 +31,12 @@ inspect 결과에서 꼭 보는 값:
 - `components[].type`
 - `components[].values`
 
+`--omit-defaults` 결과는 read-only이다. patch input으로 그대로 쓰면 생략된 필드가 복원되지 않는다.
+
 ## 수정 흐름
 
 ```bash
-"$UNITY_CLI_BIN" prefab patch --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --spec-file /tmp/enemy-patch.json --json
+ucli prefab patch --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab --spec-file /tmp/enemy-patch.json --output compact
 ```
 
 지원 op:
