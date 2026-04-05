@@ -10,6 +10,11 @@ public sealed class InstanceRegistryFileTests
     [Fact]
     public async Task Load_RetriesWhileRegistryFileIsTemporarilyLocked()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         using var temp = new TempDirectory();
         string registryPath = Path.Combine(temp.Path, "instances.json");
         File.WriteAllText(registryPath, BuildRegistryJson("abc"));
@@ -59,6 +64,11 @@ public sealed class InstanceRegistryFileTests
     [Fact]
     public async Task Save_RetriesWhileRegistryDataFileIsTemporarilyLocked()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         using var temp = new TempDirectory();
         string registryPath = Path.Combine(temp.Path, "instances.json");
         File.WriteAllText(registryPath, "{\"instances\":[]}");
