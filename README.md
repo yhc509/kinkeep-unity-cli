@@ -66,7 +66,18 @@ https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.
 
 The bridge starts automatically when the Editor opens. No configuration needed.
 
-### 3. Verify
+### 3. Install AI Agent Skill
+
+In the Unity Editor, open `KinKeep > CLI Manager`. Select your AI tool (Claude Code or Codex) from the dropdown and click **Install Skill**.
+
+| Tool | Install Path |
+|------|-------------|
+| Claude Code | `{ProjectRoot}/.claude/skills/kinkeep-unity-cli/` |
+| Codex | `{ProjectRoot}/.agents/skills/kinkeep-unity-cli/` |
+
+The skill teaches AI agents how to pick the right commands, run them safely, and verify results with `read-console`.
+
+### 4. Verify
 
 Check that the CLI can reach the running Editor:
 
@@ -189,7 +200,7 @@ unity-cli scene inspect --path ... --max-depth 2
 cli/UnityCli.Cli/              CLI executable (.NET 9, macOS arm64 + Windows x64)
 cli/UnityCli.Protocol/         Shared protocol (linked from Unity package)
 unity-package/                 com.kinkeep.unity-cli-bridge (UPM package)
-tools/skills/unity-cli-operator/   AI agent skill for consistent CLI usage
+tools/skills/unity-cli-operator/   AI agent skill (dev copy; end-users install via CLI Manager)
 tests/                         xUnit CLI tests + live IPC test scenarios
 docs/                          Generated CLI reference, specs
 ```
@@ -213,12 +224,9 @@ docs/                          Generated CLI reference, specs
 
 ## AI Agent Skill
 
-The `unity-cli-operator` skill keeps agent workflows consistent: pick the right command, do the work, verify with `read-console`.
+The `kinkeep-unity-cli` skill teaches AI agents how to use the CLI safely: pick the right command, verify with `read-console`, follow inspect-before-patch patterns.
 
-```bash
-# Symlink into your skills directory
-ln -sfn "$(pwd -P)/tools/skills/unity-cli-operator" ~/.claude/skills/unity-cli-operator
-```
+Install from **KinKeep > CLI Manager** in the Unity Editor — select your AI tool and click **Install Skill**. Supports Claude Code and Codex.
 
 ## Development
 

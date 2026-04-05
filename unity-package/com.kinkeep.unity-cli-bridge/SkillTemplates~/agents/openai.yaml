@@ -1,0 +1,4 @@
+interface:
+  display_name: "KinKeep Unity CLI"
+  short_description: "KinKeep Unity CLI 운용과 prefab/asset 작업 절차를 안내한다"
+  default_prompt: "Use $kinkeep-unity-cli to choose the right KinKeep Unity CLI commands, run them safely, and verify console logs."
