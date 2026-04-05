@@ -36,10 +36,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (JProperty property in values.Properties())
             {
-                SerializedProperty serializedProperty = serializedObject.FindProperty(property.Name);
+                SerializedProperty? serializedProperty = FindPropertyWithFallback(serializedObject, property.Name);
                 if (serializedProperty == null)
                 {
-                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "serialized field를 찾지 못했습니다: " + property.Name);
+                    string fallbackKey = "m_" + ToPascalCase(property.Name);
+                    throw new CommandFailureException(
+                        "COMPONENT_VALUE_KEY_INVALID",
+                        "serialized field를 찾지 못했습니다: "
+                        + property.Name
+                        + " (시도한 키: '"
+                        + property.Name
+                        + "', '"
+                        + fallbackKey
+                        + "'). list-components로 유효한 property 이름을 확인하세요.");
                 }
 
                 ApplyToken(serializedProperty, property.Value, property.Name);
@@ -81,6 +90,34 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return !property.editable
                 || _skippedPropertyPaths.Contains(property.propertyPath)
                 || property.propertyPath.StartsWith("m_GameObject.", StringComparison.Ordinal);
+        }
+
+        private static string ToPascalCase(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                return key;
+            }
+
+            if (char.IsUpper(key[0]))
+            {
+                return key;
+            }
+
+            return key.Length == 1
+                ? char.ToUpperInvariant(key[0]).ToString()
+                : char.ToUpperInvariant(key[0]) + key.Substring(1);
+        }
+
+        private static SerializedProperty? FindPropertyWithFallback(SerializedObject serializedObject, string key)
+        {
+            SerializedProperty directMatch = serializedObject.FindProperty(key);
+            if (directMatch != null)
+            {
+                return directMatch;
+            }
+
+            return serializedObject.FindProperty("m_" + ToPascalCase(key));
         }
 
         private static void ApplyToken(SerializedProperty property, JToken token, string propertyPath)
