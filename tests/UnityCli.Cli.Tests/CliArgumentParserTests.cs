@@ -946,6 +946,99 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_PrefabListComponents_RequiresNode()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse(["prefab", "list-components", "--path", "Assets/Prefabs/P.prefab"]));
+
+        Assert.Contains("--node", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_PrefabListComponents_AcceptsPathAndNode()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab", "list-components",
+            "--path", "Assets/Prefabs/Player.prefab",
+            "--node", "/Root[0]"
+        ]);
+
+        Assert.Equal(CommandKind.PrefabListComponents, parsed.Kind);
+        var envelope = parsed.ToEnvelope();
+        Assert.Equal(ProtocolConstants.CommandPrefabListComponents, envelope.command);
+        Assert.Contains("/Root[0]", envelope.argumentsJson);
+        Assert.Contains("Player.prefab", envelope.argumentsJson);
+    }
+
+    [Fact]
+    public void Parse_PrefabAddComponent_RequiresType()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "prefab", "add-component",
+                "--path", "Assets/Prefabs/P.prefab",
+                "--target", "/Root[0]"
+            ]));
+
+        Assert.Contains("--type", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_PrefabAddComponent_AcceptsTypeAndValues()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab", "add-component",
+            "--path", "Assets/Prefabs/Player.prefab",
+            "--target", "/Root[0]",
+            "--type", "Rigidbody",
+            "--values", "{\"mass\":5}"
+        ]);
+
+        Assert.Equal(CommandKind.PrefabAddComponent, parsed.Kind);
+        var envelope = parsed.ToEnvelope();
+        Assert.Equal(ProtocolConstants.CommandPrefabPatch, envelope.command);
+        Assert.Contains("add-component", envelope.argumentsJson);
+        Assert.Contains("Rigidbody", envelope.argumentsJson);
+        var args = ProtocolJson.Deserialize<PrefabPatchArgs>(envelope.argumentsJson);
+        Assert.NotNull(args);
+        Assert.Contains("\"component\":", args.specJson);
+    }
+
+    [Fact]
+    public void Parse_PrefabRemoveComponent_RequiresForce()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "prefab", "remove-component",
+                "--path", "Assets/Prefabs/P.prefab",
+                "--target", "/Root[0]",
+                "--type", "BoxCollider"
+            ]));
+
+        Assert.Contains("--force", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_PrefabRemoveComponent_AcceptsForce()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab", "remove-component",
+            "--path", "Assets/Prefabs/Player.prefab",
+            "--target", "/Root[0]",
+            "--type", "BoxCollider",
+            "--force"
+        ]);
+
+        Assert.Equal(CommandKind.PrefabRemoveComponent, parsed.Kind);
+        var envelope = parsed.ToEnvelope();
+        Assert.Equal(ProtocolConstants.CommandPrefabPatch, envelope.command);
+        Assert.Contains("remove-component", envelope.argumentsJson);
+        var args = ProtocolJson.Deserialize<PrefabPatchArgs>(envelope.argumentsJson);
+        Assert.NotNull(args);
+        Assert.Contains("componentType", args.specJson);
+    }
+
+    [Fact]
     public void Parse_SceneAssignMaterial_RequiresNode()
     {
         var ex = Assert.Throws<CliUsageException>(() =>

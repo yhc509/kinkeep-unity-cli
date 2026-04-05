@@ -82,6 +82,9 @@ Commands for inspecting, creating, and patching prefab assets.
 | `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]` | live | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs and the other options to reduce payload size. |
 | `prefab create` | `prefab create --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Creates a prefab from a JSON structure spec; use --force to overwrite an existing asset. |
 | `prefab patch` | `prefab patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>)` | live | Applies a deterministic patch spec to an existing prefab. |
+| `prefab add-component` | `prefab add-component --path <Assets/...> --target <nodePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a prefab node; shortcut for a single add-component prefab patch operation. |
+| `prefab remove-component` | `prefab remove-component --path <Assets/...> --target <nodePath> --type <ComponentType> --force` | live | Removes a component from a prefab node; shortcut for a single remove-component prefab patch operation. |
+| `prefab list-components` | `prefab list-components --path <Assets/...> --node <nodePath>` | live | Lists all components on a node in a prefab asset, returning type names and indices. |
 
 ## Package Management
 

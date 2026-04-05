@@ -152,6 +152,24 @@ public static partial class CliArgumentParser
                 throw new CliUsageException("`prefab create`에는 `--path`가 필요합니다.");
             case CommandKind.PrefabPatch when string.IsNullOrWhiteSpace(parsed.PrefabPath):
                 throw new CliUsageException("`prefab patch`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab add-component`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`prefab add-component`에는 `--target`이 필요합니다.");
+            case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
+                throw new CliUsageException("`prefab add-component`에는 `--type`이 필요합니다.");
+            case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab remove-component`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`prefab remove-component`에는 `--target`이 필요합니다.");
+            case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
+                throw new CliUsageException("`prefab remove-component`에는 `--type`이 필요합니다.");
+            case CommandKind.PrefabRemoveComponent when !parsed.Force:
+                throw new CliUsageException("`prefab remove-component`에는 `--force`가 필요합니다.");
+            case CommandKind.PrefabListComponents when string.IsNullOrWhiteSpace(parsed.PrefabPath):
+                throw new CliUsageException("`prefab list-components`에는 `--path`가 필요합니다.");
+            case CommandKind.PrefabListComponents when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`prefab list-components`에는 `--node`가 필요합니다.");
             case CommandKind.PrefabCreate when HasInvalidPrefabSpecSource(parsed):
                 throw new CliUsageException("`prefab create`에는 `--spec-file` 또는 `--spec-json` 중 하나만 필요합니다.");
             case CommandKind.PrefabPatch when HasInvalidPrefabSpecSource(parsed):

@@ -86,4 +86,16 @@ namespace KinKeep.UnityCli.Bridge.Editor
         public string ComponentType { get; set; } = string.Empty;
         public int? ComponentIndex { get; set; }
     }
+
+    internal sealed class PrefabListComponentsArgs
+    {
+        public string? path { get; set; }
+        public string? node { get; set; }
+    }
+
+    internal sealed class PrefabListComponentsPayload
+    {
+        public string node { get; set; } = string.Empty;
+        public ComponentOperations.ComponentEntry[]? components { get; set; }
+    }
 }

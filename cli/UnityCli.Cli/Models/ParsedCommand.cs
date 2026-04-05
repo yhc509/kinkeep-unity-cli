@@ -37,6 +37,9 @@ public enum CommandKind
     PrefabInspect,
     PrefabCreate,
     PrefabPatch,
+    PrefabAddComponent,
+    PrefabRemoveComponent,
+    PrefabListComponents,
     InstancesList,
     InstancesUse,
     Doctor,
@@ -231,6 +234,9 @@ public sealed class ParsedCommand
                 CommandKind.PrefabInspect => ProtocolConstants.CommandPrefabInspect,
                 CommandKind.PrefabCreate => ProtocolConstants.CommandPrefabCreate,
                 CommandKind.PrefabPatch => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabAddComponent => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabRemoveComponent => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabListComponents => ProtocolConstants.CommandPrefabListComponents,
                 _ => throw new CliUsageException($"지원하지 않는 live 명령입니다: {Kind}"),
             },
             argumentsJson = BuildArgumentsJson(),
@@ -433,6 +439,21 @@ public sealed class ParsedCommand
             {
                 path = PrefabPath ?? string.Empty,
                 specJson = ResolvePrefabSpecJson(),
+            },
+            CommandKind.PrefabAddComponent => new PrefabPatchArgs
+            {
+                path = PrefabPath ?? string.Empty,
+                specJson = BuildAddComponentSpec(),
+            },
+            CommandKind.PrefabRemoveComponent => new PrefabPatchArgs
+            {
+                path = PrefabPath ?? string.Empty,
+                specJson = BuildRemoveComponentSpec(),
+            },
+            CommandKind.PrefabListComponents => new
+            {
+                path = PrefabPath ?? string.Empty,
+                node = SceneTarget ?? string.Empty,
             },
             _ => new { },
         };
