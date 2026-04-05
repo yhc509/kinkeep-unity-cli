@@ -384,12 +384,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private bool IsUpdateAvailable()
         {
-            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_installedVersion))
+            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_packageVersion))
             {
                 return false;
             }
 
-            return CliInstallerState.CompareVersions(_installedVersion, _latestReleaseVersion) < 0;
+            return CliInstallerState.CompareVersions(_packageVersion, _latestReleaseVersion) < 0;
         }
 
         private static string GetPathCommand()
