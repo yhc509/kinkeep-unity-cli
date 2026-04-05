@@ -13,16 +13,43 @@ Most Unity automation tools fall into two camps:
 **kinkeep-unity-cli takes a third path: declarative commands over direct IPC.**
 
 ```
-CLI ──── Unix socket ──── Unity Editor (bridge)
+CLI ──── local IPC ──── Unity Editor (bridge)
+         (Named Pipe on Windows, Unix socket on macOS/Linux)
 ```
 
-- **One hop, no intermediary.** CLI talks directly to the Editor over a local Unix socket. Average response: 265 ms.
+- **One hop, no intermediary.** CLI talks directly to the Editor over local IPC. Average response: 265 ms.
 - **Declarative, not imperative.** `scene add-object --primitive Cube --position 3,0,0` instead of writing C# code. The LLM picks options, not APIs.
 - **Token-aware responses.** `--output compact` strips envelope metadata. `--omit-defaults` cuts material info by 71% and scene inspect by 41%.
 - **Structured results in stdout.** No polling, no log scraping, no file reads. Every command returns JSON immediately.
 - **Fail fast, fail loud.** Invalid options get a clear error. Unrecognized patch keys return warnings instead of silent success.
 
 > See [Benchmark: 3-Way Comparison](https://github.com/yhc509/kinkeep-unity-cli/wiki/Benchmark-Unity-Editor-CLI-Tool-Comparison) for measured results against two other approaches on the same scenario.
+
+## Quick Start
+
+### 1. Build
+
+```bash
+./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
+```
+
+### 2. Add the Unity Package
+
+```json
+{
+  "dependencies": {
+    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
+  }
+}
+```
+
+The bridge starts automatically when the Editor opens. No configuration needed.
+
+### 3. Verify
+
+```bash
+unity-cli status --project /path/to/your-project --json
+```
 
 ## What You Can Do
 
@@ -105,32 +132,6 @@ unity-cli qa tap --x 400 --y 300
 unity-cli qa swipe --target ... --from 0,0 --to 100,0 --duration 500
 unity-cli qa key --key space
 unity-cli qa wait-until --scene GameScene --timeout 5000
-```
-
-## Quick Start
-
-### 1. Build
-
-```bash
-./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
-```
-
-### 2. Add the Unity Package
-
-```json
-{
-  "dependencies": {
-    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
-  }
-}
-```
-
-The bridge starts automatically when the Editor opens. No configuration needed.
-
-### 3. Verify
-
-```bash
-unity-cli status --project /path/to/your-project --json
 ```
 
 ## Token Optimization
