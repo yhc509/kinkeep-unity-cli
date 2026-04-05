@@ -337,6 +337,16 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false,
                 notes: new[] { "Uses the active scene instead of --path.", "Saves the active scene immediately after assignment." }),
             new CliCommandDescriptor(
+                "scene list-components",
+                "scene list-components --node <scenePath>",
+                "Lists all components on a GameObject in the active loaded scene, returning type names and indices.",
+                CliCommandGroup.SceneWorkflows,
+                ProtocolConstants.CommandSceneListComponents,
+                canUseLocal: false,
+                canUseLive: true,
+                isAllowedWhileBusy: true,
+                notes: new[] { "Uses the active scene.", "Returns type + index pairs for use with add-component, remove-component, and modify-component." }),
+            new CliCommandDescriptor(
                 "prefab inspect",
                 "prefab inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]",
                 "Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs and the other options to reduce payload size.",

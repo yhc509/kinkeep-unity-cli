@@ -32,6 +32,7 @@ public enum CommandKind
     SceneSetTransform,
     SceneAddComponent,
     SceneRemoveComponent,
+    SceneListComponents,
     SceneAssignMaterial,
     PrefabInspect,
     PrefabCreate,
@@ -225,6 +226,7 @@ public sealed class ParsedCommand
                 CommandKind.SceneSetTransform => ProtocolConstants.CommandSceneSetTransform,
                 CommandKind.SceneAddComponent => ProtocolConstants.CommandScenePatch,
                 CommandKind.SceneRemoveComponent => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneListComponents => ProtocolConstants.CommandSceneListComponents,
                 CommandKind.SceneAssignMaterial => ProtocolConstants.CommandSceneAssignMaterial,
                 CommandKind.PrefabInspect => ProtocolConstants.CommandPrefabInspect,
                 CommandKind.PrefabCreate => ProtocolConstants.CommandPrefabCreate,
@@ -404,6 +406,10 @@ public sealed class ParsedCommand
                 path = ScenePath ?? string.Empty,
                 force = Force,
                 specJson = BuildRemoveComponentSpec(),
+            },
+            CommandKind.SceneListComponents => new
+            {
+                node = SceneTarget ?? string.Empty,
             },
             CommandKind.SceneAssignMaterial => new SceneAssignMaterialArgs
             {

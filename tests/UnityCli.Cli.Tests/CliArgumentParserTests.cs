@@ -923,6 +923,29 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_SceneListComponents_RequiresNode()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse(["scene", "list-components"]));
+
+        Assert.Contains("--node", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_SceneListComponents_AcceptsNode()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "list-components",
+            "--node", "/Player[0]"
+        ]);
+
+        Assert.Equal(CommandKind.SceneListComponents, parsed.Kind);
+        var envelope = parsed.ToEnvelope();
+        Assert.Equal(ProtocolConstants.CommandSceneListComponents, envelope.command);
+        Assert.Contains("/Player[0]", envelope.argumentsJson);
+    }
+
+    [Fact]
     public void Parse_SceneAssignMaterial_RequiresNode()
     {
         var ex = Assert.Throws<CliUsageException>(() =>

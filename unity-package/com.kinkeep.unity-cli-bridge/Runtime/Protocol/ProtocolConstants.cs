@@ -51,6 +51,7 @@ namespace UnityCli.Protocol
         public const string CommandScenePatch = "scene-patch";
         public const string CommandSceneSetTransform = "scene-set-transform";
         public const string CommandSceneAssignMaterial = "scene-assign-material";
+        public const string CommandSceneListComponents = "scene-list-components";
         public const string CommandPrefabInspect = "prefab-inspect";
         public const string CommandPrefabCreate = "prefab-create";
         public const string CommandPrefabPatch = "prefab-patch";

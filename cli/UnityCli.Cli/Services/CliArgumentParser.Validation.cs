@@ -198,6 +198,8 @@ public static partial class CliArgumentParser
                 throw new CliUsageException("`scene remove-component`에는 `--type`이 필요합니다.");
             case CommandKind.SceneRemoveComponent when !parsed.Force:
                 throw new CliUsageException("`scene remove-component`는 `--force`가 필요합니다.");
+            case CommandKind.SceneListComponents when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`scene list-components`에는 `--node`가 필요합니다.");
             case CommandKind.SceneAssignMaterial when string.IsNullOrWhiteSpace(parsed.SceneTarget):
                 throw new CliUsageException("`scene assign-material`에는 `--node`가 필요합니다.");
             case CommandKind.SceneAssignMaterial when string.IsNullOrWhiteSpace(parsed.MaterialPath):

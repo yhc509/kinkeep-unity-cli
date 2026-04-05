@@ -71,6 +71,7 @@ Commands for opening, inspecting, and patching saved scene assets.
 | `scene add-component` | `scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a GameObject; shortcut for a single add-component scene patch operation. |
 | `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> --force` | live | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
 | `scene assign-material` | `scene assign-material --node <scenePath> --material <Assets/...>` | live | Assigns a material asset to MeshRenderer.sharedMaterials[0] on a node in the active loaded scene. |
+| `scene list-components` | `scene list-components --node <scenePath>` | live | Lists all components on a GameObject in the active loaded scene, returning type names and indices. |
 
 ## Prefab Workflows
 

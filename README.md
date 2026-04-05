@@ -114,6 +114,7 @@ unity-cli scene add-object --name Cube --primitive Cube \
 
 unity-cli scene set-transform --node "/Cube[0]" --position 0,1,0 --scale 2,2,2
 unity-cli scene assign-material --node "/Cube[0]" --material Assets/Materials/Red.mat
+unity-cli scene list-components --node "/Cube[0]"
 
 # Or use spec-based patching for complex edits
 unity-cli scene patch --path ... --spec-file patch.json

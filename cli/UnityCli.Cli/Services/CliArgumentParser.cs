@@ -237,6 +237,7 @@ public static partial class CliArgumentParser
             "set-transform" => new ParsedCommand(CommandKind.SceneSetTransform),
             "add-component" => new ParsedCommand(CommandKind.SceneAddComponent),
             "remove-component" => new ParsedCommand(CommandKind.SceneRemoveComponent),
+            "list-components" => new ParsedCommand(CommandKind.SceneListComponents),
             "assign-material" => new ParsedCommand(CommandKind.SceneAssignMaterial),
             _ => throw new CliUsageException($"알 수 없는 scene 하위 명령입니다: {subCommand}"),
         };
@@ -595,6 +596,7 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneRemoveComponent when token == "--target":
                     parsed.SceneTarget = RequireValue(tokens, "--target");
                     break;
+                case CommandKind.SceneListComponents when token == "--node":
                 case CommandKind.SceneSetTransform when token == "--node":
                 case CommandKind.SceneAssignMaterial when token == "--node":
                     parsed.SceneTarget = RequireValue(tokens, "--node");
