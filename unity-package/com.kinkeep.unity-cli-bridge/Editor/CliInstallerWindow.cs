@@ -10,10 +10,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private const string WindowTitle = "CLI Manager";
         private const string OpenWindowMenuItemPath = "KinKeep/CLI Manager";
         private static readonly Vector2 WindowMinSize = new Vector2(420f, 340f);
+        private static GUIStyle? _updateAvailableLabelStyle;
 
         private Vector2 _scrollPosition;
         private CliInstallStatus _status;
         private string _packageVersion = string.Empty;
+        private string _latestReleaseVersion = string.Empty;
         private string _installedVersion = string.Empty;
         private string _executablePath = string.Empty;
         private string _platformDisplayName = string.Empty;
@@ -26,6 +28,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private float _downloadProgress;
         private bool _hasLoadedState;
         private bool _isDownloading;
+        private bool _isFetchingLatestVersion;
         private SkillTarget _skillTarget;
 
         [MenuItem(OpenWindowMenuItemPath)]
@@ -81,6 +84,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 GUILayout.Label("Package Info", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Package Version", FormatVersion(_packageVersion));
+                if (IsUpdateAvailable())
+                {
+                    EditorGUILayout.LabelField("Latest Release", GetLatestReleaseVersionLabel(), UpdateAvailableLabelStyle);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Latest Release", GetLatestReleaseVersionLabel());
+                }
+
                 DrawLinkButton("Repository", CliInstallerState.GetRepositoryUrl(), "Open Repository");
                 DrawLinkButton("Release", _releasePageUrl, "Open Release");
             }
@@ -298,12 +310,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 _releasePageUrl = CliInstallerState.GetReleasePageUrl();
                 _pathCommand = GetPathCommand();
                 _status = CliInstallerState.GetStatus();
+                RefreshLatestReleaseVersion();
                 _hasLoadedState = true;
             }
             catch (Exception exception)
             {
                 _hasLoadedState = true;
                 _packageVersion = string.Empty;
+                _latestReleaseVersion = string.Empty;
                 _installedVersion = string.Empty;
                 _executablePath = string.Empty;
                 _platformDisplayName = string.Empty;
@@ -311,12 +325,32 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 _releasePageUrl = string.Empty;
                 _pathCommand = string.Empty;
                 _status = CliInstallStatus.NotInstalled;
+                _isFetchingLatestVersion = false;
 
                 if (string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     _errorMessage = exception.Message;
                 }
             }
+        }
+
+        private void RefreshLatestReleaseVersion()
+        {
+            _latestReleaseVersion = CliInstallerState.GetCachedLatestReleaseVersion() ?? string.Empty;
+            if (_isFetchingLatestVersion || !CliInstallerState.IsLatestReleaseCacheExpired())
+            {
+                return;
+            }
+
+            _isFetchingLatestVersion = true;
+            CliInstallerState.FetchLatestReleaseVersion(HandleLatestReleaseVersionFetched);
+        }
+
+        private void HandleLatestReleaseVersionFetched(string? latestReleaseVersion)
+        {
+            _latestReleaseVersion = latestReleaseVersion ?? string.Empty;
+            _isFetchingLatestVersion = false;
+            Repaint();
         }
 
         private string GetStatusLabel()
@@ -338,6 +372,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+        private string GetLatestReleaseVersionLabel()
+        {
+            if (_isFetchingLatestVersion && string.IsNullOrWhiteSpace(_latestReleaseVersion))
+            {
+                return "Checking...";
+            }
+
+            return FormatVersion(_latestReleaseVersion);
+        }
+
+        private bool IsUpdateAvailable()
+        {
+            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_packageVersion))
+            {
+                return false;
+            }
+
+            return CliInstallerState.CompareVersions(_packageVersion, _latestReleaseVersion) < 0;
+        }
+
         private static string GetPathCommand()
         {
             switch (Application.platform)
@@ -356,6 +410,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return string.IsNullOrWhiteSpace(version)
                 ? "-"
                 : "v" + version.Trim().TrimStart('v', 'V');
+        }
+
+        private static GUIStyle UpdateAvailableLabelStyle =>
+            _updateAvailableLabelStyle ??= CreateUpdateAvailableLabelStyle();
+
+        private static GUIStyle CreateUpdateAvailableLabelStyle()
+        {
+            GUIStyle style = new GUIStyle(EditorStyles.label)
+            {
+                fontStyle = FontStyle.Bold,
+            };
+            style.normal.textColor = new Color(0.2f, 0.8f, 0.2f);
+            return style;
         }
     }
 }
