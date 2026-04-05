@@ -1,0 +1,4 @@
+interface:
+  display_name: "Unity CLI Operator"
+  short_description: "unity-cli 운용과 prefab/asset 작업 절차를 안내한다"
+  default_prompt: "Use $unity-cli-operator to choose the right unity-cli commands, run them safely, and verify console logs."

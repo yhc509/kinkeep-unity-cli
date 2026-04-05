@@ -21,9 +21,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private string _releasePageUrl = string.Empty;
         private string _pathCommand = string.Empty;
         private string _errorMessage = string.Empty;
+        private string _skillFeedbackMessage = string.Empty;
+        private MessageType _skillFeedbackType = MessageType.Info;
         private float _downloadProgress;
         private bool _hasLoadedState;
         private bool _isDownloading;
+        private SkillTarget _skillTarget;
 
         [MenuItem(OpenWindowMenuItemPath)]
         private static void OpenWindow()
@@ -66,6 +69,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             DrawActionSection();
             GUILayout.Space(8f);
             DrawPathSetupSection();
+            GUILayout.Space(8f);
+            DrawSkillSection();
 
             EditorGUILayout.EndScrollView();
         }
@@ -169,6 +174,25 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+        private void DrawSkillSection()
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label("AI Agent Skill", EditorStyles.boldLabel);
+                _skillTarget = (SkillTarget)EditorGUILayout.EnumPopup("Target", _skillTarget);
+
+                if (GUILayout.Button("Install Skill", GUILayout.Height(24f)))
+                {
+                    InstallSkill();
+                }
+
+                if (!string.IsNullOrWhiteSpace(_skillFeedbackMessage))
+                {
+                    EditorGUILayout.HelpBox(_skillFeedbackMessage, _skillFeedbackType);
+                }
+            }
+        }
+
         private void DrawLinkButton(string label, string url, string buttonLabel)
         {
             using (new EditorGUILayout.HorizontalScope())
@@ -192,6 +216,23 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 value,
                 EditorStyles.textField,
                 GUILayout.Height(EditorGUIUtility.singleLineHeight));
+        }
+
+        private void InstallSkill()
+        {
+            try
+            {
+                SkillInstaller.Install(_skillTarget);
+                string destination = SkillInstaller.GetDestination(_skillTarget);
+                _skillFeedbackType = MessageType.Info;
+                _skillFeedbackMessage = "Installed to: " + destination;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                _skillFeedbackType = MessageType.Error;
+                _skillFeedbackMessage = exception.Message;
+            }
         }
 
         private void BeginInstall()
