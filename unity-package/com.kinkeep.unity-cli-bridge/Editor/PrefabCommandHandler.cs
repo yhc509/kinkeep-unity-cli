@@ -26,6 +26,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return HandleCreate(argumentsJson);
                 case ProtocolConstants.CommandPrefabPatch:
                     return HandlePatch(argumentsJson);
+                case ProtocolConstants.CommandPrefabListComponents:
+                    return HandleListComponents(argumentsJson);
                 default:
                     throw new InvalidOperationException("지원하지 않는 prefab 명령입니다: " + command);
             }
@@ -150,6 +152,33 @@ namespace KinKeep.UnityCli.Bridge.Editor
             });
         }
 
+        private static string HandleListComponents(string argumentsJson)
+        {
+            var args = ProtocolJson.Deserialize<PrefabListComponentsArgs>(argumentsJson)
+                ?? new PrefabListComponentsArgs();
+            string path = RequireExistingPrefabPath(args.path, "prefab-list-components");
+            if (string.IsNullOrWhiteSpace(args.node))
+            {
+                throw new CommandFailureException("PREFAB_LIST_COMPONENTS_INVALID", "`--node`가 필요합니다.");
+            }
+
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                GameObject target = PrefabInspector.ResolveNode(root, args.node, "prefab-list-components");
+                var entries = ComponentOperations.ListComponents(target);
+                return ProtocolJson.Serialize(new PrefabListComponentsPayload
+                {
+                    node = args.node,
+                    components = entries.ToArray(),
+                });
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         private static T DeserializeSpec<T>(string specJson, string commandName) where T : class
         {
             if (string.IsNullOrWhiteSpace(specJson))
@@ -182,9 +211,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
-        private static string ResolvePrefabPath(string path)
+        private static string ResolvePrefabPath(string? path)
         {
-            string normalizedPath = AssetCommandSupport.NormalizeAssetPath(path);
+            string normalizedPath = AssetCommandSupport.NormalizeAssetPath(path ?? string.Empty);
             string extension = Path.GetExtension(normalizedPath);
             if (string.IsNullOrWhiteSpace(extension))
             {
@@ -199,7 +228,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return normalizedPath;
         }
 
-        private static string RequireExistingPrefabPath(string path, string commandName)
+        private static string RequireExistingPrefabPath(string? path, string commandName)
         {
             string prefabPath = ResolvePrefabPath(path);
             prefabPath = AssetCommandSupport.RequireExistingAssetPath(prefabPath, commandName);

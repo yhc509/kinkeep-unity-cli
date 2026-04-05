@@ -33,6 +33,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return HandleSetTransform(argumentsJson);
                 case ProtocolConstants.CommandSceneAssignMaterial:
                     return HandleAssignMaterial(argumentsJson);
+                case ProtocolConstants.CommandSceneListComponents:
+                    return HandleListComponents(argumentsJson);
                 default:
                     throw new InvalidOperationException("지원하지 않는 scene 명령입니다: " + command);
             }
@@ -166,6 +168,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 node = SceneInspector.BuildNodePath(node),
                 material = materialPath,
                 previousMaterial = previousMaterialPath,
+            });
+        }
+
+        private static string HandleListComponents(string argumentsJson)
+        {
+            SceneListComponentsArgs args = ProtocolJson.Deserialize<SceneListComponentsArgs>(argumentsJson)
+                ?? new SceneListComponentsArgs();
+            if (string.IsNullOrWhiteSpace(args.node))
+            {
+                throw new CommandFailureException("SCENE_LIST_COMPONENTS_INVALID", "`--node`가 필요합니다.");
+            }
+
+            Scene scene = RequireActiveSavedScene("scene-list-components");
+            GameObject target = SceneInspector.ResolveNode(scene, args.node, "scene-list-components");
+            var entries = ComponentOperations.ListComponents(target);
+
+            return ProtocolJson.Serialize(new SceneListComponentsPayload
+            {
+                node = args.node,
+                components = entries.ToArray(),
             });
         }
 
@@ -417,4 +439,5 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return scenePath;
         }
     }
+
 }

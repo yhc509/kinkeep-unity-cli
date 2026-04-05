@@ -69,8 +69,9 @@ Commands for opening, inspecting, and patching saved scene assets.
 | `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--primitive <Cube\|Sphere\|Capsule\|Cylinder\|Plane\|Quad>] [--position x,y,z] [--components "Type1,Type2"]` | live | Adds a new GameObject or built-in primitive to a scene; shortcut for a single add-gameobject scene patch operation. |
 | `scene set-transform` | `scene set-transform --node <scenePath> [--position x,y,z] [--rotation x,y,z] [--scale x,y,z]` | live | Sets local transform values on a node in the active loaded scene and saves the scene immediately. |
 | `scene add-component` | `scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a GameObject; shortcut for a single add-component scene patch operation. |
-| `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> --force` | live | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
+| `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--index N] --force` | live | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
 | `scene assign-material` | `scene assign-material --node <scenePath> --material <Assets/...>` | live | Assigns a material asset to MeshRenderer.sharedMaterials[0] on a node in the active loaded scene. |
+| `scene list-components` | `scene list-components --node <scenePath>` | live | Lists all components on a GameObject in the active loaded scene, returning type names and indices. |
 
 ## Prefab Workflows
 
@@ -81,6 +82,9 @@ Commands for inspecting, creating, and patching prefab assets.
 | `prefab inspect` | `prefab inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]` | live | Inspects prefab hierarchy and serialized property paths; use --with-values when authoring patch specs and the other options to reduce payload size. |
 | `prefab create` | `prefab create --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Creates a prefab from a JSON structure spec; use --force to overwrite an existing asset. |
 | `prefab patch` | `prefab patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>)` | live | Applies a deterministic patch spec to an existing prefab. |
+| `prefab add-component` | `prefab add-component --path <Assets/...> --target <nodePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a prefab node; shortcut for a single add-component prefab patch operation. |
+| `prefab remove-component` | `prefab remove-component --path <Assets/...> --target <nodePath> --type <ComponentType> [--index N] --force` | live | Removes a component from a prefab node; shortcut for a single remove-component prefab patch operation. |
+| `prefab list-components` | `prefab list-components --path <Assets/...> --node <nodePath>` | live | Lists all components on a node in a prefab asset, returning type names and indices. |
 
 ## Package Management
 

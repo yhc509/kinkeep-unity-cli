@@ -53,6 +53,36 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 - root prefab 이름은 Unity 저장 규칙 때문에 파일 이름으로 정규화된다고 가정한다.
 - `screenshot`은 `--view` 생략 시 game이 기본이다. Scene View가 필요하면 `--view scene`을 명시한다.
 
+### Script Workflow (No Dedicated Commands)
+
+unity-cli does not have dedicated script create/delete commands. Use this combination:
+
+**Create/modify script:**
+1. Write .cs file directly to the Assets/ folder via filesystem
+2. `unity-cli refresh` — trigger AssetDatabase refresh
+3. `unity-cli compile` — request script compilation
+4. `unity-cli read-console --type error` — check for compile errors
+
+**Delete script:**
+- `unity-cli asset delete --path Assets/Scripts/MyScript.cs --force`
+  (handles .meta cleanup and refresh automatically)
+
+### Component Operations
+
+**List components on a node:**
+- `unity-cli scene list-components --node "/Player[0]"`
+- `unity-cli prefab list-components --path Assets/Prefabs/Player.prefab --node "/Root[0]"`
+
+**Add component (with optional initial values):**
+- `unity-cli scene add-component --path Assets/Scenes/S.unity --target "/Player[0]" --type Rigidbody --values '{"mass":5,"drag":1}'`
+- `unity-cli prefab add-component --path Assets/Prefabs/P.prefab --target "/Root[0]" --type BoxCollider`
+
+**Remove component:**
+- `unity-cli scene remove-component --path Assets/Scenes/S.unity --target "/Player[0]" --type BoxCollider --force`
+- `unity-cli prefab remove-component --path Assets/Prefabs/P.prefab --target "/Root[0]" --type BoxCollider --force`
+
+**Friendly key mapping:** Values like `mass`, `drag`, `isKinematic` are automatically resolved to Unity's internal `m_Mass`, `m_Drag`, `m_IsKinematic` paths. If a key is not found, use `list-components` then `inspect --with-values` to find the exact property name.
+
 ## Convenience Commands — 편의 명령 우선 사용 원칙
 
 아래 작업에는 `scene patch --spec-json` 대신 전용 편의 명령을 우선 사용한다. 호출 횟수와 토큰을 절약할 수 있다.

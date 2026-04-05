@@ -32,10 +32,14 @@ public enum CommandKind
     SceneSetTransform,
     SceneAddComponent,
     SceneRemoveComponent,
+    SceneListComponents,
     SceneAssignMaterial,
     PrefabInspect,
     PrefabCreate,
     PrefabPatch,
+    PrefabAddComponent,
+    PrefabRemoveComponent,
+    PrefabListComponents,
     InstancesList,
     InstancesUse,
     Doctor,
@@ -129,6 +133,7 @@ public sealed class ParsedCommand
     public string? ScenePrimitive { get; set; }
     public string? SceneComponents { get; set; }
     public string? SceneComponentType { get; set; }
+    public int? SceneComponentIndex { get; set; }
     public string? SceneComponentValues { get; set; }
     public string? ScenePosition { get; set; }
     public string? SceneRotation { get; set; }
@@ -225,10 +230,14 @@ public sealed class ParsedCommand
                 CommandKind.SceneSetTransform => ProtocolConstants.CommandSceneSetTransform,
                 CommandKind.SceneAddComponent => ProtocolConstants.CommandScenePatch,
                 CommandKind.SceneRemoveComponent => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneListComponents => ProtocolConstants.CommandSceneListComponents,
                 CommandKind.SceneAssignMaterial => ProtocolConstants.CommandSceneAssignMaterial,
                 CommandKind.PrefabInspect => ProtocolConstants.CommandPrefabInspect,
                 CommandKind.PrefabCreate => ProtocolConstants.CommandPrefabCreate,
                 CommandKind.PrefabPatch => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabAddComponent => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabRemoveComponent => ProtocolConstants.CommandPrefabPatch,
+                CommandKind.PrefabListComponents => ProtocolConstants.CommandPrefabListComponents,
                 _ => throw new CliUsageException($"지원하지 않는 live 명령입니다: {Kind}"),
             },
             argumentsJson = BuildArgumentsJson(),
@@ -405,6 +414,10 @@ public sealed class ParsedCommand
                 force = Force,
                 specJson = BuildRemoveComponentSpec(),
             },
+            CommandKind.SceneListComponents => new
+            {
+                node = SceneTarget ?? string.Empty,
+            },
             CommandKind.SceneAssignMaterial => new SceneAssignMaterialArgs
             {
                 node = SceneTarget ?? string.Empty,
@@ -427,6 +440,21 @@ public sealed class ParsedCommand
             {
                 path = PrefabPath ?? string.Empty,
                 specJson = ResolvePrefabSpecJson(),
+            },
+            CommandKind.PrefabAddComponent => new PrefabPatchArgs
+            {
+                path = PrefabPath ?? string.Empty,
+                specJson = BuildAddComponentSpec(),
+            },
+            CommandKind.PrefabRemoveComponent => new PrefabPatchArgs
+            {
+                path = PrefabPath ?? string.Empty,
+                specJson = BuildRemoveComponentSpec(),
+            },
+            CommandKind.PrefabListComponents => new
+            {
+                path = PrefabPath ?? string.Empty,
+                node = SceneTarget ?? string.Empty,
             },
             _ => new { },
         };
@@ -655,6 +683,10 @@ public sealed class ParsedCommand
             ["target"] = SceneTarget ?? string.Empty,
             ["componentType"] = SceneComponentType ?? string.Empty,
         };
+        if (SceneComponentIndex.HasValue)
+        {
+            op["componentIndex"] = SceneComponentIndex.Value;
+        }
 
         var spec = new Dictionary<string, object?>
         {

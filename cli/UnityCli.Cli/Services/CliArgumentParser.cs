@@ -237,6 +237,7 @@ public static partial class CliArgumentParser
             "set-transform" => new ParsedCommand(CommandKind.SceneSetTransform),
             "add-component" => new ParsedCommand(CommandKind.SceneAddComponent),
             "remove-component" => new ParsedCommand(CommandKind.SceneRemoveComponent),
+            "list-components" => new ParsedCommand(CommandKind.SceneListComponents),
             "assign-material" => new ParsedCommand(CommandKind.SceneAssignMaterial),
             _ => throw new CliUsageException($"알 수 없는 scene 하위 명령입니다: {subCommand}"),
         };
@@ -255,6 +256,9 @@ public static partial class CliArgumentParser
             "inspect" => new ParsedCommand(CommandKind.PrefabInspect),
             "create" => new ParsedCommand(CommandKind.PrefabCreate),
             "patch" => new ParsedCommand(CommandKind.PrefabPatch),
+            "add-component" => new ParsedCommand(CommandKind.PrefabAddComponent),
+            "remove-component" => new ParsedCommand(CommandKind.PrefabRemoveComponent),
+            "list-components" => new ParsedCommand(CommandKind.PrefabListComponents),
             _ => throw new CliUsageException($"알 수 없는 prefab 하위 명령입니다: {subCommand}"),
         };
     }
@@ -595,6 +599,7 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneRemoveComponent when token == "--target":
                     parsed.SceneTarget = RequireValue(tokens, "--target");
                     break;
+                case CommandKind.SceneListComponents when token == "--node":
                 case CommandKind.SceneSetTransform when token == "--node":
                 case CommandKind.SceneAssignMaterial when token == "--node":
                     parsed.SceneTarget = RequireValue(tokens, "--node");
@@ -614,6 +619,10 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneAddComponent when token == "--type":
                 case CommandKind.SceneRemoveComponent when token == "--type":
                     parsed.SceneComponentType = RequireValue(tokens, "--type");
+                    break;
+                case CommandKind.SceneRemoveComponent when token == "--index":
+                case CommandKind.PrefabRemoveComponent when token == "--index":
+                    parsed.SceneComponentIndex = RequireInt(RequireValue(tokens, "--index"), "--index", minimumValue: 0);
                     break;
                 case CommandKind.SceneAddComponent when token == "--values":
                     parsed.SceneComponentValues = RequireValue(tokens, "--values");
@@ -635,9 +644,13 @@ public static partial class CliArgumentParser
                     break;
                 case CommandKind.PrefabCreate when token == "--path":
                 case CommandKind.PrefabPatch when token == "--path":
+                case CommandKind.PrefabAddComponent when token == "--path":
+                case CommandKind.PrefabRemoveComponent when token == "--path":
+                case CommandKind.PrefabListComponents when token == "--path":
                     parsed.PrefabPath = RequireAssetPath(RequireValue(tokens, "--path"), "--path");
                     break;
                 case CommandKind.PrefabCreate when token == "--force":
+                case CommandKind.PrefabRemoveComponent when token == "--force":
                     parsed.Force = true;
                     break;
                 case CommandKind.PrefabCreate when token == "--spec-file":
@@ -647,6 +660,20 @@ public static partial class CliArgumentParser
                 case CommandKind.PrefabCreate when token == "--spec-json":
                 case CommandKind.PrefabPatch when token == "--spec-json":
                     parsed.PrefabSpecJson = RequireValue(tokens, "--spec-json");
+                    break;
+                case CommandKind.PrefabAddComponent when token == "--target":
+                case CommandKind.PrefabRemoveComponent when token == "--target":
+                    parsed.SceneTarget = RequireValue(tokens, "--target");
+                    break;
+                case CommandKind.PrefabListComponents when token == "--node":
+                    parsed.SceneTarget = RequireValue(tokens, "--node");
+                    break;
+                case CommandKind.PrefabAddComponent when token == "--type":
+                case CommandKind.PrefabRemoveComponent when token == "--type":
+                    parsed.SceneComponentType = RequireValue(tokens, "--type");
+                    break;
+                case CommandKind.PrefabAddComponent when token == "--values":
+                    parsed.SceneComponentValues = RequireValue(tokens, "--values");
                     break;
                 default:
                     if (parsed.Kind == CommandKind.AssetCreate && token.StartsWith("--", StringComparison.Ordinal))

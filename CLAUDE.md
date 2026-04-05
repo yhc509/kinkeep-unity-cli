@@ -53,16 +53,17 @@ unity-package/com.kinkeep.unity-cli-bridge/
   │   ├── AssetCommandHandler.cs  Asset CRUD operations and asset metadata
   │   ├── BuiltInAssetCreateProviders.cs  Basic built-in asset create providers
   │   ├── BuiltInAssetCreateProviders.Advanced.cs  Complex/dependency-aware asset providers (partial class)
-  │   ├── SceneCommandHandler.cs  scene open/inspect/patch entry points
+  │   ├── ComponentOperations.cs  Component list/add/remove shared logic and friendly key resolution
+  │   ├── SceneCommandHandler.cs  scene open/inspect/patch and component command entry points
   │   ├── SceneCommandHandler.Patching.cs  Scene patch operation application (partial class)
   │   ├── SceneInspector.cs  Scene graph traversal, node-path resolution, inspect payload building
   │   ├── SceneSpecModels.cs  Scene DTO/spec models
   │   ├── InspectorUtility.cs  Shared inspector helpers (asset tokens, path parsing, layer resolution, transform application)
-  │   ├── PrefabCommandHandler.cs  prefab create/inspect/patch entry points
+  │   ├── PrefabCommandHandler.cs  prefab create/inspect/patch and component command entry points
   │   ├── PrefabCommandHandler.Patching.cs  Prefab patch operation application (partial class)
   │   ├── PrefabInspector.cs  Prefab inspection, node-path resolution, inspect payload building
   │   ├── PrefabSpecModels.cs  Prefab DTO/spec models
-  │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath
+  │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath with friendly key fallback
   │   ├── TypeDiscoveryUtility.cs  Shared component/type scanning utility
   │   ├── BridgeJsonSettings.cs  Shared JSON serializer settings
   │   ├── CliInstallerWindow.cs  EditorWindow for one-click CLI install/update
@@ -90,7 +91,12 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 - **macOS paths:** Use real paths (`pwd -P`), not symlinks, for hashing and registry lookups.
 - **Scene paths:** Format `/Root[0]/Child[0]` with array notation for sibling indexing; `/` is the virtual scene root.
 - **Prefab editing:** Based on `SerializedProperty.propertyPath` (run `prefab inspect --with-values` to verify paths before patching).
-- **Doc sync:** CLI command or option changes must update `README.md` examples and help text. Run `dotnet run --project cli/UnityCli.DocGen -- --check` to verify.
+- **Doc sync:** CLI command or option changes must update all docs. Run through this checklist:
+  1. `dotnet run --project cli/UnityCli.DocGen -- --write` — auto-updates `docs/cli-reference.md`
+  2. `README.md` — update examples for new/changed commands in both Scene and Prefab sections
+  3. `CLAUDE.md` — update Architecture tree if new files are added, update Key Conventions if behavior changes
+  4. `tools/skills/unity-cli-operator/SKILL.md` — update command workflows and examples for AI agent usage
+  5. `dotnet run --project cli/UnityCli.DocGen -- --check` — verify cli-reference is up to date
 
 ## Branch Policy
 
