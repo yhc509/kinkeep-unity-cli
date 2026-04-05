@@ -27,10 +27,27 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 
 ## Quick Start
 
-### 1. Build
+### 1. Install the CLI
+
+**Option A: Download pre-built binary** (recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/releases):
+
+| Platform | File |
+|----------|------|
+| macOS (Apple Silicon) | `unity-cli-osx-arm64.tar.gz` |
+| Windows (x64) | `unity-cli-win-x64.zip` |
+
+Extract and add the binary to your PATH.
+
+**Option B: Build from source**
 
 ```bash
+# macOS arm64
 ./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
+
+# Windows x64
+./scripts/publish-win-x64.sh     # → dist/unity-cli-win-x64/UnityCli.Cli.exe
 ```
 
 ### 2. Add the Unity Package
@@ -153,7 +170,7 @@ unity-cli scene inspect --path ... --max-depth 2
 ## Repository Structure
 
 ```
-cli/UnityCli.Cli/              CLI executable (.NET 9, macOS arm64)
+cli/UnityCli.Cli/              CLI executable (.NET 9, macOS arm64 + Windows x64)
 cli/UnityCli.Protocol/         Shared protocol (linked from Unity package)
 unity-package/                 com.kinkeep.unity-cli-bridge (UPM package)
 tools/skills/unity-cli-operator/   AI agent skill for consistent CLI usage
@@ -197,7 +214,7 @@ dotnet run --project cli/UnityCli.DocGen -- --check   # Verify docs match code
 
 ## Current Limits
 
-- macOS arm64 only (release validation)
+- macOS arm64 and Windows x64 supported
 - Live IPC required — commands fail fast when no Editor is running
 - Scene patching targets saved `Assets/...unity` scenes; multi-scene orchestration is out of scope
 - Prefab-internal object references and nested variants are not yet supported

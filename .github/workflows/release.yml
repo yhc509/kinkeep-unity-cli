@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-osx-arm64:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run tests
+        run: dotnet test KinKeepUnityCli.sln
+
+      - name: Publish osx-arm64 build
+        run: ./scripts/publish-osx-arm64.sh
+
+      - name: Package osx-arm64 archive
+        run: tar -czf unity-cli-osx-arm64.tar.gz -C dist/unity-cli .
+
+      - name: Upload osx-arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-cli-osx-arm64
+          path: unity-cli-osx-arm64.tar.gz
+          if-no-files-found: error
+
+  build-win-x64:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run tests
+        run: dotnet test KinKeepUnityCli.sln
+
+      - name: Publish win-x64 build
+        shell: bash
+        run: bash ./scripts/publish-win-x64.sh
+
+      - name: Package win-x64 archive
+        shell: pwsh
+        run: Compress-Archive -Path dist/unity-cli-win-x64/* -DestinationPath unity-cli-win-x64.zip -Force
+
+      - name: Upload win-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-cli-win-x64
+          path: unity-cli-win-x64.zip
+          if-no-files-found: error
+
+  release:
+    needs:
+      - build-osx-arm64
+      - build-win-x64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/unity-cli-osx-arm64/unity-cli-osx-arm64.tar.gz
+            release-assets/unity-cli-win-x64/unity-cli-win-x64.zip
