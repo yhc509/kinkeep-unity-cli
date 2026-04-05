@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,8 +66,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (component == null)
             {
                 throw new CommandFailureException(
-                    "COMPONENT_ADD_FAILED",
-                    "component를 추가하지 못했습니다: " + componentSpec.Type + " @ " + BuildNodePath(target));
+                    "PREFAB_COMPONENT_ADD_FAILED",
+                    "component를 추가하지 못했습니다: " + componentSpec.Type + " @ " + PrefabInspector.BuildNodePath(target.transform));
             }
 
             if (componentSpec.Values != null)
@@ -248,41 +249,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component 타입을 찾지 못했습니다: " + normalized);
-        }
-
-        private static string BuildNodePath(GameObject target)
-        {
-            Transform transform = target.transform;
-            if (transform.parent == null)
-            {
-                return "/";
-            }
-
-            var segments = new List<string>();
-            Transform current = transform;
-            while (current.parent != null)
-            {
-                int siblingIndex = 0;
-                for (int index = 0; index < current.parent.childCount; index++)
-                {
-                    Transform sibling = current.parent.GetChild(index);
-                    if (sibling == current)
-                    {
-                        break;
-                    }
-
-                    if (string.Equals(sibling.name, current.name, StringComparison.Ordinal))
-                    {
-                        siblingIndex++;
-                    }
-                }
-
-                segments.Add(current.name + "[" + siblingIndex + "]");
-                current = current.parent;
-            }
-
-            segments.Reverse();
-            return "/" + string.Join("/", segments);
         }
 
         private sealed class PrefabPatchApplyResult

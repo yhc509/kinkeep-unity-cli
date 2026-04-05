@@ -209,7 +209,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (component == null)
             {
                 throw new CommandFailureException(
-                    "COMPONENT_ADD_FAILED",
+                    "SCENE_COMPONENT_ADD_FAILED",
                     "component를 추가하지 못했습니다: " + componentSpec.Type + " @ " + SceneInspector.BuildNodePath(target));
             }
 
