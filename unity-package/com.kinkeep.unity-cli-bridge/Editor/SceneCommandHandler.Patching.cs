@@ -196,7 +196,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_COMPONENT_INVALID", "Transform은 직접 추가할 수 없습니다.");
             }
 
-            Component component;
+            Component? component;
             try
             {
                 component = target.AddComponent(componentType);
@@ -204,6 +204,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             catch (Exception exception)
             {
                 throw new CommandFailureException("SCENE_COMPONENT_INVALID", "component를 추가하지 못했습니다: " + componentSpec.Type, exception.Message);
+            }
+
+            if (component == null)
+            {
+                throw new CommandFailureException(
+                    "SCENE_COMPONENT_ADD_FAILED",
+                    "component를 추가하지 못했습니다: " + componentSpec.Type + " @ " + SceneInspector.BuildNodePath(target));
             }
 
             if (componentSpec.Values != null)

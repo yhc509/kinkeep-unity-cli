@@ -182,7 +182,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return node;
         }
 
-        private static string BuildNodePath(Transform transform)
+        internal static string BuildNodePath(Transform transform)
         {
             if (transform.parent == null)
             {
