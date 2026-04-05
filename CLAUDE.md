@@ -89,6 +89,13 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 - **Prefab editing:** Based on `SerializedProperty.propertyPath` (run `prefab inspect --with-values` to verify paths before patching).
 - **Doc sync:** CLI command or option changes must update `README.md` examples and help text. Run `dotnet run --project cli/UnityCli.DocGen -- --check` to verify.
 
+## Branch Policy
+
+- All changes go through PRs to `main`. Direct push to `main` is blocked by branch ruleset.
+- Admin bypass exists for emergencies only — do not use it for routine work.
+- CI (`test` job) must pass before merge.
+- Versioning: patch-level increments (`v0.1.0` → `v0.1.1`). Major/minor bumps only when explicitly requested.
+
 ## Verification After Changes
 
 - CLI code changes → `dotnet build KinKeepUnityCli.sln -c Debug`
