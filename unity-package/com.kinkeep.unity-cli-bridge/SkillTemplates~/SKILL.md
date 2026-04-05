@@ -10,9 +10,9 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
 ## Quick Workflow
 
 1. 실행 파일을 찾는다.
-- 우선순위는 `UNITY_CLI_BIN` 환경 변수, `ucli` (PATH 상의 symlink), 현재 repo의 `dist/unity-cli/UnityCli.Cli` 순서다.
+- 우선순위는 `UNITY_CLI_BIN` 환경 변수, `unity-cli` (PATH 상의 설치된 바이너리), 현재 작업 디렉터리나 상위 디렉터리의 `unity-cli` 실행 파일 순서다.
 - `ucli`가 PATH에 있으면 그대로 사용한다. 매 호출마다 변수를 재정의하지 않는다.
-- 셋 다 없으면 `ln -s ~/.kinkeep/unity-cli/unity-cli ~/bin/ucli`로 symlink을 만든다.
+- 셋 다 없으면 `unity-cli`를 먼저 설치하고 PATH를 잡는다. 필요하면 `ucli` 같은 짧은 alias를 추가한다.
 
 2. **대상 프로젝트를 결정하고 `--project`를 항상 명시한다.**
 - CLI는 `--project` 없이 호출하면 아무 live 인스턴스에 연결한다. **의도하지 않은 프로젝트에 명령이 실행될 수 있으므로 반드시 명시한다.**
@@ -21,7 +21,7 @@ description: "Use when the user wants to operate Unity through `unity-cli`, incl
   2. 현재 작업 디렉터리(`pwd -P`)가 Unity 프로젝트 내부인 경우 → 해당 프로젝트
   3. 여러 프로젝트가 실행 중이면 `instances list`로 확인 후 사용자에게 물어본다
 - macOS에서는 항상 `pwd -P`로 실제 경로를 사용한다.
-- `--project`는 프로젝트 이름(예: `kinkeep-unity-cli-sample`)이나 전체 경로 모두 가능하다.
+- `--project`는 프로젝트 이름(예: `<your-project>`)이나 전체 경로 모두 가능하다.
 
 3. 쓰기 작업 전에는 상태를 본다.
 - 먼저 `status --json --project <name>`으로 live 연결, busy 상태, 현재 프로젝트가 맞는지 확인한다.

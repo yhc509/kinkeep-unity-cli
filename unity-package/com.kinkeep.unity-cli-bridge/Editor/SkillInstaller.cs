@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 using PackageManagerInfo = UnityEditor.PackageManager.PackageInfo;
 
@@ -8,7 +9,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal enum SkillTarget
     {
+        [InspectorName("Claude Code")]
         ClaudeCode = 0,
+        [InspectorName("Codex")]
         Codex = 1,
     }
 
@@ -16,6 +19,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
     {
         private const string SkillName = "unity-cli-operator";
         private const string AgentsDirectoryName = "agents";
+        private const string MetaFileExtension = ".meta";
 
         internal static void Install(SkillTarget target)
         {
@@ -23,6 +27,22 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string destination = GetDestination(target);
             bool includeAgents = target == SkillTarget.Codex;
 
+            if (Directory.Exists(destination))
+            {
+                bool shouldOverwrite = EditorUtility.DisplayDialog(
+                    "Overwrite Skill?",
+                    "기존 스킬이 이미 설치되어 있습니다: " + destination + "\n덮어쓰시겠습니까?",
+                    "Overwrite",
+                    "Cancel");
+                if (!shouldOverwrite)
+                {
+                    return;
+                }
+
+                Directory.Delete(destination, true);
+            }
+
+            Directory.CreateDirectory(destination);
             CopyDirectory(templateRoot, destination, includeAgents);
 
             Debug.Log($"[SkillInstaller] Installed {target} skill to: {destination}");
@@ -75,6 +95,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (string file in Directory.GetFiles(source))
             {
+                if (string.Equals(Path.GetExtension(file), MetaFileExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 string destinationFile = Path.Combine(destination, Path.GetFileName(file));
                 File.Copy(file, destinationFile, overwrite: true);
             }

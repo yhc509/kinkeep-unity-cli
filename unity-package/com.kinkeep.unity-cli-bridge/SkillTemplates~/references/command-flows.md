@@ -3,9 +3,9 @@
 ## 실행 파일 찾기
 
 - `UNITY_CLI_BIN`이 있으면 그것을 우선 사용한다.
-- 현재 작업 디렉터리나 상위 디렉터리에 `dist/unity-cli/UnityCli.Cli`가 있으면 그 경로를 사용한다.
-- 둘 다 없으면 `command -v unity-cli` 결과를 사용한다.
-- 셋 다 없으면 빌드나 설치가 필요하다고 보고 진행을 멈춘다.
+- `command -v unity-cli` 결과가 있으면 그 경로를 사용한다.
+- 둘 다 없으면 현재 작업 디렉터리나 상위 디렉터리의 `unity-cli` 실행 파일을 찾는다.
+- 셋 다 없으면 설치가 필요하다고 보고 진행을 멈춘다.
 
 ## 프로젝트 결정
 
@@ -15,11 +15,11 @@
 # 현재 디렉터리가 Unity 프로젝트라면
 PROJECT="$(pwd -P)"
 
-# unity-cli 레포에서 개발/테스트 중이라면
-PROJECT="kinkeep-unity-cli-sample"
+# 실행 중인 프로젝트 이름을 알고 있다면
+PROJECT="<your-project>"
 
-# 특정 프로젝트를 지정하려면 (이름 또는 경로)
-PROJECT="kinkeep-hd2d-tilemap-sample"
+# 특정 프로젝트를 경로로 지정하려면
+PROJECT="/path/to/YourProject"
 ```
 
 여러 프로젝트가 동시에 열려 있을 때 확인:
@@ -70,13 +70,13 @@ live 편집이 필요한 명령은 에디터가 켜져 있고 busy 상태가 아
 
 ```bash
 # 전체 GameObject 하위 메뉴 조회
-ucli execute-menu --list "GameObject" --project "$PROJECT_ROOT" --json
+ucli execute-menu --list "GameObject" --project "$PROJECT" --json
 
 # UI 관련 메뉴만 조회
-ucli execute-menu --list "GameObject/UI" --project "$PROJECT_ROOT" --json
+ucli execute-menu --list "GameObject/UI" --project "$PROJECT" --json
 
 # 조회 결과에서 정확한 경로로 실행
-ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project "$PROJECT_ROOT" --json
+ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project "$PROJECT" --json
 ```
 
 ### execute-menu로 충분한 경우
@@ -96,10 +96,10 @@ ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project
 ### 조회
 
 ```bash
-ucli asset find --project "$PROJECT_ROOT" --name Sample --folder Assets --limit 10 --output compact
-ucli asset find --project "$PROJECT_ROOT" --type Material --output compact
-ucli asset types --project "$PROJECT_ROOT" --output compact
-ucli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --output compact
+ucli asset find --project "$PROJECT" --name Sample --folder Assets --limit 10 --output compact
+ucli asset find --project "$PROJECT" --type Material --output compact
+ucli asset types --project "$PROJECT" --output compact
+ucli asset info --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --output compact
 ```
 
 > **`--name`은 글로브 패턴이 아니라 Unity 검색 필터 문법의 텍스트 검색어다.** `Sample*` 같은 글로브가 아니라 `Sample`로 쓰면 Unity의 `AssetDatabase.FindAssets("Sample")`이 부분 매칭한다. `--type`만으로도 검색 가능하다 (예: `--type Scene`은 `FindAssets("t:Scene")`). `--name`과 `--type`을 함께 쓰면 `FindAssets("name t:Type")`으로 조합된다.
@@ -109,8 +109,8 @@ ucli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity
 ### 생성
 
 ```bash
-ucli asset create --project "$PROJECT_ROOT" --type material --path Assets/Materials/NewMaterial --output compact
-ucli asset create --project "$PROJECT_ROOT" --type scriptable-object --path Assets/Data/NewData --type-name MyNamespace.MyData --data-json '{"title":"hello"}' --output compact
+ucli asset create --project "$PROJECT" --type material --path Assets/Materials/NewMaterial --output compact
+ucli asset create --project "$PROJECT" --type scriptable-object --path Assets/Data/NewData --type-name MyNamespace.MyData --data-json '{"title":"hello"}' --output compact
 ```
 
 ### 안전 규칙
@@ -125,20 +125,20 @@ ucli asset create --project "$PROJECT_ROOT" --type scriptable-object --path Asse
 
 ```bash
 # 기본 구조 확인 (깊이 제한 + 기본값 생략으로 토큰 절약)
-ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --max-depth 2 --omit-defaults --output compact
+ucli scene inspect --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --max-depth 2 --omit-defaults --output compact
 
 # 특정 노드의 component 값까지 확인 (patch 전 필수)
-ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --output compact
+ucli scene inspect --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --with-values --output compact
 ```
 
 ### 오브젝트 추가
 
 ```bash
 # 빈 GameObject 추가
-ucli scene add-object --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --name MyObject --output compact
+ucli scene add-object --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --name MyObject --output compact
 
 # 프리미티브 추가 (MeshFilter+MeshRenderer+Collider 자동 포함)
-ucli scene add-object --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --name Floor --primitive Plane --parent "/Environment[0]" --position 0,0,0 --output compact
+ucli scene add-object --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --name Floor --primitive Plane --parent "/Environment[0]" --position 0,0,0 --output compact
 ```
 
 `--primitive`는 Cube, Sphere, Capsule, Cylinder, Plane, Quad를 지원한다. `--parent`와 `--position`을 함께 쓰면 한 번의 호출로 생성+배치가 완료되고, 응답에 `createdPath`가 포함되어 후속 inspect가 필요 없다.
@@ -146,7 +146,7 @@ ucli scene add-object --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene
 ### Transform 수정
 
 ```bash
-ucli scene set-transform --project "$PROJECT_ROOT" --node "/Cube[0]" --position 3,0,0 --scale 2,2,2 --output compact
+ucli scene set-transform --project "$PROJECT" --node "/Cube[0]" --position 3,0,0 --scale 2,2,2 --output compact
 ```
 
 `--position`, `--rotation`, `--scale` 중 최소 하나를 지정한다. `scene patch --spec-json` 대신 이 편의 명령을 우선 사용한다.
@@ -154,7 +154,7 @@ ucli scene set-transform --project "$PROJECT_ROOT" --node "/Cube[0]" --position 
 ### 머티리얼 할당
 
 ```bash
-ucli scene assign-material --project "$PROJECT_ROOT" --node "/Cube[0]" --material Assets/Materials/MyMat.mat --output compact
+ucli scene assign-material --project "$PROJECT" --node "/Cube[0]" --material Assets/Materials/MyMat.mat --output compact
 ```
 
 노드의 MeshRenderer.sharedMaterials[0]에 머티리얼을 할당한다. `scene patch`로 `m_Materials.Array.data[0]`을 직접 지정하는 것보다 간편하다.
@@ -162,8 +162,10 @@ ucli scene assign-material --project "$PROJECT_ROOT" --node "/Cube[0]" --materia
 ### 수정 (spec 기반)
 
 ```bash
-ucli scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --spec-file ./tools/skills/unity-cli-operator/assets/scene-patch-basic.json --output compact
+ucli scene patch --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --spec-file /tmp/scene-patch-basic.json --output compact
 ```
+
+빠르게 시작할 때는 설치된 스킬의 `assets/scene-patch-basic.json`을 복사해서 `/tmp/scene-patch-basic.json`처럼 별도 파일로 수정한다.
 
 ### 안전 규칙
 
@@ -178,20 +180,20 @@ ucli scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unit
 
 ```bash
 # 전체 속성 조회
-ucli material info --project "$PROJECT_ROOT" --path Assets/Materials/MyMat.mat --output compact
+ucli material info --project "$PROJECT" --path Assets/Materials/MyMat.mat --output compact
 
 # 기본값 생략 (토큰 절약, URP/Lit 48개 → 변경된 것만)
-ucli material info --project "$PROJECT_ROOT" --path Assets/Materials/MyMat.mat --omit-defaults --output compact
+ucli material info --project "$PROJECT" --path Assets/Materials/MyMat.mat --omit-defaults --output compact
 ```
 
 ## 스크린샷
 
 ```bash
 # Game View 캡처 (--view 생략 시 game이 기본)
-ucli screenshot --project "$PROJECT_ROOT" --path /tmp/capture.png --output compact
+ucli screenshot --project "$PROJECT" --path /tmp/capture.png --output compact
 
 # Scene View 캡처
-ucli screenshot --project "$PROJECT_ROOT" --path /tmp/scene.png --view scene --output compact
+ucli screenshot --project "$PROJECT" --path /tmp/scene.png --view scene --output compact
 ```
 
 ## 검증 루틴
@@ -199,8 +201,8 @@ ucli screenshot --project "$PROJECT_ROOT" --path /tmp/scene.png --view scene --o
 live 작업 뒤 기본 검증:
 
 ```bash
-ucli read-console --project "$PROJECT_ROOT" --type error --limit 10 --output compact
-ucli read-console --project "$PROJECT_ROOT" --type warning --limit 10 --output compact
+ucli read-console --project "$PROJECT" --type error --limit 10 --output compact
+ucli read-console --project "$PROJECT" --type warning --limit 10 --output compact
 ```
 
 에러나 경고가 있으면 성공으로 바로 닫지 않는다.
