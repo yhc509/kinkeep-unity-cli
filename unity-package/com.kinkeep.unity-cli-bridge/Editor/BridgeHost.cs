@@ -135,26 +135,28 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var server = new NamedPipeServerStream(
-                    _pipeName,
-                    PipeDirection.InOut,
-                    1,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                NamedPipeServerStream? server = null;
 
                 try
                 {
+                    // Allow the accept loop to create the next listener before the current client fully disconnects.
+                    server = new NamedPipeServerStream(
+                        _pipeName,
+                        PipeDirection.InOut,
+                        -1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
                     await server.WaitForConnectionAsync(cancellationToken);
                     _ = Task.Run(() => HandleStreamClientAsync(server, cancellationToken));
                 }
                 catch (OperationCanceledException)
                 {
-                    server.Dispose();
+                    server?.Dispose();
                 }
                 catch (Exception exception)
                 {
                     ReportBackgroundException("named pipe accept", exception);
-                    server.Dispose();
+                    server?.Dispose();
                 }
             }
         }

@@ -13,18 +13,74 @@ namespace UnityCli.Protocol
         public static InstanceRegistry Load(string filePath)
         {
             string fullPath = EnsureDirectory(filePath);
-            if (!File.Exists(fullPath))
+            IOException? lastException = null;
+
+            for (int attempt = 0; attempt < MaxRetryCount; attempt++)
             {
-                return new InstanceRegistry();
+                try
+                {
+                    if (!File.Exists(fullPath))
+                    {
+                        return new InstanceRegistry();
+                    }
+
+                    using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                    string json = reader.ReadToEnd();
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        return new InstanceRegistry();
+                    }
+
+                    return NormalizeRegistry(ProtocolJson.Deserialize<InstanceRegistry>(json));
+                }
+                catch (IOException exception)
+                {
+                    lastException = exception;
+                    Thread.Sleep((attempt + 1) * 25);
+                }
             }
 
-            string json = File.ReadAllText(fullPath);
-            if (string.IsNullOrWhiteSpace(json))
+            if (lastException != null)
             {
-                return new InstanceRegistry();
+                throw lastException;
             }
 
-            return NormalizeRegistry(ProtocolJson.Deserialize<InstanceRegistry>(json));
+            return new InstanceRegistry();
+        }
+
+        public static void Save(string filePath, InstanceRegistry registry)
+        {
+            if (registry == null)
+            {
+                throw new ArgumentNullException("registry");
+            }
+
+            string fullPath = EnsureDirectory(filePath);
+            string lockPath = fullPath + ".lock";
+            IOException? lastException = null;
+
+            for (int attempt = 0; attempt < MaxRetryCount; attempt++)
+            {
+                try
+                {
+                    using (new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    {
+                        WriteAtomically(fullPath, NormalizeRegistry(registry));
+                        return;
+                    }
+                }
+                catch (IOException exception)
+                {
+                    lastException = exception;
+                    Thread.Sleep((attempt + 1) * 25);
+                }
+            }
+
+            if (lastException != null)
+            {
+                throw lastException;
+            }
         }
 
         public static void Update(string filePath, Func<InstanceRegistry, InstanceRegistry> update)

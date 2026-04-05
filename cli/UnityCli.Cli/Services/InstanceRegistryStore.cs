@@ -19,22 +19,13 @@ public sealed class InstanceRegistryStore
 
     public InstanceRegistry Load()
     {
-        if (!File.Exists(_registryPath))
-        {
-            return new InstanceRegistry();
-        }
-
-        var json = File.ReadAllText(_registryPath);
-        var registry = ProtocolJson.Deserialize<InstanceRegistry>(json) ?? new InstanceRegistry();
-        registry.instances ??= Array.Empty<InstanceRecord>();
-        return Sanitize(registry);
+        return Sanitize(InstanceRegistryFile.Load(_registryPath));
     }
 
     public void Save(InstanceRegistry registry)
     {
         registry.instances ??= Array.Empty<InstanceRecord>();
-        var json = ProtocolJson.Serialize(registry);
-        File.WriteAllText(_registryPath, json);
+        InstanceRegistryFile.Save(_registryPath, registry);
     }
 
     private static bool TryResolveProjectRootByName(
