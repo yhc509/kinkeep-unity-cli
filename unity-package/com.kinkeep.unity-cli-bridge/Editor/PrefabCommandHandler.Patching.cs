@@ -52,7 +52,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "Transform은 직접 추가할 수 없습니다.");
             }
 
-            Component component;
+            Component? component;
             try
             {
                 component = target.AddComponent(componentType);
@@ -60,6 +60,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             catch (Exception exception)
             {
                 throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component를 추가하지 못했습니다: " + componentSpec.Type, exception.Message);
+            }
+
+            if (component == null)
+            {
+                throw new CommandFailureException(
+                    "COMPONENT_ADD_FAILED",
+                    "component를 추가하지 못했습니다: " + componentSpec.Type + " @ " + BuildNodePath(target));
             }
 
             if (componentSpec.Values != null)
@@ -241,6 +248,41 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component 타입을 찾지 못했습니다: " + normalized);
+        }
+
+        private static string BuildNodePath(GameObject target)
+        {
+            Transform transform = target.transform;
+            if (transform.parent == null)
+            {
+                return "/";
+            }
+
+            var segments = new List<string>();
+            Transform current = transform;
+            while (current.parent != null)
+            {
+                int siblingIndex = 0;
+                for (int index = 0; index < current.parent.childCount; index++)
+                {
+                    Transform sibling = current.parent.GetChild(index);
+                    if (sibling == current)
+                    {
+                        break;
+                    }
+
+                    if (string.Equals(sibling.name, current.name, StringComparison.Ordinal))
+                    {
+                        siblingIndex++;
+                    }
+                }
+
+                segments.Add(current.name + "[" + siblingIndex + "]");
+                current = current.parent;
+            }
+
+            segments.Reverse();
+            return "/" + string.Join("/", segments);
         }
 
         private sealed class PrefabPatchApplyResult
