@@ -509,7 +509,8 @@ EOF
 
 ```bash
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene add-object --path "$LIVE_IPC_SCENE" --name Mover_SCENE_005
-"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene set-transform --path "$LIVE_IPC_SCENE" --target /Mover_SCENE_005[0] --position 1,2,3
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene open --path "$LIVE_IPC_SCENE"
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene set-transform --node /Mover_SCENE_005[0] --position 1,2,3
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene inspect --path "$LIVE_IPC_SCENE" --with-values
 ```
 
@@ -737,6 +738,7 @@ EOF
 ## 참고
 
 - 사용자 설명에 있던 `console-log`라는 이름의 명령은 현재 구현 기준으로는 `read-console`이다.
-- `scene add-object`, `scene set-transform`, `scene add-component`, `scene remove-component`는 별도 프로토콜 명령이 아니라 내부적으로 모두 `scene patch`를 사용한다.
+- `scene add-object`, `scene add-component`, `scene remove-component`는 내부적으로 `scene patch`를 사용한다.
+- `scene set-transform`, `scene assign-material`은 active scene에 직접 적용하는 전용 명령이다.
 - `asset delete`, `scene remove-component`, `package remove`는 모두 파괴 연산이므로 `--force`를 유지한 채 검증한다.
 - 자동 검증은 [`run-live-ipc-tests.sh`](/Users/yhjang/dev/unity/unity-cli/tests/integration/run-live-ipc-tests.sh)에서 수행할 수 있다.

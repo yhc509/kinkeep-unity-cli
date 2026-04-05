@@ -54,4 +54,25 @@ public sealed class ResponseEnvelopeTests
         var data = Assert.IsType<JsonElement>(response.data);
         Assert.Equal("hello", data.GetProperty("message").GetString());
     }
+
+    [Fact]
+    public void EnsureData_WithMutationWarnings_PreservesWarningsArray()
+    {
+        var payload = new PrefabMutationPayload
+        {
+            patched = false,
+            warnings = ["Unknown key: m_LocalScal.x"],
+        };
+        var response = ResponseEnvelope.Success(
+            requestId: "req-1",
+            target: "target-1",
+            dataJson: ProtocolJson.Serialize(payload),
+            durationMs: 12);
+
+        response.EnsureData();
+
+        var data = Assert.IsType<JsonElement>(response.data);
+        Assert.False(data.GetProperty("patched").GetBoolean());
+        Assert.Equal("Unknown key: m_LocalScal.x", data.GetProperty("warnings")[0].GetString());
+    }
 }

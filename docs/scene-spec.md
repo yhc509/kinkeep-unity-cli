@@ -49,6 +49,7 @@ Example:
       "parent": "/",
       "node": {
         "name": "SpawnPoint",
+        "primitive": "Cube",
         "transform": {
           "localPosition": { "x": 0, "y": 1, "z": 0 }
         }
@@ -79,7 +80,7 @@ Rules:
 - `delete-gameobject` and `remove-component` require `--force`
 - if the target scene is already loaded in the Editor, it must be clean before `scene inspect` or `scene patch`
 - `modify-gameobject` uses `values` with `name`, `active`, `tag`, `layer`, and `transform`
-- `add-gameobject` can include nested `children` and initial `components`
+- `add-gameobject` can include nested `children`, initial `components`, and an optional `primitive` of `Cube`, `Sphere`, `Capsule`, `Cylinder`, `Plane`, or `Quad`
 - `modify-component` uses writable serialized field names from inspect output
 
 ## Value Rules

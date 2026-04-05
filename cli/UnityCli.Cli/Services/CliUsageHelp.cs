@@ -434,6 +434,7 @@ internal static class CliUsageHelp
                 CommandKind.SceneSetTransform => "scene set-transform",
                 CommandKind.SceneAddComponent => "scene add-component",
                 CommandKind.SceneRemoveComponent => "scene remove-component",
+                CommandKind.SceneAssignMaterial => "scene assign-material",
                 CommandKind.PrefabInspect => "prefab inspect",
                 CommandKind.PrefabCreate => "prefab create",
                 CommandKind.PrefabPatch => "prefab patch",

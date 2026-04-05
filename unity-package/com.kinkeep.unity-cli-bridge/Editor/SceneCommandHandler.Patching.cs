@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using UnityCli.Protocol;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,8 +20,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     || string.Equals(operation.Operation, "remove-component", StringComparison.OrdinalIgnoreCase)));
         }
 
-        private static void ApplyPatchOperations(Scene scene, ScenePatchOperationSpec[] operations)
+        private static ScenePatchApplyResult ApplyPatchOperations(Scene scene, ScenePatchOperationSpec[] operations)
         {
+            var result = new ScenePatchApplyResult();
+            var createdRoots = new List<GameObject>();
             foreach (ScenePatchOperationSpec operation in operations)
             {
                 if (operation == null || string.IsNullOrWhiteSpace(operation.Operation))
@@ -38,12 +41,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             throw new CommandFailureException("SCENE_SPEC_INVALID", "`add-gameobject`에는 `node`가 필요합니다.");
                         }
 
-                        AddNodes(scene, parent, new[] { operation.Node }, "add-gameobject");
+                        createdRoots.Add(AddNode(scene, parent, operation.Node, "add-gameobject"));
+                        result.Patched = true;
                         break;
                     }
                     case "modify-gameobject":
                     {
                         GameObject target = SceneInspector.ResolveNode(scene, operation.Target, "modify-gameobject");
+                        JObject? rawValues = operation.Values as JObject;
                         SceneNodeMutationSpec? values = operation.Values == null
                             ? null
                             : operation.Values.ToObject<SceneNodeMutationSpec>(_serializer);
@@ -52,13 +57,29 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             throw new CommandFailureException("SCENE_SPEC_INVALID", "`modify-gameobject`에는 `values`가 필요합니다.");
                         }
 
+                        if (rawValues == null)
+                        {
+                            SceneInspector.ApplyNodeState(target, values);
+                            result.Patched = true;
+                            break;
+                        }
+
+                        NodeMutationAnalysis analysis = InspectorUtility.AnalyzeNodeMutationValues(rawValues);
+                        result.Warnings.AddRange(analysis.Warnings);
+                        if (!analysis.HasRecognizedKeys)
+                        {
+                            break;
+                        }
+
                         SceneInspector.ApplyNodeState(target, values);
+                        result.Patched = true;
                         break;
                     }
                     case "delete-gameobject":
                     {
                         GameObject target = SceneInspector.ResolveNode(scene, operation.Target, "delete-gameobject");
                         UnityEngine.Object.DestroyImmediate(target);
+                        result.Patched = true;
                         break;
                     }
                     case "add-component":
@@ -70,6 +91,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         AddComponent(target, operation.Component, "add-component");
+                        result.Patched = true;
                         break;
                     }
                     case "modify-component":
@@ -82,6 +104,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         SerializedValueApplier.Apply(component, (JObject)operation.Values);
+                        result.Patched = true;
                         break;
                     }
                     case "remove-component":
@@ -94,12 +117,23 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         UnityEngine.Object.DestroyImmediate(component, true);
+                        result.Patched = true;
                         break;
                     }
                     default:
                         throw new CommandFailureException("SCENE_SPEC_INVALID", "지원하지 않는 patch operation입니다: " + operation.Operation);
                 }
             }
+
+            GameObject[] survivingCreatedRoots = createdRoots
+                .Where(gameObject => gameObject != null)
+                .ToArray();
+
+            result.CreatedPath = survivingCreatedRoots.Length == 1
+                ? SceneInspector.BuildNodePath(survivingCreatedRoots[0])
+                : null;
+
+            return result;
         }
 
         private static void AddNodes(Scene scene, Transform? parent, SceneNodeSpec[]? children, string commandName)
@@ -111,18 +145,29 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (SceneNodeSpec childSpec in children)
             {
-                string childName = InspectorUtility.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName, "SCENE");
-                var child = new GameObject(childName);
-                SceneManager.MoveGameObjectToScene(child, scene);
-                if (parent != null)
-                {
-                    child.transform.SetParent(parent, false);
-                }
-
-                SceneInspector.ApplyNodeState(child, childSpec, childName, allowMissingName: false);
-                AddComponents(child, childSpec.Components, commandName);
-                AddNodes(scene, child.transform, childSpec.Children, commandName);
+                AddNode(scene, parent, childSpec, commandName);
             }
+        }
+
+        private static GameObject AddNode(Scene scene, Transform? parent, SceneNodeSpec? childSpec, string commandName)
+        {
+            if (childSpec == null)
+            {
+                throw new CommandFailureException("SCENE_SPEC_INVALID", commandName + " node spec이 비어 있습니다.");
+            }
+
+            string childName = InspectorUtility.RequireNodeName(childSpec.Name, commandName, "SCENE");
+            GameObject child = CreateSceneObject(childName, childSpec.Primitive, commandName);
+            SceneManager.MoveGameObjectToScene(child, scene);
+            if (parent != null)
+            {
+                child.transform.SetParent(parent, false);
+            }
+
+            SceneInspector.ApplyNodeState(child, childSpec, childName, allowMissingName: false);
+            AddComponents(child, childSpec.Components, commandName);
+            AddNodes(scene, child.transform, childSpec.Children, commandName);
+            return child;
         }
 
         private static void AddComponents(GameObject target, SceneComponentSpec[]? components, string commandName)
@@ -167,6 +212,47 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return component;
+        }
+
+        private static GameObject CreateSceneObject(string name, string? primitive, string commandName)
+        {
+            if (string.IsNullOrWhiteSpace(primitive))
+            {
+                return new GameObject(name);
+            }
+
+            string normalizedPrimitive = ProtocolConstants.NormalizeScenePrimitive(primitive);
+            if (string.IsNullOrWhiteSpace(normalizedPrimitive))
+            {
+                throw new CommandFailureException(
+                    "SCENE_SPEC_INVALID",
+                    commandName + " primitive type을 지원하지 않습니다: " + primitive + " (지원: " + string.Join(", ", ProtocolConstants.SupportedScenePrimitiveNames) + ")");
+            }
+
+            GameObject gameObject = GameObject.CreatePrimitive(ResolvePrimitiveType(normalizedPrimitive));
+            gameObject.name = name;
+            return gameObject;
+        }
+
+        private static PrimitiveType ResolvePrimitiveType(string normalizedPrimitive)
+        {
+            switch (normalizedPrimitive)
+            {
+                case "Cube":
+                    return PrimitiveType.Cube;
+                case "Sphere":
+                    return PrimitiveType.Sphere;
+                case "Capsule":
+                    return PrimitiveType.Capsule;
+                case "Cylinder":
+                    return PrimitiveType.Cylinder;
+                case "Plane":
+                    return PrimitiveType.Plane;
+                case "Quad":
+                    return PrimitiveType.Quad;
+                default:
+                    throw new InvalidOperationException("지원하지 않는 primitive type입니다: " + normalizedPrimitive);
+            }
         }
 
         private static Component ResolveComponent(GameObject target, string? componentTypeName, int? componentIndex, string commandName)
@@ -228,6 +314,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             throw new CommandFailureException("SCENE_COMPONENT_INVALID", "component 타입을 찾지 못했습니다: " + normalized);
+        }
+
+        private sealed class ScenePatchApplyResult
+        {
+            internal string? CreatedPath { get; set; }
+
+            internal bool Patched { get; set; }
+
+            internal List<string> Warnings { get; } = new List<string>();
         }
     }
 }

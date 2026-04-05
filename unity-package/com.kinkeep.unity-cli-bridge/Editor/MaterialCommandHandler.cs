@@ -45,6 +45,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 string propertyName = shader.GetPropertyName(i);
                 ShaderPropertyType propertyType = shader.GetPropertyType(i);
+                if (args.omitDefaults && ShouldOmitInfoProperty(material, shader, i, propertyName, propertyType))
+                {
+                    continue;
+                }
+
                 string typeLabel;
                 string valueLabel;
 
@@ -94,6 +99,86 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 shader = shader.name,
                 properties = properties.ToArray(),
             });
+        }
+
+        private static bool ShouldOmitInfoProperty(
+            Material material,
+            Shader shader,
+            int propertyIndex,
+            string propertyName,
+            ShaderPropertyType propertyType)
+        {
+            switch (propertyType)
+            {
+                case ShaderPropertyType.Color:
+                {
+                    Color color = material.GetColor(propertyName);
+                    Vector4 defaultValue = shader.GetPropertyDefaultVectorValue(propertyIndex);
+                    return color.r == defaultValue.x
+                        && color.g == defaultValue.y
+                        && color.b == defaultValue.z
+                        && color.a == defaultValue.w;
+                }
+                case ShaderPropertyType.Vector:
+                {
+                    Vector4 vector = material.GetVector(propertyName);
+                    Vector4 defaultValue = shader.GetPropertyDefaultVectorValue(propertyIndex);
+                    return vector.x == defaultValue.x
+                        && vector.y == defaultValue.y
+                        && vector.z == defaultValue.z
+                        && vector.w == defaultValue.w;
+                }
+                case ShaderPropertyType.Float:
+                case ShaderPropertyType.Range:
+                    return material.GetFloat(propertyName) == shader.GetPropertyDefaultFloatValue(propertyIndex);
+                case ShaderPropertyType.Texture:
+                    return IsDefaultTexture(material.GetTexture(propertyName), shader.GetPropertyTextureDefaultName(propertyIndex));
+                case ShaderPropertyType.Int:
+#if UNITY_2021_1_OR_NEWER
+                    return material.GetInt(propertyName) == shader.GetPropertyDefaultIntValue(propertyIndex);
+#else
+                    return false;
+#endif
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsDefaultTexture(Texture? texture, string defaultTextureName)
+        {
+            if (string.IsNullOrWhiteSpace(defaultTextureName))
+            {
+                return texture == null;
+            }
+
+            if (texture == null)
+            {
+                return false;
+            }
+
+            string assetPath = AssetDatabase.GetAssetPath(texture);
+            if (!string.IsNullOrWhiteSpace(assetPath))
+            {
+                return false;
+            }
+
+            return string.Equals(NormalizeBuiltinTextureName(texture.name), NormalizeBuiltinTextureName(defaultTextureName), StringComparison.Ordinal);
+        }
+
+        private static string NormalizeBuiltinTextureName(string value)
+        {
+            string normalized = value
+                .Replace(" ", string.Empty)
+                .Replace("-", string.Empty)
+                .Replace("_", string.Empty)
+                .Trim();
+
+            if (normalized.StartsWith("default", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized.Substring("default".Length);
+            }
+
+            return normalized.ToLowerInvariant();
         }
 
         private string HandleSet(string argumentsJson)

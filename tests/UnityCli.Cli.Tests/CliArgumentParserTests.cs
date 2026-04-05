@@ -148,6 +148,54 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_AssetFind_AcceptsTypeWithoutName()
+    {
+        var parsed = CliArgumentParser.Parse(["asset", "find", "--type", "Material", "--folder", "Assets"]);
+
+        Assert.Equal(CommandKind.AssetFind, parsed.Kind);
+        Assert.Null(parsed.AssetName);
+        Assert.Equal("Material", parsed.AssetType);
+        Assert.Equal("Assets", parsed.AssetFolder);
+    }
+
+    [Fact]
+    public void Parse_AssetFind_TypeOnlyToEnvelope_PreservesTypeQuery()
+    {
+        var parsed = CliArgumentParser.Parse(["asset", "find", "--type", "Scene"]);
+
+        var args = ProtocolJson.Deserialize<AssetFindArgs>(parsed.ToEnvelope().argumentsJson);
+
+        Assert.NotNull(args);
+        Assert.Equal(string.Empty, args!.name);
+        Assert.Equal("Scene", args.type);
+        Assert.Equal(ProtocolConstants.DefaultAssetFindLimit, args.limit);
+    }
+
+    [Fact]
+    public void Parse_AssetFind_RequiresNameOrType()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse(["asset", "find"]));
+
+        Assert.Contains("--name", ex.Message);
+        Assert.Contains("--type", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_AssetInfo_AcceptsPackagesPath()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "asset",
+            "info",
+            "--path", "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Lit.mat"
+        ]);
+
+        Assert.Equal(CommandKind.AssetInfo, parsed.Kind);
+        Assert.Equal(
+            "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Lit.mat",
+            parsed.AssetPath);
+    }
+
+    [Fact]
     public void Parse_AssetTypes_UsesLiveDefaultTimeout()
     {
         var parsed = CliArgumentParser.Parse(["asset", "types"]);
@@ -316,6 +364,34 @@ public sealed class CliArgumentParserTests
         Assert.Equal(CommandKind.MaterialInfo, parsed.Kind);
         Assert.Equal("Assets/Materials/Wood.mat", parsed.MaterialPath);
         Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
+    }
+
+    [Fact]
+    public void Parse_MaterialInfo_AcceptsOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "material", "info",
+            "--path", "Assets/Materials/Wood.mat",
+            "--omit-defaults"
+        ]);
+
+        Assert.Equal(CommandKind.MaterialInfo, parsed.Kind);
+        Assert.True(parsed.OmitDefaults);
+    }
+
+    [Fact]
+    public void Parse_MaterialInfo_ToEnvelope_IncludesOmitDefaults()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "material", "info",
+            "--path", "Assets/Materials/Wood.mat",
+            "--omit-defaults"
+        ]);
+
+        var args = ProtocolJson.Deserialize<MaterialInfoArgs>(parsed.ToEnvelope().argumentsJson);
+        Assert.NotNull(args);
+        Assert.Equal("Assets/Materials/Wood.mat", args.path);
+        Assert.True(args.omitDefaults);
     }
 
     [Fact]
@@ -646,25 +722,46 @@ public sealed class CliArgumentParserTests
             "scene", "add-object",
             "--path", "Assets/Scenes/Test.unity",
             "--parent", "/Root[0]",
+            "--position", "3,0,0",
             "--name", "SpawnPoint",
+            "--primitive", "cube",
             "--components", "Rigidbody,BoxCollider"
         ]);
 
         Assert.Equal(CommandKind.SceneAddObject, parsed.Kind);
         Assert.Equal("Assets/Scenes/Test.unity", parsed.ScenePath);
         Assert.Equal("/Root[0]", parsed.SceneParent);
+        Assert.Equal("3,0,0", parsed.ScenePosition);
         Assert.Equal("SpawnPoint", parsed.SceneObjectName);
+        Assert.Equal("Cube", parsed.ScenePrimitive);
         Assert.Equal("Rigidbody,BoxCollider", parsed.SceneComponents);
         Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }
 
     [Fact]
-    public void Parse_SceneAddObject_ToEnvelope_UsesScenePatch()
+    public void Parse_SceneAddObject_RejectsUnsupportedPrimitive()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "scene", "add-object",
+                "--path", "Assets/Scenes/Test.unity",
+                "--name", "SpawnPoint",
+                "--primitive", "pyramid"
+            ]));
+
+        Assert.Contains("--primitive", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_SceneAddObject_ToEnvelope_UsesScenePatchAndIncludesShortcutMetadata()
     {
         var parsed = CliArgumentParser.Parse([
             "scene", "add-object",
             "--path", "Assets/Scenes/Test.unity",
-            "--name", "SpawnPoint"
+            "--parent", "/Environment[0]",
+            "--position", "3,0,0",
+            "--name", "SpawnPoint",
+            "--primitive", "Cube"
         ]);
 
         var envelope = parsed.ToEnvelope();
@@ -673,45 +770,91 @@ public sealed class CliArgumentParserTests
         Assert.Contains("SpawnPoint", envelope.argumentsJson);
         var args = ProtocolJson.Deserialize<ScenePatchArgs>(envelope.argumentsJson);
         Assert.NotNull(args);
+        Assert.Equal("/Environment[0]", args.parent);
+        Assert.Equal("Cube", args.primitive);
+        Assert.NotNull(args.position);
+        Assert.Equal(3f, args.position!.x);
+        Assert.Equal(0f, args.position.y);
+        Assert.Equal(0f, args.position.z);
+        Assert.Contains("\"parent\":\"/Environment[0]\"", args.specJson);
+        Assert.Contains("\"primitive\":\"Cube\"", args.specJson);
+        Assert.Contains("\"localPosition\":{\"x\":3", args.specJson);
+    }
+
+    [Fact]
+    public void Parse_SceneAddObject_ToEnvelope_DefaultsParentToRoot()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "add-object",
+            "--path", "Assets/Scenes/Test.unity",
+            "--name", "SpawnPoint"
+        ]);
+
+        var args = ProtocolJson.Deserialize<ScenePatchArgs>(parsed.ToEnvelope().argumentsJson);
+        Assert.NotNull(args);
+        Assert.Equal("/", args.parent);
         Assert.Contains("\"parent\":\"/\"", args.specJson);
     }
 
     [Fact]
-    public void Parse_SceneSetTransform_RequiresTarget()
+    public void Parse_SceneSetTransform_RequiresNode()
     {
         var ex = Assert.Throws<CliUsageException>(() =>
-            CliArgumentParser.Parse(["scene", "set-transform", "--path", "Assets/Scenes/Test.unity"]));
+            CliArgumentParser.Parse(["scene", "set-transform", "--position", "1,2,3"]));
 
-        Assert.Contains("--target", ex.Message);
+        Assert.Contains("--node", ex.Message);
     }
 
     [Fact]
     public void Parse_SceneSetTransform_RequiresAtLeastOneTransformProp()
     {
         var ex = Assert.Throws<CliUsageException>(() =>
-            CliArgumentParser.Parse(["scene", "set-transform", "--path", "Assets/Scenes/Test.unity", "--target", "/Root[0]"]));
+            CliArgumentParser.Parse(["scene", "set-transform", "--node", "/Root[0]"]));
 
         Assert.Contains("--position", ex.Message);
     }
 
     [Fact]
-    public void Parse_SceneSetTransform_AcceptsPosition()
+    public void Parse_SceneSetTransform_AcceptsNodeAndTransforms()
     {
         var parsed = CliArgumentParser.Parse([
             "scene", "set-transform",
-            "--path", "Assets/Scenes/Test.unity",
-            "--target", "/Root[0]/Player[0]",
-            "--position", "1,2,3"
+            "--node", "/Root[0]/Player[0]",
+            "--position", "1,2,3",
+            "--rotation", "0,45,0",
+            "--scale", "2,2,2"
         ]);
 
         Assert.Equal(CommandKind.SceneSetTransform, parsed.Kind);
+        Assert.Equal("/Root[0]/Player[0]", parsed.SceneTarget);
         Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
+    }
+
+    [Fact]
+    public void Parse_SceneSetTransform_ToEnvelope_UsesDedicatedArgs()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "set-transform",
+            "--node", "/Root[0]/Player[0]",
+            "--position", "1,2,3",
+            "--rotation", "0,45,0",
+            "--scale", "2,2,2"
+        ]);
+
         var envelope = parsed.ToEnvelope();
-        Assert.Equal(ProtocolConstants.CommandScenePatch, envelope.command);
-        Assert.Contains("modify-gameobject", envelope.argumentsJson);
-        var args = ProtocolJson.Deserialize<ScenePatchArgs>(envelope.argumentsJson);
+        Assert.Equal(ProtocolConstants.CommandSceneSetTransform, envelope.command);
+
+        var args = ProtocolJson.Deserialize<SceneSetTransformArgs>(envelope.argumentsJson);
         Assert.NotNull(args);
-        Assert.Contains("localPosition", args.specJson);
+        Assert.Equal("/Root[0]/Player[0]", args.node);
+        Assert.NotNull(args.position);
+        Assert.Equal(1f, args.position!.x);
+        Assert.Equal(2f, args.position.y);
+        Assert.Equal(3f, args.position.z);
+        Assert.NotNull(args.rotation);
+        Assert.Equal(45f, args.rotation!.y);
+        Assert.NotNull(args.scale);
+        Assert.Equal(2f, args.scale!.x);
     }
 
     [Fact]
@@ -780,12 +923,56 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_SceneAssignMaterial_RequiresNode()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "scene", "assign-material",
+                "--material", "Assets/Materials/Test.mat"
+            ]));
+
+        Assert.Contains("--node", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_SceneAssignMaterial_AcceptsNodeAndMaterial()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "assign-material",
+            "--node", "/Cube[0]",
+            "--material", "Assets/Materials/MyMat.mat"
+        ]);
+
+        Assert.Equal(CommandKind.SceneAssignMaterial, parsed.Kind);
+        Assert.Equal("/Cube[0]", parsed.SceneTarget);
+        Assert.Equal("Assets/Materials/MyMat.mat", parsed.MaterialPath);
+        Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
+    }
+
+    [Fact]
+    public void Parse_SceneAssignMaterial_ToEnvelope_UsesDedicatedArgs()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "assign-material",
+            "--node", "/Cube[0]",
+            "--material", "Assets/Materials/MyMat.mat"
+        ]);
+
+        var envelope = parsed.ToEnvelope();
+        Assert.Equal(ProtocolConstants.CommandSceneAssignMaterial, envelope.command);
+
+        var args = ProtocolJson.Deserialize<SceneAssignMaterialArgs>(envelope.argumentsJson);
+        Assert.NotNull(args);
+        Assert.Equal("/Cube[0]", args.node);
+        Assert.Equal("Assets/Materials/MyMat.mat", args.material);
+    }
+
+    [Fact]
     public void Parse_SceneSetTransform_InvalidPositionFormatThrows()
     {
         var parsed = CliArgumentParser.Parse([
             "scene", "set-transform",
-            "--path", "Assets/Scenes/Test.unity",
-            "--target", "/Root[0]",
+            "--node", "/Root[0]",
             "--position", "1,2"
         ]);
 
@@ -794,13 +981,25 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
-    public void Parse_Screenshot_RequiresViewOrCamera()
+    public void Parse_Screenshot_DefaultsToGameView()
     {
-        var ex = Assert.Throws<CliUsageException>(() =>
-            CliArgumentParser.Parse(["screenshot"]));
+        var parsed = CliArgumentParser.Parse(["screenshot"]);
 
-        Assert.Contains("--view", ex.Message);
-        Assert.Contains("--camera", ex.Message);
+        Assert.Equal(CommandKind.Screenshot, parsed.Kind);
+        Assert.Equal(ParsedCommand.DefaultScreenshotView, parsed.ScreenshotView);
+        Assert.Null(parsed.ScreenshotCamera);
+    }
+
+    [Fact]
+    public void ToEnvelope_Screenshot_DefaultsToGameViewWithoutExplicitView()
+    {
+        var parsed = new ParsedCommand(CommandKind.Screenshot);
+
+        var args = ProtocolJson.Deserialize<ScreenshotArgs>(parsed.ToEnvelope().argumentsJson);
+
+        Assert.NotNull(args);
+        Assert.Equal(ParsedCommand.DefaultScreenshotView, args!.view);
+        Assert.Null(args.camera);
     }
 
     [Fact]
@@ -838,6 +1037,7 @@ public sealed class CliArgumentParserTests
         ]);
 
         Assert.Equal(CommandKind.Screenshot, parsed.Kind);
+        Assert.Null(parsed.ScreenshotView);
         Assert.Equal("Main Camera", parsed.ScreenshotCamera);
         Assert.Equal("/tmp/render.png", parsed.ScreenshotPath);
     }
@@ -865,7 +1065,7 @@ public sealed class CliArgumentParserTests
     [Fact]
     public void Parse_Screenshot_UsesLiveTimeout()
     {
-        var parsed = CliArgumentParser.Parse(["screenshot", "--view", "game"]);
+        var parsed = CliArgumentParser.Parse(["screenshot"]);
 
         Assert.Equal(ProtocolConstants.DefaultLiveTimeoutMs, parsed.TimeoutMs);
     }

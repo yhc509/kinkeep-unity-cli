@@ -97,9 +97,14 @@ ucli execute-menu --path "GameObject/UI (Canvas)/Button - TextMeshPro" --project
 
 ```bash
 ucli asset find --project "$PROJECT_ROOT" --name Sample --folder Assets --limit 10 --output compact
+ucli asset find --project "$PROJECT_ROOT" --type Material --output compact
 ucli asset types --project "$PROJECT_ROOT" --output compact
 ucli asset info --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --output compact
 ```
+
+> **`--name`은 글로브 패턴이 아니라 Unity 검색 필터 문법의 텍스트 검색어다.** `Sample*` 같은 글로브가 아니라 `Sample`로 쓰면 Unity의 `AssetDatabase.FindAssets("Sample")`이 부분 매칭한다. `--type`만으로도 검색 가능하다 (예: `--type Scene`은 `FindAssets("t:Scene")`). `--name`과 `--type`을 함께 쓰면 `FindAssets("name t:Type")`으로 조합된다.
+
+> **`--folder`**: 검색 범위를 특정 폴더로 제한한다. 기본값은 `Assets` 전체. 하위 폴더 에셋도 재귀적으로 포함된다. 예: `--folder Assets/Prefabs`는 Prefabs 폴더와 그 하위의 모든 에셋을 검색한다.
 
 ### 생성
 
@@ -126,7 +131,35 @@ ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.un
 ucli scene inspect --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --with-values --output compact
 ```
 
-### 수정
+### 오브젝트 추가
+
+```bash
+# 빈 GameObject 추가
+ucli scene add-object --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --name MyObject --output compact
+
+# 프리미티브 추가 (MeshFilter+MeshRenderer+Collider 자동 포함)
+ucli scene add-object --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --name Floor --primitive Plane --parent "/Environment[0]" --position 0,0,0 --output compact
+```
+
+`--primitive`는 Cube, Sphere, Capsule, Cylinder, Plane, Quad를 지원한다. `--parent`와 `--position`을 함께 쓰면 한 번의 호출로 생성+배치가 완료되고, 응답에 `createdPath`가 포함되어 후속 inspect가 필요 없다.
+
+### Transform 수정
+
+```bash
+ucli scene set-transform --project "$PROJECT_ROOT" --node "/Cube[0]" --position 3,0,0 --scale 2,2,2 --output compact
+```
+
+`--position`, `--rotation`, `--scale` 중 최소 하나를 지정한다. `scene patch --spec-json` 대신 이 편의 명령을 우선 사용한다.
+
+### 머티리얼 할당
+
+```bash
+ucli scene assign-material --project "$PROJECT_ROOT" --node "/Cube[0]" --material Assets/Materials/MyMat.mat --output compact
+```
+
+노드의 MeshRenderer.sharedMaterials[0]에 머티리얼을 할당한다. `scene patch`로 `m_Materials.Array.data[0]`을 직접 지정하는 것보다 간편하다.
+
+### 수정 (spec 기반)
 
 ```bash
 ucli scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unity --spec-file ./tools/skills/unity-cli-operator/assets/scene-patch-basic.json --output compact
@@ -140,6 +173,26 @@ ucli scene patch --project "$PROJECT_ROOT" --path Assets/Scenes/SampleScene.unit
 - `/`는 virtual scene root이고, root GameObject 추가의 parent로만 쓴다
 - 대상 scene이 이미 열려 있다면 먼저 저장하거나 변경을 버려서 clean 상태로 맞춘다
 - `delete-gameobject`, `remove-component`, dirty scene을 버리는 `scene open`에는 `--force`가 필요하다
+
+## 머티리얼 조회
+
+```bash
+# 전체 속성 조회
+ucli material info --project "$PROJECT_ROOT" --path Assets/Materials/MyMat.mat --output compact
+
+# 기본값 생략 (토큰 절약, URP/Lit 48개 → 변경된 것만)
+ucli material info --project "$PROJECT_ROOT" --path Assets/Materials/MyMat.mat --omit-defaults --output compact
+```
+
+## 스크린샷
+
+```bash
+# Game View 캡처 (--view 생략 시 game이 기본)
+ucli screenshot --project "$PROJECT_ROOT" --path /tmp/capture.png --output compact
+
+# Scene View 캡처
+ucli screenshot --project "$PROJECT_ROOT" --path /tmp/scene.png --view scene --output compact
+```
 
 ## 검증 루틴
 

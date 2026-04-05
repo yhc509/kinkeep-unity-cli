@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace KinKeep.UnityCli.Bridge.Editor
@@ -28,6 +29,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return HandleInspect(argumentsJson);
                 case ProtocolConstants.CommandScenePatch:
                     return HandlePatch(argumentsJson);
+                case ProtocolConstants.CommandSceneSetTransform:
+                    return HandleSetTransform(argumentsJson);
+                case ProtocolConstants.CommandSceneAssignMaterial:
+                    return HandleAssignMaterial(argumentsJson);
                 default:
                     throw new InvalidOperationException("지원하지 않는 scene 명령입니다: " + command);
             }
@@ -88,7 +93,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             return WithLoadedScene(path, "scene-patch", delegate(Scene scene)
             {
-                ApplyPatchOperations(scene, spec.Operations);
+                ScenePatchApplyResult patchResult = ApplyPatchOperations(scene, spec.Operations);
+                if (!patchResult.Patched)
+                {
+                    return ProtocolJson.Serialize(new SceneMutationPayload
+                    {
+                        asset = AssetCommandSupport.BuildRecordFromPath(path),
+                        activeScenePath = EditorSceneManager.GetActiveScene().path,
+                        patched = false,
+                        createdPath = patchResult.CreatedPath,
+                        warnings = patchResult.Warnings.Count == 0 ? null : patchResult.Warnings.ToArray(),
+                    });
+                }
+
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene))
                 {
@@ -101,8 +118,85 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 {
                     asset = AssetCommandSupport.BuildRecordFromPath(path),
                     activeScenePath = EditorSceneManager.GetActiveScene().path,
-                    patched = true,
+                    patched = patchResult.Patched,
+                    createdPath = patchResult.CreatedPath,
+                    warnings = patchResult.Warnings.Count == 0 ? null : patchResult.Warnings.ToArray(),
                 });
+            });
+        }
+
+        private static string HandleAssignMaterial(string argumentsJson)
+        {
+            SceneAssignMaterialArgs args = ProtocolJson.Deserialize<SceneAssignMaterialArgs>(argumentsJson) ?? new SceneAssignMaterialArgs();
+            Scene scene = RequireActiveSavedScene("scene assign-material");
+            GameObject node = SceneInspector.ResolveNode(scene, args.node, "scene assign-material");
+
+            MeshRenderer meshRenderer = node.GetComponent<MeshRenderer>();
+            if (meshRenderer == null)
+            {
+                throw new CommandFailureException("SCENE_COMPONENT_NOT_FOUND", "scene assign-material 대상 node에 MeshRenderer가 없습니다: " + SceneInspector.BuildNodePath(node));
+            }
+
+            (Material material, string materialPath) = LoadMaterialAsset(args.material, "scene assign-material");
+            Material[] sharedMaterials = meshRenderer.sharedMaterials ?? Array.Empty<Material>();
+            string? previousMaterialPath = sharedMaterials.Length > 0 && sharedMaterials[0] != null
+                ? AssetDatabase.GetAssetPath(sharedMaterials[0])
+                : null;
+
+            if (sharedMaterials.Length == 0)
+            {
+                sharedMaterials = new Material[1];
+            }
+
+            sharedMaterials[0] = material;
+            meshRenderer.sharedMaterials = sharedMaterials;
+
+            EditorUtility.SetDirty(meshRenderer);
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (!EditorSceneManager.SaveScene(scene))
+            {
+                throw new CommandFailureException("SCENE_SAVE_FAILED", "scene를 저장하지 못했습니다: " + scene.path);
+            }
+
+            AssetDatabase.Refresh();
+            return ProtocolJson.Serialize(new SceneAssignMaterialPayload
+            {
+                asset = AssetCommandSupport.BuildRecordFromPath(scene.path),
+                activeScenePath = scene.path,
+                node = SceneInspector.BuildNodePath(node),
+                material = materialPath,
+                previousMaterial = previousMaterialPath,
+            });
+        }
+
+        private static string HandleSetTransform(string argumentsJson)
+        {
+            SceneSetTransformArgs args = ProtocolJson.Deserialize<SceneSetTransformArgs>(argumentsJson) ?? new SceneSetTransformArgs();
+            if (args.position == null && args.rotation == null && args.scale == null)
+            {
+                throw new CommandFailureException("SCENE_TRANSFORM_INVALID", "scene set-transform에는 position, rotation, scale 중 하나 이상이 필요합니다.");
+            }
+
+            Scene scene = RequireActiveSavedScene("scene set-transform");
+            GameObject node = SceneInspector.ResolveNode(scene, args.node, "scene set-transform");
+            ApplySerializedTransform(node.transform, args.position, args.rotation, args.scale);
+
+            EditorUtility.SetDirty(node.transform);
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (!EditorSceneManager.SaveScene(scene))
+            {
+                throw new CommandFailureException("SCENE_SAVE_FAILED", "scene를 저장하지 못했습니다: " + scene.path);
+            }
+
+            AssetDatabase.Refresh();
+            return ProtocolJson.Serialize(new SceneSetTransformPayload
+            {
+                asset = AssetCommandSupport.BuildRecordFromPath(scene.path),
+                activeScenePath = scene.path,
+                node = SceneInspector.BuildNodePath(node),
+                position = args.position,
+                rotation = args.rotation,
+                scale = args.scale,
             });
         }
 
@@ -195,6 +289,89 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 throw new CommandFailureException("SCENE_SPEC_INVALID", commandName + " spec version을 지원하지 않습니다: " + version);
             }
+        }
+
+        private static Scene RequireActiveSavedScene(string commandName)
+        {
+            Scene scene = EditorSceneManager.GetActiveScene();
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                throw new CommandFailureException("SCENE_NOT_OPEN", commandName + " 대상 active scene이 없습니다.");
+            }
+
+            if (string.IsNullOrWhiteSpace(scene.path))
+            {
+                throw new CommandFailureException("SCENE_PATH_INVALID", commandName + " 대상 active scene이 저장되지 않았습니다. 먼저 scene asset으로 저장하세요.");
+            }
+
+            return scene;
+        }
+
+        private static (Material material, string path) LoadMaterialAsset(string? path, string commandName)
+        {
+            string normalizedPath;
+            try
+            {
+                normalizedPath = AssetCommandSupport.NormalizeAssetPath(path);
+            }
+            catch (Exception exception)
+            {
+                throw new CommandFailureException("SCENE_MATERIAL_INVALID", exception.Message, exception.ToString());
+            }
+
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(normalizedPath);
+            if (material == null)
+            {
+                throw new CommandFailureException("MATERIAL_NOT_FOUND", commandName + " 머티리얼을 찾지 못했습니다: " + normalizedPath);
+            }
+
+            return (material, normalizedPath);
+        }
+
+        private static void ApplySerializedTransform(Transform transform, SceneVector3Value? position, SceneVector3Value? rotation, SceneVector3Value? scale)
+        {
+            var serializedObject = new SerializedObject(transform);
+            serializedObject.Update();
+
+            if (position != null)
+            {
+                RequireSerializedProperty(serializedObject, "m_LocalPosition").vector3Value = ToVector3(position);
+            }
+
+            if (rotation != null)
+            {
+                Vector3 euler = ToVector3(rotation);
+                RequireSerializedProperty(serializedObject, "m_LocalRotation").quaternionValue = Quaternion.Euler(euler);
+
+                SerializedProperty eulerHint = serializedObject.FindProperty("m_LocalEulerAnglesHint");
+                if (eulerHint != null)
+                {
+                    eulerHint.vector3Value = euler;
+                }
+            }
+
+            if (scale != null)
+            {
+                RequireSerializedProperty(serializedObject, "m_LocalScale").vector3Value = ToVector3(scale);
+            }
+
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static SerializedProperty RequireSerializedProperty(SerializedObject serializedObject, string propertyPath)
+        {
+            SerializedProperty property = serializedObject.FindProperty(propertyPath);
+            if (property == null)
+            {
+                throw new CommandFailureException("SCENE_COMPONENT_INVALID", "Transform serialized field를 찾지 못했습니다: " + propertyPath);
+            }
+
+            return property;
+        }
+
+        private static Vector3 ToVector3(SceneVector3Value value)
+        {
+            return new Vector3(value.x, value.y, value.z);
         }
 
         private static string ResolveScenePath(string? path)

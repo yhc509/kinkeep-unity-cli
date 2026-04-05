@@ -237,6 +237,7 @@ public static partial class CliArgumentParser
             "set-transform" => new ParsedCommand(CommandKind.SceneSetTransform),
             "add-component" => new ParsedCommand(CommandKind.SceneAddComponent),
             "remove-component" => new ParsedCommand(CommandKind.SceneRemoveComponent),
+            "assign-material" => new ParsedCommand(CommandKind.SceneAssignMaterial),
             _ => throw new CliUsageException($"알 수 없는 scene 하위 명령입니다: {subCommand}"),
         };
     }
@@ -414,6 +415,9 @@ public static partial class CliArgumentParser
                 case CommandKind.MaterialSet when token == "--path":
                     parsed.MaterialPath = RequireAssetPath(RequireValue(tokens, "--path"), "--path");
                     break;
+                case CommandKind.MaterialInfo when token == "--omit-defaults":
+                    parsed.OmitDefaults = true;
+                    break;
                 case CommandKind.MaterialSet when token == "--property":
                     parsed.MaterialProperty = RequireValue(tokens, "--property");
                     break;
@@ -480,7 +484,7 @@ public static partial class CliArgumentParser
                     parsed.AssetLimit = RequireInt(RequireValue(tokens, "--limit"), "--limit");
                     break;
                 case CommandKind.AssetInfo when token == "--path":
-                    parsed.AssetPath = RequireAssetPath(RequireValue(tokens, "--path"), "--path");
+                    parsed.AssetPath = RequireAssetPath(RequireValue(tokens, "--path"), "--path", allowPackages: true);
                     break;
                 case CommandKind.AssetInfo when token == "--guid":
                     parsed.AssetGuid = RequireValue(tokens, "--guid");
@@ -551,7 +555,6 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneInspect when token == "--path":
                 case CommandKind.ScenePatch when token == "--path":
                 case CommandKind.SceneAddObject when token == "--path":
-                case CommandKind.SceneSetTransform when token == "--path":
                 case CommandKind.SceneAddComponent when token == "--path":
                 case CommandKind.SceneRemoveComponent when token == "--path":
                     parsed.ScenePath = RequireAssetPath(RequireValue(tokens, "--path"), "--path");
@@ -582,13 +585,22 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneAddObject when token == "--name":
                     parsed.SceneObjectName = RequireValue(tokens, "--name");
                     break;
+                case CommandKind.SceneAddObject when token == "--primitive":
+                    parsed.ScenePrimitive = RequireScenePrimitive(RequireValue(tokens, "--primitive"));
+                    break;
                 case CommandKind.SceneAddObject when token == "--components":
                     parsed.SceneComponents = RequireValue(tokens, "--components");
                     break;
-                case CommandKind.SceneSetTransform when token == "--target":
                 case CommandKind.SceneAddComponent when token == "--target":
                 case CommandKind.SceneRemoveComponent when token == "--target":
                     parsed.SceneTarget = RequireValue(tokens, "--target");
+                    break;
+                case CommandKind.SceneSetTransform when token == "--node":
+                case CommandKind.SceneAssignMaterial when token == "--node":
+                    parsed.SceneTarget = RequireValue(tokens, "--node");
+                    break;
+                case CommandKind.SceneAddObject when token == "--position":
+                    parsed.ScenePosition = RequireValue(tokens, "--position");
                     break;
                 case CommandKind.SceneSetTransform when token == "--position":
                     parsed.ScenePosition = RequireValue(tokens, "--position");
@@ -605,6 +617,9 @@ public static partial class CliArgumentParser
                     break;
                 case CommandKind.SceneAddComponent when token == "--values":
                     parsed.SceneComponentValues = RequireValue(tokens, "--values");
+                    break;
+                case CommandKind.SceneAssignMaterial when token == "--material":
+                    parsed.MaterialPath = RequireAssetPath(RequireValue(tokens, "--material"), "--material");
                     break;
                 case CommandKind.PrefabInspect when token == "--path":
                     parsed.PrefabPath = RequireAssetPath(RequireValue(tokens, "--path"), "--path");

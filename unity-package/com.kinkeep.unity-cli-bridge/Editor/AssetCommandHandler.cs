@@ -44,17 +44,21 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleFind(string argumentsJson)
         {
             AssetFindArgs args = ProtocolJson.Deserialize<AssetFindArgs>(argumentsJson) ?? new AssetFindArgs();
-            if (string.IsNullOrWhiteSpace(args.name))
+            string[] filterTerms = new string[]
             {
-                throw new InvalidOperationException("asset-find에는 name이 필요합니다.");
+                string.IsNullOrWhiteSpace(args.name) ? null : args.name.Trim(),
+                string.IsNullOrWhiteSpace(args.type) ? null : "t:" + args.type.Trim(),
+            }
+                .Where(term => !string.IsNullOrWhiteSpace(term))
+                .ToArray();
+
+            if (filterTerms.Length == 0)
+            {
+                throw new InvalidOperationException("asset-find에는 name 또는 type이 필요합니다.");
             }
 
             int limit = args.limit <= 0 ? ProtocolConstants.DefaultAssetFindLimit : args.limit;
-            string filter = args.name.Trim();
-            if (!string.IsNullOrWhiteSpace(args.type))
-            {
-                filter += " t:" + args.type.Trim();
-            }
+            string filter = string.Join(" ", filterTerms);
 
             string[] guids = string.IsNullOrWhiteSpace(args.folder)
                 ? AssetDatabase.FindAssets(filter)
@@ -81,7 +85,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             AssetRecord payload = hasPath
-                ? AssetCommandSupport.BuildRecordFromPath(AssetCommandSupport.NormalizeAssetPath(args.path))
+                ? AssetCommandSupport.BuildRecordFromPath(args.path, allowPackages: true)
                 : AssetCommandSupport.BuildRecordFromGuid(args.guid.Trim());
 
             return ProtocolJson.Serialize(payload);

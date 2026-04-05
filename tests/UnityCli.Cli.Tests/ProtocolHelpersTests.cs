@@ -14,6 +14,8 @@ public sealed class ProtocolHelpersTests
         Assert.Contains(ProtocolConstants.CommandSceneOpen, commands);
         Assert.Contains(ProtocolConstants.CommandSceneInspect, commands);
         Assert.Contains(ProtocolConstants.CommandScenePatch, commands);
+        Assert.Contains(ProtocolConstants.CommandSceneSetTransform, commands);
+        Assert.Contains(ProtocolConstants.CommandSceneAssignMaterial, commands);
     }
 
     [Fact]
@@ -22,6 +24,8 @@ public sealed class ProtocolHelpersTests
         Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneOpen));
         Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneInspect));
         Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandScenePatch));
+        Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneSetTransform));
+        Assert.True(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandSceneAssignMaterial));
         Assert.False(ProtocolHelpers.IsSceneCommand(ProtocolConstants.CommandPrefabPatch));
     }
 

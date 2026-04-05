@@ -49,6 +49,8 @@ namespace UnityCli.Protocol
         public const string CommandSceneOpen = "scene-open";
         public const string CommandSceneInspect = "scene-inspect";
         public const string CommandScenePatch = "scene-patch";
+        public const string CommandSceneSetTransform = "scene-set-transform";
+        public const string CommandSceneAssignMaterial = "scene-assign-material";
         public const string CommandPrefabInspect = "prefab-inspect";
         public const string CommandPrefabCreate = "prefab-create";
         public const string CommandPrefabPatch = "prefab-patch";
@@ -59,6 +61,41 @@ namespace UnityCli.Protocol
         public const string CommandQaWaitUntil = "qa-wait-until";
         public const int DefaultQaWaitUntilTimeoutMs = 10_000;
         public const int DefaultQaSwipeDurationMs = 300;
+        public static readonly string[] SupportedScenePrimitiveNames =
+        {
+            "Cube",
+            "Sphere",
+            "Capsule",
+            "Cylinder",
+            "Plane",
+            "Quad",
+        };
+
+        public static string NormalizeScenePrimitive(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            switch (value.Trim().ToLowerInvariant())
+            {
+                case "cube":
+                    return "Cube";
+                case "sphere":
+                    return "Sphere";
+                case "capsule":
+                    return "Capsule";
+                case "cylinder":
+                    return "Cylinder";
+                case "plane":
+                    return "Plane";
+                case "quad":
+                    return "Quad";
+                default:
+                    return string.Empty;
+            }
+        }
 
         public static string ComputeProjectHash(string projectRoot)
         {

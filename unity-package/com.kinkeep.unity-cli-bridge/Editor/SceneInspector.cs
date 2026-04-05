@@ -214,7 +214,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return node;
         }
 
-        private static string BuildNodePath(GameObject gameObject)
+        internal static string BuildNodePath(GameObject gameObject)
         {
             return BuildNodePath(gameObject.transform);
         }

@@ -1042,7 +1042,10 @@ test_scene_set_transform() {
   run_cli_main scene add-object --path "$SCENE_TEST_PATH" --name "$object_name"
   assert_success_response || return 1
 
-  run_cli_main scene set-transform --path "$SCENE_TEST_PATH" --target "$object_path" --position "1,2,3"
+  run_cli_main scene open --path "$SCENE_TEST_PATH"
+  assert_success_response || return 1
+
+  run_cli_main scene set-transform --node "$object_path" --position "1,2,3"
   assert_success_response || return 1
 
   run_cli_main scene inspect --path "$SCENE_TEST_PATH" --with-values

@@ -17,6 +17,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
     internal sealed class SceneNodeSpec
     {
         public string? Name { get; set; }
+        public string? Primitive { get; set; }
 
         [JsonProperty("active")]
         public bool? IsActive { get; set; }

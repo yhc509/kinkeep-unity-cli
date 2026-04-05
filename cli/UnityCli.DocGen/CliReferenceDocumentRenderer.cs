@@ -134,7 +134,7 @@ public static class CliReferenceDocumentRenderer
     {
         builder.AppendLine("## Safety Rules");
         builder.AppendLine();
-        builder.AppendLine("- All asset paths use the `Assets/...` form.");
+        builder.AppendLine("- Query-only asset reads such as `asset info --path` may use `Assets/...` or `Packages/...`, but write paths stay under `Assets/...`.");
         builder.AppendLine("- Destructive or overwrite flows are guarded by `--force`, including `asset delete`, overwrite variants of `asset move`, `asset rename`, and `asset create`, `package remove`, plus destructive `scene patch` operations.");
         builder.AppendLine("- Use `scene inspect --with-values` before writing a scene patch spec.");
         builder.AppendLine("- Use `prefab inspect --with-values` before writing a prefab patch spec.");
@@ -175,7 +175,7 @@ public static class CliReferenceDocumentRenderer
         return group switch
         {
             CliCommandGroup.EditorControl => "Commands for editor state, compilation, play state, menus, arbitrary code execution, project-defined custom commands, and console access.",
-            CliCommandGroup.AssetWorkflows => "Commands for querying, mutating, and creating assets under `Assets/...`.",
+            CliCommandGroup.AssetWorkflows => "Commands for querying assets under `Assets/...` and `Packages/...`, plus mutating and creating assets under `Assets/...`.",
             CliCommandGroup.SceneWorkflows => "Commands for opening, inspecting, and patching saved scene assets.",
             CliCommandGroup.PrefabWorkflows => "Commands for inspecting, creating, and patching prefab assets.",
             CliCommandGroup.PackageManagement => "Commands for listing, adding, removing, and searching Unity packages.",

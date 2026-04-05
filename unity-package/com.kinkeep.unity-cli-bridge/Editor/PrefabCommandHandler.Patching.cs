@@ -70,8 +70,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return component;
         }
 
-        private static void ApplyPatchOperations(GameObject root, PrefabPatchOperationSpec[] operations)
+        private static PrefabPatchApplyResult ApplyPatchOperations(GameObject root, PrefabPatchOperationSpec[] operations)
         {
+            var result = new PrefabPatchApplyResult();
             foreach (PrefabPatchOperationSpec operation in operations)
             {
                 if (operation == null || string.IsNullOrWhiteSpace(operation.Operation))
@@ -90,6 +91,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         AddChildren(parent.transform, new[] { operation.Node }, "add-child");
+                        result.Patched = true;
                         break;
                     }
                     case "remove-node":
@@ -101,11 +103,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         UnityEngine.Object.DestroyImmediate(target);
+                        result.Patched = true;
                         break;
                     }
                     case "set-node":
                     {
                         GameObject target = PrefabInspector.ResolveNode(root, operation.Target, "set-node");
+                        JObject rawValues = operation.Values as JObject;
                         PrefabNodeMutationSpec values = operation.Values == null
                             ? null
                             : operation.Values.ToObject<PrefabNodeMutationSpec>(_serializer);
@@ -114,7 +118,22 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`set-node`에는 `values`가 필요합니다.");
                         }
 
+                        if (rawValues == null)
+                        {
+                            PrefabInspector.ApplyNodeState(target, values);
+                            result.Patched = true;
+                            break;
+                        }
+
+                        NodeMutationAnalysis analysis = InspectorUtility.AnalyzeNodeMutationValues(rawValues);
+                        result.Warnings.AddRange(analysis.Warnings);
+                        if (!analysis.HasRecognizedKeys)
+                        {
+                            break;
+                        }
+
                         PrefabInspector.ApplyNodeState(target, values);
+                        result.Patched = true;
                         break;
                     }
                     case "add-component":
@@ -126,6 +145,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         AddComponent(target, operation.Component, "add-component");
+                        result.Patched = true;
                         break;
                     }
                     case "remove-component":
@@ -138,6 +158,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         UnityEngine.Object.DestroyImmediate(component, true);
+                        result.Patched = true;
                         break;
                     }
                     case "set-component-values":
@@ -150,12 +171,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         }
 
                         SerializedValueApplier.Apply(component, (JObject)operation.Values);
+                        result.Patched = true;
                         break;
                     }
                     default:
                         throw new CommandFailureException("PREFAB_SPEC_INVALID", "지원하지 않는 patch operation입니다: " + operation.Operation);
                 }
             }
+
+            return result;
         }
 
         private static Component ResolveComponent(GameObject target, string componentTypeName, int? componentIndex, string commandName)
@@ -217,6 +241,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             throw new CommandFailureException("PREFAB_COMPONENT_INVALID", "component 타입을 찾지 못했습니다: " + normalized);
+        }
+
+        private sealed class PrefabPatchApplyResult
+        {
+            internal bool Patched { get; set; }
+
+            internal List<string> Warnings { get; } = new List<string>();
         }
     }
 }

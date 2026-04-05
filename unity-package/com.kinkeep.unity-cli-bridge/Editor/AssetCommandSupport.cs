@@ -18,7 +18,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     guid = normalizedGuid,
                     exists = false,
                 }
-                : BuildRecordFromPath(path);
+                : BuildRecordFromPath(path, allowPackages: true);
 
             if (string.IsNullOrWhiteSpace(record.guid))
             {
@@ -28,13 +28,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return record;
         }
 
-        public static AssetRecord BuildRecordFromPath(string path)
+        public static AssetRecord BuildRecordFromPath(string path, bool allowPackages = false)
         {
-            string normalizedPath = NormalizeAssetPath(path);
+            string normalizedPath = NormalizeAssetPath(path, allowPackages);
             bool isFolder = AssetDatabase.IsValidFolder(normalizedPath);
             string guid = AssetDatabase.AssetPathToGUID(normalizedPath);
             UnityEngine.Object mainAsset = isFolder ? null : AssetDatabase.LoadMainAssetAtPath(normalizedPath);
-            bool hasExistingAsset = DoesAssetPathExistOnDisk(normalizedPath) || isFolder || mainAsset != null;
+            bool hasExistingAsset = DoesAssetPathExistOnDisk(normalizedPath, allowPackages) || isFolder || mainAsset != null;
 
             string assetName;
             if (mainAsset != null)
@@ -81,17 +81,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return normalizedPath;
         }
 
-        public static string NormalizeAssetPath(string path)
+        public static string NormalizeAssetPath(string path, bool allowPackages = false)
         {
-            string normalizedPath = path == null ? string.Empty : path.Replace('\\', '/').Trim();
-            normalizedPath = normalizedPath.TrimEnd('/');
-
-            if (normalizedPath == "Assets" || normalizedPath.StartsWith("Assets/", StringComparison.Ordinal))
-            {
-                return normalizedPath;
-            }
-
-            throw new InvalidOperationException("asset 경로는 `Assets/...` 형식이어야 합니다.");
+            return AssetPathUtility.Normalize(path, allowPackages);
         }
 
         public static void EnsureParentFolderExists(string path)
@@ -141,9 +133,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return path.Substring(0, separatorIndex);
         }
 
-        public static string GetPhysicalPath(string assetPath)
+        public static string GetPhysicalPath(string assetPath, bool allowPackages = false)
         {
-            string normalizedPath = NormalizeAssetPath(assetPath);
+            string normalizedPath = NormalizeAssetPath(assetPath, allowPackages);
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             if (string.IsNullOrWhiteSpace(projectRoot))
             {
@@ -154,9 +146,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return Path.GetFullPath(Path.Combine(projectRoot, relativePath));
         }
 
-        private static bool DoesAssetPathExistOnDisk(string assetPath)
+        private static bool DoesAssetPathExistOnDisk(string assetPath, bool allowPackages = false)
         {
-            string physicalPath = GetPhysicalPath(assetPath);
+            string physicalPath = GetPhysicalPath(assetPath, allowPackages);
             return File.Exists(physicalPath) || Directory.Exists(physicalPath);
         }
     }

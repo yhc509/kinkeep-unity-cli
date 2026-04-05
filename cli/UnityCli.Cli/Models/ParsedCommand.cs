@@ -32,6 +32,7 @@ public enum CommandKind
     SceneSetTransform,
     SceneAddComponent,
     SceneRemoveComponent,
+    SceneAssignMaterial,
     PrefabInspect,
     PrefabCreate,
     PrefabPatch,
@@ -58,6 +59,8 @@ public enum CommandKind
 
 public sealed class ParsedCommand
 {
+    public const string DefaultScreenshotView = "game";
+
     public ParsedCommand(CommandKind kind)
     {
         Kind = kind;
@@ -123,6 +126,7 @@ public sealed class ParsedCommand
     public string? SceneTarget { get; set; }
     public string? SceneParent { get; set; }
     public string? SceneObjectName { get; set; }
+    public string? ScenePrimitive { get; set; }
     public string? SceneComponents { get; set; }
     public string? SceneComponentType { get; set; }
     public string? SceneComponentValues { get; set; }
@@ -218,9 +222,10 @@ public sealed class ParsedCommand
                 CommandKind.SceneInspect => ProtocolConstants.CommandSceneInspect,
                 CommandKind.ScenePatch => ProtocolConstants.CommandScenePatch,
                 CommandKind.SceneAddObject => ProtocolConstants.CommandScenePatch,
-                CommandKind.SceneSetTransform => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneSetTransform => ProtocolConstants.CommandSceneSetTransform,
                 CommandKind.SceneAddComponent => ProtocolConstants.CommandScenePatch,
                 CommandKind.SceneRemoveComponent => ProtocolConstants.CommandScenePatch,
+                CommandKind.SceneAssignMaterial => ProtocolConstants.CommandSceneAssignMaterial,
                 CommandKind.PrefabInspect => ProtocolConstants.CommandPrefabInspect,
                 CommandKind.PrefabCreate => ProtocolConstants.CommandPrefabCreate,
                 CommandKind.PrefabPatch => ProtocolConstants.CommandPrefabPatch,
@@ -249,7 +254,7 @@ public sealed class ParsedCommand
             },
             CommandKind.Screenshot => new ScreenshotArgs
             {
-                view = ScreenshotView,
+                view = ResolveScreenshotView(),
                 camera = ScreenshotCamera,
                 outputPath = ScreenshotPath,
                 width = ScreenshotWidth ?? 0,
@@ -281,6 +286,7 @@ public sealed class ParsedCommand
             CommandKind.MaterialInfo => new MaterialInfoArgs
             {
                 path = MaterialPath ?? string.Empty,
+                omitDefaults = OmitDefaults,
             },
             CommandKind.MaterialSet => new MaterialSetArgs
             {
@@ -385,18 +391,8 @@ public sealed class ParsedCommand
                 force = Force,
                 specJson = ResolveSceneSpecJson(),
             },
-            CommandKind.SceneAddObject => new ScenePatchArgs
-            {
-                path = ScenePath ?? string.Empty,
-                force = Force,
-                specJson = BuildAddObjectSpec(),
-            },
-            CommandKind.SceneSetTransform => new ScenePatchArgs
-            {
-                path = ScenePath ?? string.Empty,
-                force = Force,
-                specJson = BuildSetTransformSpec(),
-            },
+            CommandKind.SceneAddObject => BuildSceneAddObjectArgs(),
+            CommandKind.SceneSetTransform => BuildSceneSetTransformArgs(),
             CommandKind.SceneAddComponent => new ScenePatchArgs
             {
                 path = ScenePath ?? string.Empty,
@@ -408,6 +404,11 @@ public sealed class ParsedCommand
                 path = ScenePath ?? string.Empty,
                 force = Force,
                 specJson = BuildRemoveComponentSpec(),
+            },
+            CommandKind.SceneAssignMaterial => new SceneAssignMaterialArgs
+            {
+                node = SceneTarget ?? string.Empty,
+                material = MaterialPath ?? string.Empty,
             },
             CommandKind.PrefabInspect => new PrefabInspectArgs
             {
@@ -431,6 +432,18 @@ public sealed class ParsedCommand
         };
 
         return JsonSerializer.Serialize(payload, ProtocolJson.Default);
+    }
+
+    private string? ResolveScreenshotView()
+    {
+        if (Kind != CommandKind.Screenshot || !string.IsNullOrWhiteSpace(ScreenshotCamera))
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(ScreenshotView)
+            ? DefaultScreenshotView
+            : ScreenshotView;
     }
 
     private string? BuildAssetCreateOptionsJson()
@@ -528,12 +541,45 @@ public sealed class ParsedCommand
         return ResolveSpecJson(SceneSpecJson, SceneSpecFile, "scene");
     }
 
-    private string BuildAddObjectSpec()
+    private ScenePatchArgs BuildSceneAddObjectArgs()
+    {
+        SceneVector3Value? position = string.IsNullOrWhiteSpace(ScenePosition)
+            ? null
+            : ParseVector3(ScenePosition!, "--position");
+        string? primitive = string.IsNullOrWhiteSpace(ScenePrimitive)
+            ? null
+            : RequireSupportedScenePrimitive(ScenePrimitive);
+
+        return new ScenePatchArgs
+        {
+            path = ScenePath ?? string.Empty,
+            force = Force,
+            parent = SceneParent ?? "/",
+            primitive = primitive,
+            position = position,
+            specJson = BuildAddObjectSpec(position, primitive),
+        };
+    }
+
+    private string BuildAddObjectSpec(SceneVector3Value? position, string? primitive)
     {
         var node = new Dictionary<string, object?>
         {
             ["name"] = SceneObjectName ?? "GameObject",
         };
+
+        if (!string.IsNullOrWhiteSpace(primitive))
+        {
+            node["primitive"] = primitive;
+        }
+
+        if (position != null)
+        {
+            node["transform"] = new Dictionary<string, object?>
+            {
+                ["localPosition"] = position,
+            };
+        }
 
         if (!string.IsNullOrWhiteSpace(SceneComponents))
         {
@@ -566,43 +612,21 @@ public sealed class ParsedCommand
         return JsonSerializer.Serialize(spec, ProtocolJson.Default);
     }
 
-    private string BuildSetTransformSpec()
+    private SceneSetTransformArgs BuildSceneSetTransformArgs()
     {
-        var transform = new Dictionary<string, object?>();
-        if (!string.IsNullOrWhiteSpace(ScenePosition))
+        return new SceneSetTransformArgs
         {
-            transform["localPosition"] = ParseVector3(ScenePosition!, "--position");
-        }
-
-        if (!string.IsNullOrWhiteSpace(SceneRotation))
-        {
-            transform["localRotationEuler"] = ParseVector3(SceneRotation!, "--rotation");
-        }
-
-        if (!string.IsNullOrWhiteSpace(SceneScale))
-        {
-            transform["localScale"] = ParseVector3(SceneScale!, "--scale");
-        }
-
-        var values = new Dictionary<string, object?>
-        {
-            ["transform"] = transform,
+            node = SceneTarget ?? string.Empty,
+            position = string.IsNullOrWhiteSpace(ScenePosition)
+                ? null
+                : ParseVector3(ScenePosition!, "--position"),
+            rotation = string.IsNullOrWhiteSpace(SceneRotation)
+                ? null
+                : ParseVector3(SceneRotation!, "--rotation"),
+            scale = string.IsNullOrWhiteSpace(SceneScale)
+                ? null
+                : ParseVector3(SceneScale!, "--scale"),
         };
-
-        var op = new Dictionary<string, object?>
-        {
-            ["op"] = "modify-gameobject",
-            ["target"] = SceneTarget ?? string.Empty,
-            ["values"] = values,
-        };
-
-        var spec = new Dictionary<string, object?>
-        {
-            ["version"] = 1,
-            ["operations"] = new[] { op },
-        };
-
-        return JsonSerializer.Serialize(spec, ProtocolJson.Default);
     }
 
     private string BuildAddComponentSpec()
@@ -668,7 +692,18 @@ public sealed class ParsedCommand
         }
     }
 
-    private static Dictionary<string, object?> ParseVector3(string csv, string option)
+    private static string RequireSupportedScenePrimitive(string primitive)
+    {
+        string normalized = ProtocolConstants.NormalizeScenePrimitive(primitive);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new CliUsageException("`--primitive`는 `" + string.Join("`, `", ProtocolConstants.SupportedScenePrimitiveNames) + "` 중 하나여야 합니다.");
+        }
+
+        return normalized;
+    }
+
+    private static SceneVector3Value ParseVector3(string csv, string option)
     {
         string[] parts = csv.Split(',', StringSplitOptions.TrimEntries);
         if (parts.Length != 3
@@ -679,11 +714,11 @@ public sealed class ParsedCommand
             throw new CliUsageException($"{option} 값은 `x,y,z` 형식이어야 합니다.");
         }
 
-        return new Dictionary<string, object?>
+        return new SceneVector3Value
         {
-            ["x"] = x,
-            ["y"] = y,
-            ["z"] = z,
+            x = x,
+            y = y,
+            z = z,
         };
     }
 

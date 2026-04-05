@@ -54,15 +54,19 @@ public static partial class CliArgumentParser
         return tokens.Dequeue();
     }
 
-    private static string RequireAssetPath(string value, string option)
+    private static string RequireAssetPath(string value, string option, bool allowPackages = false)
     {
-        var normalized = value.Replace('\\', '/').Trim();
-        if (normalized == "Assets" || normalized.StartsWith("Assets/", StringComparison.Ordinal))
+        try
         {
-            return normalized.TrimEnd('/');
+            return AssetPathUtility.Normalize(value, allowPackages);
         }
-
-        throw new CliUsageException($"{option} 값은 `Assets/...` 형식이어야 합니다.");
+        catch (InvalidOperationException)
+        {
+            throw new CliUsageException(
+                allowPackages
+                    ? $"{option} 값은 `Assets/...` 또는 `Packages/...` 형식이어야 합니다."
+                    : $"{option} 값은 `Assets/...` 형식이어야 합니다.");
+        }
     }
 
     private static string RequireAssetCreateType(string value)
@@ -71,6 +75,17 @@ public static partial class CliArgumentParser
         if (string.IsNullOrWhiteSpace(normalized))
         {
             throw new CliUsageException("`asset create --type` 값이 비어 있습니다.");
+        }
+
+        return normalized;
+    }
+
+    private static string RequireScenePrimitive(string value)
+    {
+        string normalized = ProtocolConstants.NormalizeScenePrimitive(value);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new CliUsageException("`--primitive`는 `" + string.Join("`, `", ProtocolConstants.SupportedScenePrimitiveNames) + "` 중 하나여야 합니다.");
         }
 
         return normalized;
@@ -90,8 +105,10 @@ public static partial class CliArgumentParser
     {
         switch (parsed.Kind)
         {
-            case CommandKind.AssetFind when string.IsNullOrWhiteSpace(parsed.AssetName):
-                throw new CliUsageException("`asset find`에는 `--name`이 필요합니다.");
+            case CommandKind.AssetFind
+                when string.IsNullOrWhiteSpace(parsed.AssetName)
+                && string.IsNullOrWhiteSpace(parsed.AssetType):
+                throw new CliUsageException("`asset find`에는 `--name` 또는 `--type` 중 하나 이상이 필요합니다.");
             case CommandKind.AssetInfo:
             {
                 var hasPath = !string.IsNullOrWhiteSpace(parsed.AssetPath);
@@ -160,10 +177,8 @@ public static partial class CliArgumentParser
                 throw new CliUsageException("`scene add-object`에는 `--path`가 필요합니다.");
             case CommandKind.SceneAddObject when string.IsNullOrWhiteSpace(parsed.SceneObjectName):
                 throw new CliUsageException("`scene add-object`에는 `--name`이 필요합니다.");
-            case CommandKind.SceneSetTransform when string.IsNullOrWhiteSpace(parsed.ScenePath):
-                throw new CliUsageException("`scene set-transform`에는 `--path`가 필요합니다.");
             case CommandKind.SceneSetTransform when string.IsNullOrWhiteSpace(parsed.SceneTarget):
-                throw new CliUsageException("`scene set-transform`에는 `--target`이 필요합니다.");
+                throw new CliUsageException("`scene set-transform`에는 `--node`가 필요합니다.");
             case CommandKind.SceneSetTransform
                 when string.IsNullOrWhiteSpace(parsed.ScenePosition)
                 && string.IsNullOrWhiteSpace(parsed.SceneRotation)
@@ -183,6 +198,10 @@ public static partial class CliArgumentParser
                 throw new CliUsageException("`scene remove-component`에는 `--type`이 필요합니다.");
             case CommandKind.SceneRemoveComponent when !parsed.Force:
                 throw new CliUsageException("`scene remove-component`는 `--force`가 필요합니다.");
+            case CommandKind.SceneAssignMaterial when string.IsNullOrWhiteSpace(parsed.SceneTarget):
+                throw new CliUsageException("`scene assign-material`에는 `--node`가 필요합니다.");
+            case CommandKind.SceneAssignMaterial when string.IsNullOrWhiteSpace(parsed.MaterialPath):
+                throw new CliUsageException("`scene assign-material`에는 `--material`이 필요합니다.");
         }
     }
 
@@ -196,9 +215,14 @@ public static partial class CliArgumentParser
         bool hasView = !string.IsNullOrWhiteSpace(parsed.ScreenshotView);
         bool hasCamera = !string.IsNullOrWhiteSpace(parsed.ScreenshotCamera);
 
-        if (hasView == hasCamera)
+        if (hasView && hasCamera)
         {
             throw new CliUsageException("`screenshot`에는 `--view` 또는 `--camera` 중 하나만 필요합니다.");
+        }
+
+        if (!hasView && !hasCamera)
+        {
+            parsed.ScreenshotView = ParsedCommand.DefaultScreenshotView;
         }
     }
 

@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
@@ -11,7 +12,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
     {
         internal static JObject BuildAssetToken(string path)
         {
-            AssetRecord record = AssetCommandSupport.BuildRecordFromPath(path);
+            AssetRecord record = AssetCommandSupport.BuildRecordFromPath(path, allowPackages: true);
             return new JObject
             {
                 ["path"] = record.path,
@@ -356,5 +357,139 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             ApplyTransformSpec(target.transform, position, rotation, scale);
         }
+
+        internal static NodeMutationAnalysis AnalyzeNodeMutationValues(JObject values)
+        {
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            var warnings = new List<string>();
+            int recognizedLeafCount = AnalyzeNodeMutationObject(values, string.Empty, warnings);
+            return new NodeMutationAnalysis(recognizedLeafCount, warnings.ToArray());
+        }
+
+        private static int AnalyzeNodeMutationObject(JObject values, string prefix, List<string> warnings)
+        {
+            int recognizedLeafCount = 0;
+            foreach (JProperty property in values.Properties())
+            {
+                string path = BuildMutationPath(prefix, property.Name);
+                if (MatchesName(property.Name, "name")
+                    || MatchesName(property.Name, "active")
+                    || MatchesName(property.Name, "tag")
+                    || MatchesName(property.Name, "layer"))
+                {
+                    if (!IsNullLike(property.Value))
+                    {
+                        recognizedLeafCount++;
+                    }
+
+                    continue;
+                }
+
+                if (MatchesName(property.Name, "transform"))
+                {
+                    if (property.Value is JObject transformObject)
+                    {
+                        recognizedLeafCount += AnalyzeTransformMutationObject(transformObject, path, warnings);
+                    }
+                    else if (!IsNullLike(property.Value))
+                    {
+                        recognizedLeafCount++;
+                    }
+                    continue;
+                }
+
+                warnings.Add("Unknown key: " + path);
+            }
+
+            return recognizedLeafCount;
+        }
+
+        private static int AnalyzeTransformMutationObject(JObject values, string prefix, List<string> warnings)
+        {
+            int recognizedLeafCount = 0;
+            foreach (JProperty property in values.Properties())
+            {
+                string path = BuildMutationPath(prefix, property.Name);
+                if (MatchesName(property.Name, "localPosition")
+                    || MatchesName(property.Name, "localRotationEuler")
+                    || MatchesName(property.Name, "localScale"))
+                {
+                    if (property.Value is JObject vectorObject)
+                    {
+                        recognizedLeafCount += AnalyzeVector3MutationObject(vectorObject, path, warnings);
+                    }
+                    else if (!IsNullLike(property.Value))
+                    {
+                        recognizedLeafCount++;
+                    }
+                    continue;
+                }
+
+                warnings.Add("Unknown key: " + path);
+            }
+
+            return recognizedLeafCount;
+        }
+
+        private static int AnalyzeVector3MutationObject(JObject values, string prefix, List<string> warnings)
+        {
+            int recognizedLeafCount = 0;
+            foreach (JProperty property in values.Properties())
+            {
+                if (MatchesName(property.Name, "x")
+                    || MatchesName(property.Name, "y")
+                    || MatchesName(property.Name, "z"))
+                {
+                    if (!IsNullLike(property.Value))
+                    {
+                        recognizedLeafCount++;
+                    }
+
+                    continue;
+                }
+
+                warnings.Add("Unknown key: " + BuildMutationPath(prefix, property.Name));
+            }
+
+            return recognizedLeafCount;
+        }
+
+        private static string BuildMutationPath(string prefix, string name)
+        {
+            return string.IsNullOrEmpty(prefix)
+                ? name
+                : prefix + "." + name;
+        }
+
+        private static bool MatchesName(string actual, string expected)
+        {
+            return string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsNullLike(JToken token)
+        {
+            return token == null
+                || token.Type == JTokenType.Null
+                || token.Type == JTokenType.Undefined;
+        }
+    }
+
+    internal sealed class NodeMutationAnalysis
+    {
+        internal NodeMutationAnalysis(int recognizedLeafCount, string[] warnings)
+        {
+            RecognizedLeafCount = recognizedLeafCount;
+            Warnings = warnings ?? Array.Empty<string>();
+        }
+
+        internal int RecognizedLeafCount { get; }
+
+        internal bool HasRecognizedKeys => RecognizedLeafCount > 0;
+
+        internal string[] Warnings { get; }
     }
 }

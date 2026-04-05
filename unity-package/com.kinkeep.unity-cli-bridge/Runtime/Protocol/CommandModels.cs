@@ -180,6 +180,7 @@ namespace UnityCli.Protocol
     public sealed class MaterialInfoArgs
     {
         public string path = string.Empty;
+        public bool omitDefaults;
     }
 
     [Serializable]
@@ -274,6 +275,14 @@ namespace UnityCli.Protocol
     }
 
     [Serializable]
+    public sealed class SceneVector3Value
+    {
+        public float x;
+        public float y;
+        public float z;
+    }
+
+    [Serializable]
     public sealed class SceneOpenArgs
     {
         public string path = string.Empty;
@@ -294,7 +303,26 @@ namespace UnityCli.Protocol
     {
         public string path = string.Empty;
         public bool force;
+        public string? parent;
+        public string? primitive;
+        public SceneVector3Value? position;
         public string specJson = string.Empty;
+    }
+
+    [Serializable]
+    public sealed class SceneSetTransformArgs
+    {
+        public string node = string.Empty;
+        public SceneVector3Value? position;
+        public SceneVector3Value? rotation;
+        public SceneVector3Value? scale;
+    }
+
+    [Serializable]
+    public sealed class SceneAssignMaterialArgs
+    {
+        public string node = string.Empty;
+        public string material = string.Empty;
     }
 
     [Serializable]
@@ -385,6 +413,29 @@ namespace UnityCli.Protocol
         public AssetRecord asset = new AssetRecord();
         public string activeScenePath = string.Empty;
         public bool patched;
+        public string? createdPath;
+        public string[]? warnings;
+    }
+
+    [Serializable]
+    public sealed class SceneAssignMaterialPayload
+    {
+        public AssetRecord asset = new AssetRecord();
+        public string activeScenePath = string.Empty;
+        public string node = string.Empty;
+        public string material = string.Empty;
+        public string? previousMaterial;
+    }
+
+    [Serializable]
+    public sealed class SceneSetTransformPayload
+    {
+        public AssetRecord asset = new AssetRecord();
+        public string activeScenePath = string.Empty;
+        public string node = string.Empty;
+        public SceneVector3Value? position;
+        public SceneVector3Value? rotation;
+        public SceneVector3Value? scale;
     }
 
     [Serializable]
@@ -394,6 +445,7 @@ namespace UnityCli.Protocol
         public bool created;
         public bool patched;
         public bool overwritten;
+        public string[]? warnings;
     }
 
     [Serializable]

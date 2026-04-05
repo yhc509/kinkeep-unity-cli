@@ -113,9 +113,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             GameObject root = PrefabUtility.LoadPrefabContents(path);
+            PrefabPatchApplyResult patchResult;
             try
             {
-                ApplyPatchOperations(root, spec.Operations);
+                patchResult = ApplyPatchOperations(root, spec.Operations);
+                if (!patchResult.Patched)
+                {
+                    return ProtocolJson.Serialize(new PrefabMutationPayload
+                    {
+                        asset = AssetCommandSupport.BuildRecordFromPath(path),
+                        patched = false,
+                        warnings = patchResult.Warnings.Count == 0 ? null : patchResult.Warnings.ToArray(),
+                    });
+                }
 
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
                 if (saved == null)
@@ -135,7 +145,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return ProtocolJson.Serialize(new PrefabMutationPayload
             {
                 asset = AssetCommandSupport.BuildRecordFromPath(path),
-                patched = true,
+                patched = patchResult.Patched,
+                warnings = patchResult.Warnings.Count == 0 ? null : patchResult.Warnings.ToArray(),
             });
         }
 

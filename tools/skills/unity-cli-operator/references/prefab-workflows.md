@@ -15,6 +15,8 @@ ucli prefab create --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab 
 
 빠르게 시작할 때는 `assets/prefab-create-basic.json`을 복사해서 수정한다.
 
+> **spec에는 `root` 래핑이 필수다.** `{"root": {"name": "Enemy", "children": [...]}}` 형식으로 작성한다. `root` 없이 바로 `{"name": "Enemy"}`를 넣으면 파싱 실패한다.
+
 ## 조회 흐름
 
 ```bash
@@ -48,7 +50,20 @@ ucli prefab patch --project "$PROJECT_ROOT" --path Assets/Prefabs/Enemy.prefab -
 - `remove-component`
 - `set-component-values`
 
-빠르게 시작할 때는 `assets/prefab-patch-boxcollider.json`을 기준으로 잡는다.
+빠르게 시작할 때는 `assets/prefab-patch-boxcollider.json`�� 기준으로 잡는다.
+
+### set-node vs set-component-values
+
+이 둘은 같은 컴포넌트(예: Transform)를 수정하지만 경로 체계가 다르다:
+
+| op | 경로 체계 | 예시 | 용도 |
+|---|---|---|---|
+| `set-node` | 고수준 spec 키 | `transform.localPosition`, `transform.localScale` | 빈번한 Transform 수정에 간편 |
+| `set-component-values` | `SerializedProperty.propertyPath` | `m_LocalPosition.x`, `m_LocalScale.y` | 모든 컴포넌트의 모든 필드에 접근 가능 |
+
+- `set-node`는 Transform, name 등 미리 정의된 고수준 키만 지원한다. **인식 안 되는 키는 경고가 반환된다.**
+- `set-component-values`는 `SerializedProperty.propertyPath`를 그대로 사용하므로 inspect 결과의 `values` 키를 기준으로 쓴다.
+- 같은 노드에 두 op을 동시에 쓸 수 있다. 먼저 `set-node`로 Transform을 잡고, `set-component-values`로 세부 필드를 조정하는 패턴.
 
 ## 자주 쓰는 값 형식
 

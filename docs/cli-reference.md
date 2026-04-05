@@ -37,19 +37,19 @@ Commands for editor state, compilation, play state, menus, arbitrary code execut
 | `pause` | `pause` | live | Pauses Play Mode in a running editor. |
 | `stop` | `stop` | live | Stops Play Mode in a running editor. |
 | `execute-menu` | `execute-menu (--path "Menu/Item" \| --list "Prefix")` | live | Executes a Unity menu item or lists registered menu items matching a prefix in a running editor. |
-| `screenshot` | `screenshot (--view game\|scene \| --camera <name>) [--path <output.png>] [--width N] [--height N]` | live | Captures a screenshot from the Game View, Scene View, or a named camera. In Play Mode, --view game can downscale the native Game View capture but does not upscale it. |
+| `screenshot` | `screenshot [--view game\|scene (default: game) \| --camera <name>] [--path <output.png>] [--width N] [--height N]` | live | Captures a screenshot from the Game View, Scene View, or a named camera. Defaults to Game View when neither --view nor --camera is supplied. In Play Mode, --view game can downscale the native Game View capture but does not upscale it. |
 | `execute` | `execute (--code <csharp> \| --file <path>) --force` | live | Executes arbitrary C# code in the running editor context; always requires --force. |
 | `custom` | `custom <command-name> [--json <args>]` | live | Invokes a project-defined custom command registered via [PucCommand] attribute. |
 
 ## Asset Workflows
 
-Commands for querying, mutating, and creating assets under `Assets/...`.
+Commands for querying assets under `Assets/...` and `Packages/...`, plus mutating and creating assets under `Assets/...`.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `asset find` | `asset find --name <term> [--type <type>] [--folder <Assets/...>] [--limit N]` | live | Finds assets by name, optional type, and optional folder. |
+| `asset find` | `asset find [--name <term>] [--type <type>] [--folder <Assets/...>] [--limit N]` | live | Finds assets by name and/or type, with an optional folder filter. Requires at least one of --name or --type. |
 | `asset types` | `asset types` | live | Lists built-in and project extension asset-create type descriptors available to the target project. |
-| `asset info` | `asset info (--path <Assets/...> \| --guid <guid>)` | live | Reads asset metadata by path or GUID. |
+| `asset info` | `asset info (--path <Assets/...\|Packages/...> \| --guid <guid>)` | live | Reads asset metadata by path or GUID. Query paths may point to package assets. |
 | `asset reimport` | `asset reimport --path <Assets/...>` | live | Reimports an existing asset. |
 | `asset mkdir` | `asset mkdir --path <Assets/...>` | live | Creates missing folders under `Assets/...`. |
 | `asset move` | `asset move --from <Assets/...> --to <Assets/...> [--force]` | live | Moves an asset to a new path; overwriting the destination requires --force. |
@@ -66,10 +66,11 @@ Commands for opening, inspecting, and patching saved scene assets.
 | `scene open` | `scene open --path <Assets/...> [--force]` | live | Opens a saved scene asset; use --force to discard dirty loaded scenes. |
 | `scene inspect` | `scene inspect --path <Assets/...> [--with-values] [--max-depth <N>] [--omit-defaults]` | live | Inspects a saved scene hierarchy; use --with-values when authoring scene patch specs and the other options to reduce payload size. |
 | `scene patch` | `scene patch --path <Assets/...> (--spec-file <file.json> \| --spec-json <json>) [--force]` | live | Applies a deterministic scene patch spec; destructive operations require --force. |
-| `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--components "Type1,Type2"]` | live | Adds a new GameObject to a scene; shortcut for a single add-gameobject scene patch operation. |
-| `scene set-transform` | `scene set-transform --path <Assets/...> --target <scenePath> (--position x,y,z \| --rotation x,y,z \| --scale x,y,z)` | live | Sets the transform of a GameObject; shortcut for a single modify-gameobject scene patch operation. |
+| `scene add-object` | `scene add-object --path <Assets/...> [--parent <scenePath>] --name <name> [--primitive <Cube\|Sphere\|Capsule\|Cylinder\|Plane\|Quad>] [--position x,y,z] [--components "Type1,Type2"]` | live | Adds a new GameObject or built-in primitive to a scene; shortcut for a single add-gameobject scene patch operation. |
+| `scene set-transform` | `scene set-transform --node <scenePath> [--position x,y,z] [--rotation x,y,z] [--scale x,y,z]` | live | Sets local transform values on a node in the active loaded scene and saves the scene immediately. |
 | `scene add-component` | `scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]` | live | Adds a component to a GameObject; shortcut for a single add-component scene patch operation. |
 | `scene remove-component` | `scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> --force` | live | Removes a component from a GameObject; shortcut for a single remove-component scene patch operation. |
+| `scene assign-material` | `scene assign-material --node <scenePath> --material <Assets/...>` | live | Assigns a material asset to MeshRenderer.sharedMaterials[0] on a node in the active loaded scene. |
 
 ## Prefab Workflows
 
@@ -98,7 +99,7 @@ Commands for inspecting and mutating material properties and texture slots.
 
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
-| `material info` | `material info --path <Assets/...mat>` | live | Inspects a material's shader and property values. |
+| `material info` | `material info --path <Assets/...mat> [--omit-defaults]` | live | Inspects a material's shader and property values, with an option to omit properties still at the shader defaults. |
 | `material set` | `material set --path <Assets/...mat> (--property <name> --value <val> \| --texture <name> --asset <Assets/...>)` | live | Sets a material property value or texture. |
 
 ## QA Workflows
@@ -155,7 +156,7 @@ Runtime extension providers can add more rows to `asset types`, but they are not
 
 ## Safety Rules
 
-- All asset paths use the `Assets/...` form.
+- Query-only asset reads such as `asset info --path` may use `Assets/...` or `Packages/...`, but write paths stay under `Assets/...`.
 - Destructive or overwrite flows are guarded by `--force`, including `asset delete`, overwrite variants of `asset move`, `asset rename`, and `asset create`, `package remove`, plus destructive `scene patch` operations.
 - Use `scene inspect --with-values` before writing a scene patch spec.
 - Use `prefab inspect --with-values` before writing a prefab patch spec.
