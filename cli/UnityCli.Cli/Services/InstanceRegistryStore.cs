@@ -24,7 +24,6 @@ public sealed class InstanceRegistryStore
 
     public void Save(InstanceRegistry registry)
     {
-        registry.instances ??= Array.Empty<InstanceRecord>();
         InstanceRegistryFile.Save(_registryPath, registry);
     }
 

@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 
 namespace UnityCli.Protocol
@@ -9,35 +10,28 @@ namespace UnityCli.Protocol
     public static class InstanceRegistryFile
     {
         private const int MaxRetryCount = 6;
+        private const int RetryDelayMs = 25;
 
         public static InstanceRegistry Load(string filePath)
         {
             string fullPath = EnsureDirectory(filePath);
-            IOException? lastException = null;
+            Exception? lastException = null;
 
             for (int attempt = 0; attempt < MaxRetryCount; attempt++)
             {
                 try
                 {
-                    if (!File.Exists(fullPath))
-                    {
-                        return new InstanceRegistry();
-                    }
-
-                    using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                    using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-                    string json = reader.ReadToEnd();
-                    if (string.IsNullOrWhiteSpace(json))
-                    {
-                        return new InstanceRegistry();
-                    }
-
-                    return NormalizeRegistry(ProtocolJson.Deserialize<InstanceRegistry>(json));
+                    return LoadUnlocked(fullPath);
                 }
                 catch (IOException exception)
                 {
                     lastException = exception;
-                    Thread.Sleep((attempt + 1) * 25);
+                    Thread.Sleep((attempt + 1) * RetryDelayMs);
+                }
+                catch (JsonException exception)
+                {
+                    lastException = exception;
+                    Thread.Sleep((attempt + 1) * RetryDelayMs);
                 }
             }
 
@@ -73,7 +67,11 @@ namespace UnityCli.Protocol
                 catch (IOException exception)
                 {
                     lastException = exception;
-                    Thread.Sleep((attempt + 1) * 25);
+                    Thread.Sleep((attempt + 1) * RetryDelayMs);
+                }
+                finally
+                {
+                    TryDeleteFile(lockPath);
                 }
             }
 
@@ -100,7 +98,7 @@ namespace UnityCli.Protocol
                 {
                     using (new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                     {
-                        InstanceRegistry current = Load(fullPath);
+                        InstanceRegistry current = LoadUnlocked(fullPath);
                         InstanceRegistry next = NormalizeRegistry(update(current));
                         WriteAtomically(fullPath, next);
                         return;
@@ -109,7 +107,11 @@ namespace UnityCli.Protocol
                 catch (IOException exception)
                 {
                     lastException = exception;
-                    Thread.Sleep((attempt + 1) * 25);
+                    Thread.Sleep((attempt + 1) * RetryDelayMs);
+                }
+                finally
+                {
+                    TryDeleteFile(lockPath);
                 }
             }
 
@@ -149,6 +151,24 @@ namespace UnityCli.Protocol
             }
         }
 
+        private static InstanceRegistry LoadUnlocked(string fullPath)
+        {
+            if (!File.Exists(fullPath))
+            {
+                return new InstanceRegistry();
+            }
+
+            using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            string json = reader.ReadToEnd();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new InstanceRegistry();
+            }
+
+            return NormalizeRegistry(ProtocolJson.Deserialize<InstanceRegistry>(json));
+        }
+
         private static InstanceRegistry NormalizeRegistry(InstanceRegistry? registry)
         {
             if (registry == null)
@@ -174,6 +194,20 @@ namespace UnityCli.Protocol
             }
 
             return fullPath;
+        }
+
+        private static void TryDeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+            }
         }
     }
 }

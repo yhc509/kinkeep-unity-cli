@@ -139,11 +139,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                 try
                 {
-                    // Allow the accept loop to create the next listener before the current client fully disconnects.
+                    // Allow one active client handler and one pending listener during reconnect races.
                     server = new NamedPipeServerStream(
                         _pipeName,
                         PipeDirection.InOut,
-                        -1,
+                        2,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
                     await server.WaitForConnectionAsync(cancellationToken);
