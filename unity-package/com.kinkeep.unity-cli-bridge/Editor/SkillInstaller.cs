@@ -17,7 +17,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
     internal static class SkillInstaller
     {
-        private const string SkillName = "unity-cli-operator";
+        private const string SkillName = "kinkeep-unity-cli";
         private const string AgentsDirectoryName = "agents";
         private const string MetaFileExtension = ".meta";
 
@@ -50,24 +50,18 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         internal static string GetDestination(SkillTarget target)
         {
+            string? projectRoot = Path.GetDirectoryName(Application.dataPath);
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                throw new InvalidOperationException("Failed to resolve Unity project root.");
+            }
+
             switch (target)
             {
                 case SkillTarget.ClaudeCode:
-                    string? projectRoot = Path.GetDirectoryName(Application.dataPath);
-                    if (string.IsNullOrWhiteSpace(projectRoot))
-                    {
-                        throw new InvalidOperationException("Failed to resolve Unity project root.");
-                    }
-
                     return Path.Combine(projectRoot, ".claude", "skills", SkillName);
                 case SkillTarget.Codex:
-                    string homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                    if (string.IsNullOrWhiteSpace(homeDirectory))
-                    {
-                        throw new InvalidOperationException("Failed to resolve user home directory.");
-                    }
-
-                    return Path.Combine(homeDirectory, ".codex", "skills", SkillName);
+                    return Path.Combine(projectRoot, ".codex", "skills", SkillName);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported skill target.");
             }
