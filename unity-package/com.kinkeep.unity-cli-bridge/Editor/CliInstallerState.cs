@@ -1,9 +1,11 @@
 #nullable enable
 using System;
+using System.Globalization;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
 using PackageManagerInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace KinKeep.UnityCli.Bridge.Editor
@@ -18,8 +20,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
     public static class CliInstallerState
     {
         private const string InstalledVersionEditorPrefsKey = "KinKeep.CLI.InstalledVersion";
+        private const string LatestReleaseVersionKey = "KinKeep.CLI.LatestReleaseVersion";
+        private const string LatestReleaseCheckTimeKey = "KinKeep.CLI.LatestReleaseCheckTime";
         private const string PackageJsonFileName = "package.json";
         private const string RepositoryUrl = "https://github.com/yhc509/kinkeep-unity-cli";
+        private const string GitHubApiLatestReleaseUrl = "https://api.github.com/repos/yhc509/kinkeep-unity-cli/releases/latest";
+        private const string GitHubApiUserAgent = "kinkeep-unity-cli";
         private const string ReleaseDownloadUrlPattern = RepositoryUrl + "/releases/download/v{0}/unity-cli-{1}.{2}";
         private const string ReleasePageUrlPattern = RepositoryUrl + "/releases/tag/v{0}";
         private const string InstallRootDirectoryName = ".kinkeep";
@@ -32,6 +38,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private const string WindowsArchiveExtension = "zip";
         private const string MacPlatformDisplayName = "macOS arm64";
         private const string WindowsPlatformDisplayName = "Windows x64";
+        private const int CacheExpirationMinutes = 60;
+        private static LatestReleaseFetchOperation? _activeLatestReleaseFetch;
 
         public static bool IsInstalled => File.Exists(GetExecutablePath());
 
@@ -78,6 +86,55 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return packageVersion;
+        }
+
+        public static string? GetCachedLatestReleaseVersion()
+        {
+            string latestReleaseVersion = EditorPrefs.GetString(LatestReleaseVersionKey, string.Empty).Trim();
+            return latestReleaseVersion.Length == 0 ? null : latestReleaseVersion;
+        }
+
+        public static bool IsLatestReleaseCacheExpired()
+        {
+            string cachedCheckTime = EditorPrefs.GetString(LatestReleaseCheckTimeKey, string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(cachedCheckTime))
+            {
+                return true;
+            }
+
+            if (!DateTimeOffset.TryParseExact(
+                    cachedCheckTime,
+                    "O",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out DateTimeOffset lastCheckTimeUtc))
+            {
+                return true;
+            }
+
+            return lastCheckTimeUtc.AddMinutes(CacheExpirationMinutes) <= DateTimeOffset.UtcNow;
+        }
+
+        public static void FetchLatestReleaseVersion(Action<string?> onComplete)
+        {
+            if (onComplete == null)
+            {
+                throw new ArgumentNullException(nameof(onComplete));
+            }
+
+            if (_activeLatestReleaseFetch != null)
+            {
+                _activeLatestReleaseFetch.AddOnComplete(onComplete);
+                return;
+            }
+
+            UnityWebRequest request = UnityWebRequest.Get(GitHubApiLatestReleaseUrl);
+            request.SetRequestHeader("User-Agent", GitHubApiUserAgent);
+
+            _activeLatestReleaseFetch = new LatestReleaseFetchOperation(request, onComplete);
+
+            request.SendWebRequest();
+            EditorApplication.update += PollLatestReleaseFetch;
         }
 
         public static string GetDownloadUrl()
@@ -143,6 +200,40 @@ namespace KinKeep.UnityCli.Bridge.Editor
             EditorPrefs.SetString(InstalledVersionEditorPrefsKey, version.Trim());
         }
 
+        private static void PollLatestReleaseFetch()
+        {
+            LatestReleaseFetchOperation operation = _activeLatestReleaseFetch
+                ?? throw new InvalidOperationException("No active latest release fetch operation.");
+
+            if (!operation.Request.isDone)
+            {
+                return;
+            }
+
+            EditorApplication.update -= PollLatestReleaseFetch;
+            _activeLatestReleaseFetch = null;
+
+            string? latestReleaseVersion;
+            try
+            {
+                latestReleaseVersion = operation.Request.result == UnityWebRequest.Result.Success
+                    ? ParseLatestReleaseVersion(operation.Request.downloadHandler.text)
+                    : null;
+                SetLatestReleaseCache(latestReleaseVersion);
+            }
+            catch
+            {
+                latestReleaseVersion = null;
+                SetLatestReleaseCache(null);
+            }
+            finally
+            {
+                operation.Dispose();
+            }
+
+            operation.Complete(latestReleaseVersion);
+        }
+
         private static string GetPackageDirectory()
         {
             PackageManagerInfo? packageInfo = PackageManagerInfo.FindForAssembly(typeof(CliInstallerState).Assembly);
@@ -172,10 +263,36 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return ParseVersion(leftVersion).CompareTo(ParseVersion(rightVersion));
         }
 
+        private static string? ParseLatestReleaseVersion(string responseText)
+        {
+            if (string.IsNullOrWhiteSpace(responseText))
+            {
+                return null;
+            }
+
+            JObject responseJson = JObject.Parse(responseText);
+            string? tagName = responseJson["tag_name"]?.Value<string>()?.Trim();
+            return string.IsNullOrWhiteSpace(tagName)
+                ? null
+                : tagName.TrimStart('v', 'V');
+        }
+
         private static Version ParseVersion(string version)
         {
             string normalizedVersion = version.Trim().TrimStart('v', 'V');
             return Version.Parse(normalizedVersion);
+        }
+
+        private static void SetLatestReleaseCache(string? latestReleaseVersion)
+        {
+            EditorPrefs.SetString(
+                LatestReleaseVersionKey,
+                string.IsNullOrWhiteSpace(latestReleaseVersion)
+                    ? string.Empty
+                    : latestReleaseVersion.Trim());
+            EditorPrefs.SetString(
+                LatestReleaseCheckTimeKey,
+                DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
         }
 
         private static void GetPlatformAssetInfo(out string platformAssetName, out string archiveExtension)
@@ -192,6 +309,39 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     return;
                 default:
                     throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
+            }
+        }
+
+        private sealed class LatestReleaseFetchOperation : IDisposable
+        {
+            private Action<string?> _onComplete;
+
+            public LatestReleaseFetchOperation(UnityWebRequest request, Action<string?> onComplete)
+            {
+                Request = request ?? throw new ArgumentNullException(nameof(request));
+                _onComplete = onComplete ?? throw new ArgumentNullException(nameof(onComplete));
+            }
+
+            public UnityWebRequest Request { get; }
+
+            public void AddOnComplete(Action<string?> onComplete)
+            {
+                if (onComplete == null)
+                {
+                    throw new ArgumentNullException(nameof(onComplete));
+                }
+
+                _onComplete += onComplete;
+            }
+
+            public void Complete(string? latestReleaseVersion)
+            {
+                _onComplete(latestReleaseVersion);
+            }
+
+            public void Dispose()
+            {
+                Request.Dispose();
             }
         }
     }
