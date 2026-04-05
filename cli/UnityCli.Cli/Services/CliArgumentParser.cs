@@ -620,6 +620,10 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneRemoveComponent when token == "--type":
                     parsed.SceneComponentType = RequireValue(tokens, "--type");
                     break;
+                case CommandKind.SceneRemoveComponent when token == "--index":
+                case CommandKind.PrefabRemoveComponent when token == "--index":
+                    parsed.SceneComponentIndex = RequireInt(RequireValue(tokens, "--index"), "--index", minimumValue: 0);
+                    break;
                 case CommandKind.SceneAddComponent when token == "--values":
                     parsed.SceneComponentValues = RequireValue(tokens, "--values");
                     break;

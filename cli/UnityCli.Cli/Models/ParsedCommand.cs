@@ -133,6 +133,7 @@ public sealed class ParsedCommand
     public string? ScenePrimitive { get; set; }
     public string? SceneComponents { get; set; }
     public string? SceneComponentType { get; set; }
+    public int? SceneComponentIndex { get; set; }
     public string? SceneComponentValues { get; set; }
     public string? ScenePosition { get; set; }
     public string? SceneRotation { get; set; }
@@ -682,6 +683,10 @@ public sealed class ParsedCommand
             ["target"] = SceneTarget ?? string.Empty,
             ["componentType"] = SceneComponentType ?? string.Empty,
         };
+        if (SceneComponentIndex.HasValue)
+        {
+            op["componentIndex"] = SceneComponentIndex.Value;
+        }
 
         var spec = new Dictionary<string, object?>
         {

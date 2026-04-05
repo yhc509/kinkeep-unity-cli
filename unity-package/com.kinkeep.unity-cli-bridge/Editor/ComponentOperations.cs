@@ -7,10 +7,23 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class ComponentOperations
     {
+        [Serializable]
         internal sealed class ComponentEntry
         {
-            public string type { get; set; } = string.Empty;
-            public int index { get; set; }
+            [SerializeField] private string type = string.Empty;
+            [SerializeField] private int index;
+
+            public string Type
+            {
+                get => type;
+                set => type = value;
+            }
+
+            public int Index
+            {
+                get => index;
+                set => index = value;
+            }
         }
 
         internal static List<ComponentEntry> ListComponents(GameObject gameObject)
@@ -29,7 +42,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     continue;
                 }
 
-                string typeName = component.GetType().Name;
+                string typeName = component.GetType().FullName ?? component.GetType().Name;
                 if (!typeCounts.TryGetValue(typeName, out int count))
                 {
                     count = 0;
@@ -37,8 +50,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                 entries.Add(new ComponentEntry
                 {
-                    type = typeName,
-                    index = count,
+                    Type = typeName,
+                    Index = count,
                 });
                 typeCounts[typeName] = count + 1;
             }

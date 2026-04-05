@@ -923,6 +923,26 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_SceneRemoveComponent_AcceptsIndex()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "scene", "remove-component",
+            "--path", "Assets/Scenes/Test.unity",
+            "--target", "/Player[0]",
+            "--type", "BoxCollider",
+            "--index", "1",
+            "--force"
+        ]);
+
+        Assert.Equal(CommandKind.SceneRemoveComponent, parsed.Kind);
+        Assert.Equal(1, parsed.SceneComponentIndex);
+        var envelope = parsed.ToEnvelope();
+        var args = ProtocolJson.Deserialize<ScenePatchArgs>(envelope.argumentsJson);
+        Assert.NotNull(args);
+        Assert.Contains("\"componentIndex\":1", args.specJson);
+    }
+
+    [Fact]
     public void Parse_SceneListComponents_RequiresNode()
     {
         var ex = Assert.Throws<CliUsageException>(() =>
@@ -1036,6 +1056,26 @@ public sealed class CliArgumentParserTests
         var args = ProtocolJson.Deserialize<PrefabPatchArgs>(envelope.argumentsJson);
         Assert.NotNull(args);
         Assert.Contains("componentType", args.specJson);
+    }
+
+    [Fact]
+    public void Parse_PrefabRemoveComponent_AcceptsIndex()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "prefab", "remove-component",
+            "--path", "Assets/Prefabs/Player.prefab",
+            "--target", "/Player[0]",
+            "--type", "BoxCollider",
+            "--index", "1",
+            "--force"
+        ]);
+
+        Assert.Equal(CommandKind.PrefabRemoveComponent, parsed.Kind);
+        Assert.Equal(1, parsed.SceneComponentIndex);
+        var envelope = parsed.ToEnvelope();
+        var args = ProtocolJson.Deserialize<PrefabPatchArgs>(envelope.argumentsJson);
+        Assert.NotNull(args);
+        Assert.Contains("\"componentIndex\":1", args.specJson);
     }
 
     [Fact]

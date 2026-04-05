@@ -440,14 +440,4 @@ namespace KinKeep.UnityCli.Bridge.Editor
         }
     }
 
-    internal sealed class SceneListComponentsArgs
-    {
-        public string? node { get; set; }
-    }
-
-    internal sealed class SceneListComponentsPayload
-    {
-        public string node { get; set; } = string.Empty;
-        public ComponentOperations.ComponentEntry[]? components { get; set; }
-    }
 }
