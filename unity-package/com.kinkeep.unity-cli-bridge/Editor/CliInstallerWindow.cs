@@ -10,6 +10,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private const string WindowTitle = "CLI Manager";
         private const string OpenWindowMenuItemPath = "KinKeep/CLI Manager";
         private static readonly Vector2 WindowMinSize = new Vector2(420f, 340f);
+        private static GUIStyle? _updateAvailableLabelStyle;
 
         private Vector2 _scrollPosition;
         private CliInstallStatus _status;
@@ -83,7 +84,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 GUILayout.Label("Package Info", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Package Version", FormatVersion(_packageVersion));
-                EditorGUILayout.LabelField("Latest Release", GetLatestReleaseVersionLabel());
+                if (IsUpdateAvailable())
+                {
+                    EditorGUILayout.LabelField("Latest Release", GetLatestReleaseVersionLabel(), UpdateAvailableLabelStyle);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Latest Release", GetLatestReleaseVersionLabel());
+                }
+
                 DrawLinkButton("Repository", CliInstallerState.GetRepositoryUrl(), "Open Repository");
                 DrawLinkButton("Release", _releasePageUrl, "Open Release");
             }
@@ -373,6 +382,16 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return FormatVersion(_latestReleaseVersion);
         }
 
+        private bool IsUpdateAvailable()
+        {
+            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_installedVersion))
+            {
+                return false;
+            }
+
+            return CliInstallerState.CompareVersions(_installedVersion, _latestReleaseVersion) < 0;
+        }
+
         private static string GetPathCommand()
         {
             switch (Application.platform)
@@ -391,6 +410,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return string.IsNullOrWhiteSpace(version)
                 ? "-"
                 : "v" + version.Trim().TrimStart('v', 'V');
+        }
+
+        private static GUIStyle UpdateAvailableLabelStyle =>
+            _updateAvailableLabelStyle ??= CreateUpdateAvailableLabelStyle();
+
+        private static GUIStyle CreateUpdateAvailableLabelStyle()
+        {
+            GUIStyle style = new GUIStyle(EditorStyles.label)
+            {
+                fontStyle = FontStyle.Bold,
+            };
+            style.normal.textColor = new Color(0.2f, 0.8f, 0.2f);
+            return style;
         }
     }
 }

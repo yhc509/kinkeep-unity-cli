@@ -258,7 +258,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
-        private static int CompareVersions(string leftVersion, string rightVersion)
+        internal static int CompareVersions(string leftVersion, string rightVersion)
         {
             return ParseVersion(leftVersion).CompareTo(ParseVersion(rightVersion));
         }
