@@ -29,7 +29,13 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 
 ### 1. Install the CLI
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/releases):
+**Option A: From Unity Editor** (recommended)
+
+After adding the Unity package (step 2), open `KinKeep > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.kinkeep/unity-cli/`.
+
+**Option B: Manual download**
+
+Download from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/releases):
 
 | Platform | File |
 |----------|------|
@@ -37,6 +43,8 @@ Download the latest release for your platform from [GitHub Releases](https://git
 | Windows (x64) | `unity-cli-win-x64.zip` |
 
 Extract and add the binary to your PATH.
+
+> **Tip:** A short, fixed install path (`~/.kinkeep/unity-cli/`) saves tokens when AI agents invoke the CLI repeatedly — every character in the path is repeated on each call.
 
 ### 2. Add the Unity Package
 

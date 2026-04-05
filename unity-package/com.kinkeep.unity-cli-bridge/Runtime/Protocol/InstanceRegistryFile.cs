@@ -2,8 +2,10 @@
 using System;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
+#if !UNITY_5_3_OR_NEWER
+using System.Text.Json;
+#endif
 
 namespace UnityCli.Protocol
 {
@@ -28,7 +30,7 @@ namespace UnityCli.Protocol
                     lastException = exception;
                     Thread.Sleep((attempt + 1) * RetryDelayMs);
                 }
-                catch (JsonException exception)
+                catch (Exception exception) when (IsJsonParseException(exception))
                 {
                     lastException = exception;
                     Thread.Sleep((attempt + 1) * RetryDelayMs);
@@ -194,6 +196,15 @@ namespace UnityCli.Protocol
             }
 
             return fullPath;
+        }
+
+        private static bool IsJsonParseException(Exception exception)
+        {
+#if UNITY_5_3_OR_NEWER
+            return exception is ArgumentException;
+#else
+            return exception is JsonException;
+#endif
         }
 
         private static void TryDeleteFile(string path)

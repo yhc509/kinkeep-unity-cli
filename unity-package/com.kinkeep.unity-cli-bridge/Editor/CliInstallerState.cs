@@ -24,8 +24,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private const string ReleasePageUrlPattern = RepositoryUrl + "/releases/tag/v{0}";
         private const string InstallRootDirectoryName = ".kinkeep";
         private const string InstallDirectoryName = "unity-cli";
-        private const string MacExecutableName = "UnityCli.Cli";
-        private const string WindowsExecutableName = "UnityCli.Cli.exe";
+        private const string MacExecutableName = "unity-cli";
+        private const string WindowsExecutableName = "unity-cli.exe";
         private const string MacPlatformAssetName = "osx-arm64";
         private const string WindowsPlatformAssetName = "win-x64";
         private const string MacArchiveExtension = "tar.gz";
@@ -40,7 +40,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string userProfileDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (string.IsNullOrWhiteSpace(userProfileDirectory))
             {
-                throw new InvalidOperationException("사용자 홈 디렉터리를 확인하지 못했습니다.");
+                throw new InvalidOperationException("Failed to resolve user home directory.");
             }
 
             return Path.Combine(userProfileDirectory, InstallRootDirectoryName, InstallDirectoryName);
@@ -67,14 +67,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string packageJsonPath = Path.Combine(GetPackageDirectory(), PackageJsonFileName);
             if (!File.Exists(packageJsonPath))
             {
-                throw new FileNotFoundException("Unity package의 package.json 파일을 찾지 못했습니다.", packageJsonPath);
+                throw new FileNotFoundException("Could not find package.json for the Unity package.", packageJsonPath);
             }
 
             JObject packageJson = JObject.Parse(File.ReadAllText(packageJsonPath));
             string? packageVersion = packageJson["version"]?.Value<string>()?.Trim();
             if (string.IsNullOrWhiteSpace(packageVersion))
             {
-                throw new InvalidOperationException("package.json에 version 값이 없습니다.");
+                throw new InvalidOperationException("package.json does not contain a version field.");
             }
 
             return packageVersion;
@@ -110,7 +110,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case RuntimePlatform.WindowsEditor:
                     return WindowsPlatformDisplayName;
                 default:
-                    throw new PlatformNotSupportedException("CLI Installer는 macOS arm64와 Windows x64 Editor만 지원합니다.");
+                    throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }
         }
 
@@ -137,7 +137,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             if (string.IsNullOrWhiteSpace(version))
             {
-                throw new ArgumentException("설치 버전 값이 필요합니다.", nameof(version));
+                throw new ArgumentException("Installed version value is required.", nameof(version));
             }
 
             EditorPrefs.SetString(InstalledVersionEditorPrefsKey, version.Trim());
@@ -148,7 +148,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             PackageManagerInfo? packageInfo = PackageManagerInfo.FindForAssembly(typeof(CliInstallerState).Assembly);
             if (packageInfo == null || string.IsNullOrWhiteSpace(packageInfo.resolvedPath))
             {
-                throw new InvalidOperationException("현재 Unity package의 경로를 확인하지 못했습니다.");
+                throw new InvalidOperationException("Could not resolve the Unity package path.");
             }
 
             return packageInfo.resolvedPath;
@@ -163,7 +163,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case RuntimePlatform.WindowsEditor:
                     return WindowsExecutableName;
                 default:
-                    throw new PlatformNotSupportedException("CLI Installer는 macOS arm64와 Windows x64 Editor만 지원합니다.");
+                    throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }
         }
 
@@ -191,7 +191,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     archiveExtension = WindowsArchiveExtension;
                     return;
                 default:
-                    throw new PlatformNotSupportedException("CLI Installer는 macOS arm64와 Windows x64 Editor만 지원합니다.");
+                    throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }
         }
     }

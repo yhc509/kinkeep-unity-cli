@@ -24,17 +24,17 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             if (_activeOperation != null)
             {
-                throw new InvalidOperationException("CLI 다운로드가 이미 진행 중입니다.");
+                throw new InvalidOperationException("A CLI download is already in progress.");
             }
 
             if (string.IsNullOrWhiteSpace(url))
             {
-                throw new ArgumentException("다운로드 URL이 필요합니다.", nameof(url));
+                throw new ArgumentException("Download URL is required.", nameof(url));
             }
 
             if (string.IsNullOrWhiteSpace(installDir))
             {
-                throw new ArgumentException("설치 디렉터리 경로가 필요합니다.", nameof(installDir));
+                throw new ArgumentException("Install directory path is required.", nameof(installDir));
             }
 
             if (onProgress == null)
@@ -71,7 +71,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static void PollDownload()
         {
             DownloadInstallOperation operation = _activeOperation
-                ?? throw new InvalidOperationException("활성 CLI 다운로드 작업이 없습니다.");
+                ?? throw new InvalidOperationException("No active CLI download operation.");
 
             operation.ReportProgress();
             if (!operation.Request.isDone)
@@ -86,7 +86,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
                 if (operation.Request.result != UnityWebRequest.Result.Success)
                 {
-                    throw new InvalidOperationException("CLI 다운로드에 실패했습니다: " + operation.Request.error);
+                    throw new InvalidOperationException("CLI download failed: " + operation.Request.error);
                 }
 
                 operation.OnProgress(0.95f);
@@ -138,13 +138,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     RunProcess(
                         TarExecutablePath,
                         "-xzf " + QuoteArgument(archivePath) + " -C " + QuoteArgument(destinationDirectory),
-                        "tar 압축 해제");
+                        "tar extraction");
                     return;
                 case RuntimePlatform.WindowsEditor:
                     ZipFile.ExtractToDirectory(archivePath, destinationDirectory);
                     return;
                 default:
-                    throw new PlatformNotSupportedException("CLI Installer는 macOS arm64와 Windows x64 Editor만 지원합니다.");
+                    throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }
         }
 
@@ -153,7 +153,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string? parentDirectory = Path.GetDirectoryName(installDir);
             if (string.IsNullOrWhiteSpace(parentDirectory))
             {
-                throw new InvalidOperationException("설치 디렉터리의 상위 경로를 확인하지 못했습니다: " + installDir);
+                throw new InvalidOperationException("Could not resolve parent directory for install path: " + installDir);
             }
 
             Directory.CreateDirectory(parentDirectory);
@@ -212,7 +212,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 string? destinationParentDirectory = Path.GetDirectoryName(destinationFilePath);
                 if (string.IsNullOrWhiteSpace(destinationParentDirectory))
                 {
-                    throw new InvalidOperationException("설치 대상 파일의 상위 디렉터리를 확인하지 못했습니다: " + destinationFilePath);
+                    throw new InvalidOperationException("Could not resolve parent directory for destination file: " + destinationFilePath);
                 }
 
                 Directory.CreateDirectory(destinationParentDirectory);
@@ -225,7 +225,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string executablePath = Path.Combine(installDirectory, Path.GetFileName(CliInstallerState.GetExecutablePath()));
             if (!File.Exists(executablePath))
             {
-                throw new FileNotFoundException("압축 해제 후 CLI 실행 파일을 찾지 못했습니다.", executablePath);
+                throw new FileNotFoundException("CLI executable not found after extraction.", executablePath);
             }
         }
 
@@ -234,7 +234,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             RunProcess(
                 ChmodExecutablePath,
                 "+x " + QuoteArgument(executablePath),
-                "실행 권한 설정");
+                "set executable permission");
         }
 
         private static void RunProcess(string fileName, string arguments, string stepName)
@@ -253,7 +253,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                 if (!process.Start())
                 {
-                    throw new InvalidOperationException(stepName + " 프로세스를 시작하지 못했습니다.");
+                    throw new InvalidOperationException(stepName + " process failed to start.");
                 }
 
                 process.WaitForExit();
@@ -261,7 +261,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 string standardError = process.StandardError.ReadToEnd().Trim();
                 if (process.ExitCode != 0)
                 {
-                    throw new InvalidOperationException(stepName + "에 실패했습니다: " + standardError);
+                    throw new InvalidOperationException(stepName + " failed: " + standardError);
                 }
             }
         }
@@ -271,7 +271,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string fileExtension = Path.GetExtension(url);
             if (string.IsNullOrWhiteSpace(fileExtension))
             {
-                throw new InvalidOperationException("다운로드 URL에서 아카이브 확장자를 확인하지 못했습니다: " + url);
+                throw new InvalidOperationException("Could not determine archive extension from download URL: " + url);
             }
 
             return Path.Combine(Path.GetTempPath(), "kinkeep-unity-cli-" + Guid.NewGuid().ToString("N") + fileExtension);

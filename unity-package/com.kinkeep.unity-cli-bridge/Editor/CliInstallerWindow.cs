@@ -145,7 +145,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                         return;
                     default:
-                        throw new InvalidOperationException("지원하지 않는 CLI 설치 상태입니다: " + _status);
+                        throw new InvalidOperationException("Unsupported CLI install status: " + _status);
                 }
             }
         }
@@ -155,7 +155,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 GUILayout.Label("PATH Setup", EditorStyles.boldLabel);
-                EditorGUILayout.HelpBox("Install directory를 PATH에 추가하면 터미널에서 CLI 실행 파일을 바로 찾을 수 있습니다.", MessageType.None);
+
+                EditorGUILayout.HelpBox("Add the install directory to your PATH to use the CLI from the terminal. A short, fixed path also saves tokens when AI agents invoke the CLI repeatedly.", MessageType.None);
                 DrawSelectableValue("Command", _pathCommand);
 
                 EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_pathCommand));
@@ -292,7 +293,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         ? "Update Required"
                         : "Update Required (" + FormatVersion(_installedVersion) + " -> " + FormatVersion(_packageVersion) + ")";
                 default:
-                    throw new InvalidOperationException("지원하지 않는 CLI 설치 상태입니다: " + _status);
+                    throw new InvalidOperationException("Unsupported CLI install status: " + _status);
             }
         }
 
@@ -305,7 +306,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case RuntimePlatform.WindowsEditor:
                     return "$env:Path = \"$env:USERPROFILE\\.kinkeep\\unity-cli;$env:Path\"";
                 default:
-                    throw new PlatformNotSupportedException("CLI Installer는 macOS arm64와 Windows x64 Editor만 지원합니다.");
+                    throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }
         }
 
