@@ -21,7 +21,7 @@ dotnet test KinKeepUnityCli.sln
 dotnet test KinKeepUnityCli.sln --filter "FullyQualifiedName~ClassName.MethodName"
 
 # Publish macOS arm64 binary
-./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
+./scripts/publish-osx-arm64.sh    # → dist/unity-cli/unity-cli
 
 # Doc generation (verify docs match code)
 dotnet run --project cli/UnityCli.DocGen -- --check
@@ -35,7 +35,7 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 ```
 KinKeepUnityCli.sln          Solution root for CLI, protocol, DocGen, and tests
 
-cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64)
+cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
   ├── CliApp.cs              Entry point; handles local status/instances/doctor flows and routes Unity work to IPC
   ├── Services/
   │   ├── CliArgumentParser  Switch-based parser → ParsedCommand
@@ -64,7 +64,10 @@ unity-package/com.kinkeep.unity-cli-bridge/
   │   ├── PrefabSpecModels.cs  Prefab DTO/spec models
   │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath
   │   ├── TypeDiscoveryUtility.cs  Shared component/type scanning utility
-  │   └── BridgeJsonSettings.cs  Shared JSON serializer settings
+  │   ├── BridgeJsonSettings.cs  Shared JSON serializer settings
+  │   ├── CliInstallerWindow.cs  EditorWindow for one-click CLI install/update
+  │   ├── CliInstallerState.cs   CLI version detection, path resolution, EditorPrefs
+  │   └── CliDownloader.cs       GitHub Releases download + archive extraction
   └── Runtime/Protocol/       Shared models (C# 11, nullable enabled)
       ├── CliCommandCatalog.cs  Master command descriptor catalog
       ├── CommandModels.cs      Request/response envelopes
