@@ -202,8 +202,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static void PollLatestReleaseFetch()
         {
-            LatestReleaseFetchOperation operation = _activeLatestReleaseFetch
-                ?? throw new InvalidOperationException("No active latest release fetch operation.");
+            if (_activeLatestReleaseFetch == null)
+            {
+                EditorApplication.update -= PollLatestReleaseFetch;
+                return;
+            }
+
+            LatestReleaseFetchOperation operation = _activeLatestReleaseFetch;
 
             if (!operation.Request.isDone)
             {
@@ -226,12 +231,15 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 latestReleaseVersion = null;
                 SetLatestReleaseCache(null);
             }
+
+            try
+            {
+                operation.Complete(latestReleaseVersion);
+            }
             finally
             {
                 operation.Dispose();
             }
-
-            operation.Complete(latestReleaseVersion);
         }
 
         private static string GetPackageDirectory()
