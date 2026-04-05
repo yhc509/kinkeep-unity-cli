@@ -61,7 +61,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case SkillTarget.ClaudeCode:
                     return Path.Combine(projectRoot, ".claude", "skills", SkillName);
                 case SkillTarget.Codex:
-                    return Path.Combine(projectRoot, ".codex", "skills", SkillName);
+                    return Path.Combine(projectRoot, ".agents", "skills", SkillName);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported skill target.");
             }
