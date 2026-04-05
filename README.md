@@ -29,8 +29,6 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 
 ### 1. Install the CLI
 
-**Option A: Download pre-built binary** (recommended)
-
 Download the latest release for your platform from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/releases):
 
 | Platform | File |
@@ -40,17 +38,9 @@ Download the latest release for your platform from [GitHub Releases](https://git
 
 Extract and add the binary to your PATH.
 
-**Option B: Build from source**
-
-```bash
-# macOS arm64
-./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
-
-# Windows x64
-./scripts/publish-win-x64.sh     # → dist/unity-cli-win-x64/UnityCli.Cli.exe
-```
-
 ### 2. Add the Unity Package
+
+Add the following to your `Packages/manifest.json`:
 
 ```json
 {
@@ -60,9 +50,17 @@ Extract and add the binary to your PATH.
 }
 ```
 
+Or paste this URL in Unity Package Manager → **Add package from git URL**:
+
+```
+https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main
+```
+
 The bridge starts automatically when the Editor opens. No configuration needed.
 
 ### 3. Verify
+
+Check that the CLI can reach the running Editor:
 
 ```bash
 unity-cli status --project /path/to/your-project --json
