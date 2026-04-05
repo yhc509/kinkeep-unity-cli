@@ -13,7 +13,7 @@
 ```bash
 export REPO_ROOT="$(cd /path/to/unity-cli && pwd -P)"
 export UNITY_PROJECT_PATH="$(cd /path/to/UnityProject && pwd -P)"
-export UNITY_CLI="$REPO_ROOT/dist/unity-cli/UnityCli.Cli"
+export UNITY_CLI="$REPO_ROOT/dist/unity-cli/unity-cli"
 export LIVE_IPC_ROOT="Assets/LiveIpcTests"
 export LIVE_IPC_SCENE="Assets/Scenes/SampleScene.unity"
 

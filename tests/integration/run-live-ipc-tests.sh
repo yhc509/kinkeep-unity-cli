@@ -204,7 +204,7 @@ find_built_dll() {
   local path=""
   local candidate=""
 
-  for candidate in "$ROOT_DIR"/cli/UnityCli.Cli/bin/Debug/*/UnityCli.Cli.dll; do
+  for candidate in "$ROOT_DIR"/cli/UnityCli.Cli/bin/Debug/*/unity-cli.dll; do
     if [[ -f "$candidate" ]]; then
       path="$candidate"
       break
@@ -212,7 +212,7 @@ find_built_dll() {
   done
 
   if [[ -z "$path" ]]; then
-    for candidate in "$ROOT_DIR"/cli/UnityCli.Cli/bin/Release/*/UnityCli.Cli.dll; do
+    for candidate in "$ROOT_DIR"/cli/UnityCli.Cli/bin/Release/*/unity-cli.dll; do
       if [[ -f "$candidate" ]]; then
         path="$candidate"
         break
@@ -224,7 +224,7 @@ find_built_dll() {
 }
 
 detect_cli() {
-  local published_path="$ROOT_DIR/dist/unity-cli/UnityCli.Cli"
+  local published_path="$ROOT_DIR/dist/unity-cli/unity-cli"
   local built_dll=""
 
   if [[ -n "${UNITY_CLI_BIN:-}" ]]; then
@@ -244,7 +244,7 @@ detect_cli() {
   fi
 
   if ! command -v dotnet >/dev/null 2>&1; then
-    abort "dotnet is required when dist/unity-cli/UnityCli.Cli is not available."
+    abort "dotnet is required when dist/unity-cli/unity-cli is not available."
   fi
 
   built_dll="$(find_built_dll)"

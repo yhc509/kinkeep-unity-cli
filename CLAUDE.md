@@ -21,7 +21,7 @@ dotnet test KinKeepUnityCli.sln
 dotnet test KinKeepUnityCli.sln --filter "FullyQualifiedName~ClassName.MethodName"
 
 # Publish macOS arm64 binary
-./scripts/publish-osx-arm64.sh    # → dist/unity-cli/UnityCli.Cli
+./scripts/publish-osx-arm64.sh    # → dist/unity-cli/unity-cli
 
 # Doc generation (verify docs match code)
 dotnet run --project cli/UnityCli.DocGen -- --check
@@ -35,7 +35,7 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 ```
 KinKeepUnityCli.sln          Solution root for CLI, protocol, DocGen, and tests
 
-cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64)
+cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
   ├── CliApp.cs              Entry point; handles local status/instances/doctor flows and routes Unity work to IPC
   ├── Services/
   │   ├── CliArgumentParser  Switch-based parser → ParsedCommand
@@ -64,7 +64,10 @@ unity-package/com.kinkeep.unity-cli-bridge/
   │   ├── PrefabSpecModels.cs  Prefab DTO/spec models
   │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath
   │   ├── TypeDiscoveryUtility.cs  Shared component/type scanning utility
-  │   └── BridgeJsonSettings.cs  Shared JSON serializer settings
+  │   ├── BridgeJsonSettings.cs  Shared JSON serializer settings
+  │   ├── CliInstallerWindow.cs  EditorWindow for one-click CLI install/update
+  │   ├── CliInstallerState.cs   CLI version detection, path resolution, EditorPrefs
+  │   └── CliDownloader.cs       GitHub Releases download + archive extraction
   └── Runtime/Protocol/       Shared models (C# 11, nullable enabled)
       ├── CliCommandCatalog.cs  Master command descriptor catalog
       ├── CommandModels.cs      Request/response envelopes
@@ -88,6 +91,14 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 - **Scene paths:** Format `/Root[0]/Child[0]` with array notation for sibling indexing; `/` is the virtual scene root.
 - **Prefab editing:** Based on `SerializedProperty.propertyPath` (run `prefab inspect --with-values` to verify paths before patching).
 - **Doc sync:** CLI command or option changes must update `README.md` examples and help text. Run `dotnet run --project cli/UnityCli.DocGen -- --check` to verify.
+
+## Branch Policy
+
+- All changes go through PRs to `main`. Direct push to `main` is blocked by branch ruleset.
+- Admin bypass exists for emergencies only — do not use it for routine work.
+- CI (`test` job) must pass before merge.
+- GitHub Codex bot (`@codex`) is enabled as a PR reviewer on this repo.
+- Versioning: patch-level increments (`v0.1.0` → `v0.1.1`). Major/minor bumps only when explicitly requested.
 
 ## Verification After Changes
 
