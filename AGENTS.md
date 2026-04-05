@@ -1,35 +1,107 @@
-# unity-cli 작업 규칙
+# CLAUDE.md
 
-## 목표
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- 이 저장소의 목표는 `수동 서버 실행 없이 Unity Editor를 CLI로 제어`하는 것입니다.
-- 문제를 막는 방향보다, 왜 이런 불편이 생겼는지 원인을 줄이는 방향을 우선합니다.
+## Project Overview
 
-## 검증 기본값
+KinKeep Unity CLI controls the Unity Editor from the command line without manual server startup. This mono-repo contains a .NET 9 CLI, the `com.kinkeep.unity-cli-bridge` Unity UPM package, and shared protocol models.
 
-- CLI 코드 수정 후:
-  - `dotnet build KinKeepUnityCli.sln -c Debug`
-- 테스트 실행 후:
-  - `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test KinKeepUnityCli.sln`
-- Unity 연동 수정 후:
-  - 실제 Unity 프로젝트에서 `status`, `refresh`, `asset info`, `asset find`, `asset create`를 live로 확인
-  - 실제 Unity 프로젝트에서 `prefab create`, `prefab inspect`, `prefab patch`를 live로 확인
-  - live IPC가 끊겼을 때 CLI가 즉시 오류를 반환하는지 확인
+The CLI is **live IPC only**. Unity commands require a running Editor with the bridge active.
 
-## 문서 동기화
+## Build & Test Commands
 
-- CLI 명령 추가나 옵션 변경이 있으면 `README.md`의 사용 예시와 help 텍스트를 같이 갱신합니다.
-- 배포 방식이 바뀌면 `scripts/publish-osx-arm64.sh`와 `README.md`를 같이 맞춥니다.
+```bash
+# Build
+dotnet build KinKeepUnityCli.sln -c Debug
 
-## 에셋 작업 안전 규칙
+# Run all tests
+dotnet test KinKeepUnityCli.sln
 
-- 파괴 연산은 기본 차단합니다.
-- `asset delete`는 항상 `--force`가 필요합니다.
-- `asset move`, `asset rename`에서 기존 asset를 덮어쓰는 동작은 `--force`가 있을 때만 허용합니다.
-- `asset create`에서 기존 asset를 덮어쓰는 동작도 `--force`가 있을 때만 허용합니다.
-- 모든 asset 경로는 `Assets/...` 형식으로 다룹니다.
+# Run a single test
+dotnet test KinKeepUnityCli.sln --filter "FullyQualifiedName~ClassName.MethodName"
 
-## 경로 규칙
+# Publish macOS arm64 binary
+./scripts/publish-osx-arm64.sh    # → dist/unity-cli/unity-cli
 
-- macOS에서는 심링크 경로 대신 실제 경로를 기준으로 해시와 registry를 맞춥니다.
-- 테스트와 문서 예시에서도 `pwd -P`를 우선합니다.
+# Doc generation (verify docs match code)
+dotnet run --project cli/UnityCli.DocGen -- --check
+
+# Doc generation (write/update docs)
+dotnet run --project cli/UnityCli.DocGen -- --write
+```
+
+## Architecture
+
+```
+KinKeepUnityCli.sln          Solution root for CLI, protocol, DocGen, and tests
+
+cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
+  ├── CliApp.cs              Entry point; handles local status/instances/doctor flows and routes Unity work to IPC
+  ├── Services/
+  │   ├── CliArgumentParser  Switch-based parser → ParsedCommand
+  │   ├── CliCommandCatalog  CLI-side command metadata
+  │   ├── LocalIpcClient     Live IPC to running Editor
+  │   ├── UnityProjectLocator Project-root resolution and lookup
+  │   └── InstanceRegistryStore  Per-project instance tracking
+  └── Models/ParsedCommand   CommandKind variants + envelope builder
+
+cli/UnityCli.Protocol/       Shared protocol project compiling linked files from unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/
+
+unity-package/com.kinkeep.unity-cli-bridge/
+  ├── Editor/
+  │   ├── BridgeHost.cs       Bridge bootstrap, registry registration, IPC listener, handler orchestration
+  │   ├── AssetCommandHandler.cs  Asset CRUD operations and asset metadata
+  │   ├── BuiltInAssetCreateProviders.cs  Basic built-in asset create providers
+  │   ├── BuiltInAssetCreateProviders.Advanced.cs  Complex/dependency-aware asset providers (partial class)
+  │   ├── SceneCommandHandler.cs  scene open/inspect/patch entry points
+  │   ├── SceneCommandHandler.Patching.cs  Scene patch operation application (partial class)
+  │   ├── SceneInspector.cs  Scene graph traversal, node-path resolution, inspect payload building
+  │   ├── SceneSpecModels.cs  Scene DTO/spec models
+  │   ├── InspectorUtility.cs  Shared inspector helpers (asset tokens, path parsing, layer resolution, transform application)
+  │   ├── PrefabCommandHandler.cs  prefab create/inspect/patch entry points
+  │   ├── PrefabCommandHandler.Patching.cs  Prefab patch operation application (partial class)
+  │   ├── PrefabInspector.cs  Prefab inspection, node-path resolution, inspect payload building
+  │   ├── PrefabSpecModels.cs  Prefab DTO/spec models
+  │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath
+  │   ├── TypeDiscoveryUtility.cs  Shared component/type scanning utility
+  │   ├── BridgeJsonSettings.cs  Shared JSON serializer settings
+  │   ├── CliInstallerWindow.cs  EditorWindow for one-click CLI install/update
+  │   ├── CliInstallerState.cs   CLI version detection, path resolution, EditorPrefs
+  │   └── CliDownloader.cs       GitHub Releases download + archive extraction
+  └── Runtime/Protocol/       Shared models (C# 11, nullable enabled)
+      ├── CliCommandCatalog.cs  Master command descriptor catalog
+      ├── CommandModels.cs      Request/response envelopes
+      ├── ProtocolConstants.cs  Registry paths, timeouts, command names
+      ├── ProtocolHelpers.cs    Command grouping helpers
+      ├── ProtocolJson.cs       Shared JSON serialization helpers
+      ├── Registry*.cs          Registry persistence/path models
+      └── TransportModels.cs    IPC transport payloads
+
+tests/UnityCli.Cli.Tests/    xUnit tests
+```
+
+**Protocol sharing:** `cli/UnityCli.Protocol/` compiles the same `.cs` files from `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/` via `<Compile Include>` links in the `.csproj`. Changes to protocol files affect both the CLI and the Unity package.
+
+## Key Conventions
+
+- **Nullable references enabled** throughout (`#nullable enable`, implicit usings).
+- **Asset paths** always use `Assets/...` format.
+- **Destructive ops require `--force`:** `asset delete` (always), `asset move/rename/create` (when overwriting).
+- **macOS paths:** Use real paths (`pwd -P`), not symlinks, for hashing and registry lookups.
+- **Scene paths:** Format `/Root[0]/Child[0]` with array notation for sibling indexing; `/` is the virtual scene root.
+- **Prefab editing:** Based on `SerializedProperty.propertyPath` (run `prefab inspect --with-values` to verify paths before patching).
+- **Doc sync:** CLI command or option changes must update `README.md` examples and help text. Run `dotnet run --project cli/UnityCli.DocGen -- --check` to verify.
+
+## Branch Policy
+
+- All changes go through PRs to `main`. Direct push to `main` is blocked by branch ruleset.
+- Admin bypass exists for emergencies only — do not use it for routine work.
+- CI (`test` job) must pass before merge.
+- GitHub Codex bot (`@codex`) is enabled as a PR reviewer on this repo.
+- Versioning: patch-level increments (`v0.1.0` → `v0.1.1`). Major/minor bumps only when explicitly requested.
+
+## Verification After Changes
+
+- CLI code changes → `dotnet build KinKeepUnityCli.sln -c Debug`
+- Test changes → `dotnet test KinKeepUnityCli.sln`
+- Unity integration changes → test live IPC flows with an actual Unity project
