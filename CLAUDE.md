@@ -94,10 +94,12 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 - **Doc sync:** CLI command or option changes must update all docs. Run through this checklist:
   1. `dotnet run --project cli/UnityCli.DocGen -- --write` — auto-updates `docs/cli-reference.md`
   2. `README.md` — update examples for new/changed commands in both Scene and Prefab sections
-  3. `CHANGELOG.md` — add entry to `[Unreleased]` section
-  4. `CLAUDE.md` — update Architecture tree if new files are added, update Key Conventions if behavior changes
-  5. `tools/skills/unity-cli-operator/SKILL.md` — update command workflows and examples for AI agent usage
-  6. `dotnet run --project cli/UnityCli.DocGen -- --check` — verify cli-reference is up to date
+  3. `CLAUDE.md` — update Architecture tree if new files are added, update Key Conventions if behavior changes
+  4. `tools/skills/unity-cli-operator/SKILL.md` — update command workflows and examples for AI agent usage
+  5. `dotnet run --project cli/UnityCli.DocGen -- --check` — verify cli-reference is up to date
+- **Release checklist:** Before tagging a new version:
+  1. `CHANGELOG.md` — move `[Unreleased]` entries to new version section with date
+  2. Update `package.json` version
 
 ## Branch Policy
 
