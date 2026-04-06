@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -512,9 +511,22 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             string expectedTypeName = ExtractObjectReferenceTypeName(property);
-            UnityEngine.Object match = assets
-                .Where(asset => asset != null)
-                .FirstOrDefault(asset => string.IsNullOrWhiteSpace(expectedTypeName) || string.Equals(asset.GetType().Name, expectedTypeName, StringComparison.Ordinal));
+            bool hasExpectedTypeName = !string.IsNullOrWhiteSpace(expectedTypeName);
+            UnityEngine.Object match = null;
+            for (int i = 0; i < assets.Length; i++)
+            {
+                UnityEngine.Object asset = assets[i];
+                if (asset == null)
+                {
+                    continue;
+                }
+
+                if (!hasExpectedTypeName || string.Equals(asset.GetType().Name, expectedTypeName, StringComparison.Ordinal))
+                {
+                    match = asset;
+                    break;
+                }
+            }
 
             if (match == null)
             {

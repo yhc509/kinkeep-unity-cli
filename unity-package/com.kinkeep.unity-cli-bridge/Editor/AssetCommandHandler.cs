@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using UnityCli.Protocol;
 using UnityEditor;
 
@@ -44,32 +44,59 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleFind(string argumentsJson)
         {
             AssetFindArgs args = ProtocolJson.Deserialize<AssetFindArgs>(argumentsJson) ?? new AssetFindArgs();
-            string[] filterTerms = new string[]
-            {
-                string.IsNullOrWhiteSpace(args.name) ? null : args.name.Trim(),
-                string.IsNullOrWhiteSpace(args.type) ? null : "t:" + args.type.Trim(),
-            }
-                .Where(term => !string.IsNullOrWhiteSpace(term))
-                .ToArray();
-
-            if (filterTerms.Length == 0)
+            string? nameTerm = string.IsNullOrWhiteSpace(args.name) ? null : args.name.Trim();
+            string? typeTerm = string.IsNullOrWhiteSpace(args.type) ? null : args.type.Trim();
+            bool hasNameTerm = !string.IsNullOrWhiteSpace(nameTerm);
+            bool hasTypeTerm = !string.IsNullOrWhiteSpace(typeTerm);
+            if (!hasNameTerm && !hasTypeTerm)
             {
                 throw new InvalidOperationException("asset-find에는 name 또는 type이 필요합니다.");
             }
 
             int limit = args.limit <= 0 ? ProtocolConstants.DefaultAssetFindLimit : args.limit;
-            string filter = string.Join(" ", filterTerms);
+            string filter;
+            if (hasNameTerm && hasTypeTerm)
+            {
+                filter = nameTerm! + " t:" + typeTerm;
+            }
+            else if (hasNameTerm)
+            {
+                filter = nameTerm!;
+            }
+            else
+            {
+                filter = "t:" + typeTerm!;
+            }
 
             string[] guids = string.IsNullOrWhiteSpace(args.folder)
                 ? AssetDatabase.FindAssets(filter)
                 : AssetDatabase.FindAssets(filter, new[] { AssetCommandSupport.NormalizeAssetPath(args.folder) });
 
-            AssetRecord[] results = guids
-                .Select(AssetCommandSupport.BuildRecordFromGuid)
-                .Where(record => record.exists)
-                .OrderBy(record => record.path, StringComparer.OrdinalIgnoreCase)
-                .Take(limit)
-                .ToArray();
+            var records = new List<AssetRecord>(guids.Length);
+            for (int index = 0; index < guids.Length; index++)
+            {
+                AssetRecord record = AssetCommandSupport.BuildRecordFromGuid(guids[index]);
+                if (!record.exists)
+                {
+                    continue;
+                }
+
+                records.Add(record);
+            }
+
+            records.Sort(CompareAssetRecordsByPath);
+
+            int resultCount = records.Count;
+            if (resultCount > limit)
+            {
+                resultCount = limit;
+            }
+
+            var results = new AssetRecord[resultCount];
+            for (int index = 0; index < resultCount; index++)
+            {
+                results[index] = records[index];
+            }
 
             return ProtocolJson.Serialize(new AssetFindPayload { results = results });
         }
@@ -264,6 +291,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 asset = beforeDelete,
                 deleted = true,
             });
+        }
+
+        private static int CompareAssetRecordsByPath(AssetRecord left, AssetRecord right)
+        {
+            return string.Compare(left.path, right.path, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

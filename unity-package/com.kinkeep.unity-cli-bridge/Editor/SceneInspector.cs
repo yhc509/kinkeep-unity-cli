@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -11,29 +13,46 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class SceneInspector
     {
+        // Reused to avoid GC allocations. Safe because all callers run on the
+        // main thread and no method using this buffer calls another that also uses it.
+        private static readonly List<Component> _componentBuffer = new List<Component>(8);
+
         internal static string BuildInspectPayload(string path, Scene scene, bool withValues, int? maxDepth, bool omitDefaults, string activeScenePath)
         {
-            var roots = new JArray();
-            foreach (GameObject root in scene.GetRootGameObjects())
+            var builder = new StringBuilder(2048);
+            using var stringWriter = new StringWriter(builder, CultureInfo.InvariantCulture);
+            using var writer = new JsonTextWriter(stringWriter);
+            writer.Formatting = Formatting.None;
+            writer.WriteStartObject();
+            writer.WritePropertyName("asset");
+            InspectorUtility.WriteAssetToken(writer, path);
+            writer.WritePropertyName("activeScenePath");
+            writer.WriteValue(activeScenePath);
+            writer.WritePropertyName("scene");
+            writer.WriteStartObject();
+            writer.WritePropertyName("path");
+            writer.WriteValue(scene.path);
+            writer.WritePropertyName("name");
+            writer.WriteValue(scene.name);
+            writer.WritePropertyName("isLoaded");
+            writer.WriteValue(scene.isLoaded);
+            writer.WritePropertyName("isDirty");
+            writer.WriteValue(scene.isDirty);
+            writer.WritePropertyName("roots");
+            writer.WriteStartArray();
+
+            GameObject[] roots = scene.GetRootGameObjects();
+            for (int index = 0; index < roots.Length; index++)
             {
-                roots.Add(BuildNodeToken(root, withValues, maxDepth, omitDefaults, 0));
+                GameObject root = roots[index];
+                WriteNode(writer, root, BuildNodePath(root), withValues, maxDepth, omitDefaults, 0);
             }
 
-            var payload = new JObject
-            {
-                ["asset"] = InspectorUtility.BuildAssetToken(path),
-                ["activeScenePath"] = activeScenePath,
-                ["scene"] = new JObject
-                {
-                    ["path"] = scene.path,
-                    ["name"] = scene.name,
-                    ["isLoaded"] = scene.isLoaded,
-                    ["isDirty"] = scene.isDirty,
-                    ["roots"] = roots,
-                },
-            };
-
-            return payload.ToString(Formatting.None);
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+            writer.Flush();
+            return builder.ToString();
         }
 
         internal static Transform? ResolveParent(Scene scene, string? path, string commandName)
@@ -60,32 +79,44 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_NODE_INVALID", commandName + " path는 `/`로 시작해야 합니다: " + normalizedPath);
             }
 
-            string[] segments = normalizedPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            if (segments.Length == 0)
+            int position = 0;
+            if (!InspectorUtility.TryGetNextPathSegment(normalizedPath, ref position, out int rootStart, out int rootLength))
             {
                 throw new CommandFailureException("SCENE_NODE_INVALID", commandName + " path가 비어 있습니다.");
             }
 
-            GameObject current = ResolveRoot(scene, segments[0], normalizedPath, commandName);
-            for (int index = 1; index < segments.Length; index++)
+            GameObject current = ResolveRoot(scene, normalizedPath.AsSpan(rootStart, rootLength), normalizedPath, commandName);
+            while (InspectorUtility.TryGetNextPathSegment(normalizedPath, ref position, out int segmentStart, out int segmentLength))
             {
-                (string name, int siblingIndex) = InspectorUtility.ParsePathSegment(segments[index], commandName, "SCENE");
-                var matches = new List<Transform>();
-                for (int childIndex = 0; childIndex < current.transform.childCount; childIndex++)
+                ReadOnlySpan<char> segment = normalizedPath.AsSpan(segmentStart, segmentLength);
+                InspectorUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int siblingIndex);
+                ReadOnlySpan<char> name = segment.Slice(0, nameLength);
+                Transform? matchedChild = null;
+                int matchIndex = 0;
+                Transform currentTransform = current.transform;
+                for (int childIndex = 0; childIndex < currentTransform.childCount; childIndex++)
                 {
-                    Transform child = current.transform.GetChild(childIndex);
-                    if (string.Equals(child.name, name, StringComparison.Ordinal))
+                    Transform child = currentTransform.GetChild(childIndex);
+                    if (!name.Equals(child.name.AsSpan(), StringComparison.Ordinal))
                     {
-                        matches.Add(child);
+                        continue;
                     }
+
+                    if (matchIndex == siblingIndex)
+                    {
+                        matchedChild = child;
+                        break;
+                    }
+
+                    matchIndex++;
                 }
 
-                if (siblingIndex < 0 || siblingIndex >= matches.Count)
+                if (matchedChild == null)
                 {
                     throw new CommandFailureException("SCENE_NODE_NOT_FOUND", commandName + " path를 찾지 못했습니다: " + normalizedPath);
                 }
 
-                current = matches[siblingIndex].gameObject;
+                current = matchedChild.gameObject;
             }
 
             return current;
@@ -141,37 +172,140 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 "SCENE");
         }
 
-        private static JObject BuildNodeToken(GameObject gameObject, bool withValues, int? maxDepth, bool omitDefaults, int currentDepth)
+        internal static void ApplyNodeState(GameObject target, JObject values, string commandName)
         {
-            var node = new JObject
+            if (values == null)
             {
-                ["path"] = BuildNodePath(gameObject),
-                ["name"] = gameObject.name,
-                ["active"] = gameObject.activeSelf,
-                ["tag"] = gameObject.tag,
-                ["layer"] = InspectorUtility.BuildLayerToken(gameObject.layer),
-                ["transform"] = InspectorUtility.BuildTransformToken(gameObject.transform, omitDefaults),
-            };
+                throw new CommandFailureException("SCENE_SPEC_INVALID", "node values가 비어 있습니다.");
+            }
 
-            var components = new JArray();
-            var componentIndices = new Dictionary<Type, int>();
-            foreach (Component component in gameObject.GetComponents<Component>())
+            string? name = InspectorUtility.ReadOptionalString(values, "name");
+            if (name != null)
             {
-                if (component is Transform)
+                target.name = InspectorUtility.RequireNodeName(name, commandName, "SCENE");
+            }
+
+            JObject? transformValues = InspectorUtility.ReadOptionalObject(values, "transform", "SCENE_SPEC_INVALID", commandName + " transform 값은 object여야 합니다.");
+            Transform transform = target.transform;
+            InspectorUtility.ApplyNodeStateCore(
+                target,
+                InspectorUtility.ReadOptionalBoolean(values, "active"),
+                InspectorUtility.ReadOptionalString(values, "tag"),
+                InspectorUtility.ReadOptionalProperty(values, "layer"),
+                InspectorUtility.MergeVector3(
+                    transform.localPosition,
+                    InspectorUtility.ReadOptionalObject(transformValues, "localPosition", "SCENE_SPEC_INVALID", commandName + " transform.localPosition 값은 object여야 합니다.")),
+                InspectorUtility.MergeVector3(
+                    transform.localEulerAngles,
+                    InspectorUtility.ReadOptionalObject(transformValues, "localRotationEuler", "SCENE_SPEC_INVALID", commandName + " transform.localRotationEuler 값은 object여야 합니다.")),
+                InspectorUtility.MergeVector3(
+                    transform.localScale,
+                    InspectorUtility.ReadOptionalObject(transformValues, "localScale", "SCENE_SPEC_INVALID", commandName + " transform.localScale 값은 object여야 합니다.")),
+                "SCENE");
+        }
+
+        private static void WriteNode(JsonTextWriter writer, GameObject gameObject, string nodePath, bool withValues, int? maxDepth, bool omitDefaults, int currentDepth)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("path");
+            writer.WriteValue(nodePath);
+            writer.WritePropertyName("name");
+            writer.WriteValue(gameObject.name);
+
+            if (!omitDefaults || !gameObject.activeSelf)
+            {
+                writer.WritePropertyName("active");
+                writer.WriteValue(gameObject.activeSelf);
+            }
+
+            if (!omitDefaults || !string.Equals(gameObject.tag, "Untagged", StringComparison.Ordinal))
+            {
+                writer.WritePropertyName("tag");
+                writer.WriteValue(gameObject.tag);
+            }
+
+            if (!omitDefaults || gameObject.layer != 0)
+            {
+                writer.WritePropertyName("layer");
+                InspectorUtility.WriteLayerToken(writer, gameObject.layer);
+            }
+
+            if (InspectorUtility.ShouldWriteTransformToken(gameObject.transform, omitDefaults))
+            {
+                writer.WritePropertyName("transform");
+                InspectorUtility.WriteTransformToken(writer, gameObject.transform, omitDefaults);
+            }
+
+            WriteComponents(writer, gameObject, withValues, omitDefaults);
+            WriteChildren(writer, gameObject.transform, nodePath, withValues, maxDepth, omitDefaults, currentDepth);
+            writer.WriteEndObject();
+        }
+
+        internal static string BuildNodePath(GameObject gameObject)
+        {
+            return BuildNodePath(gameObject.transform);
+        }
+
+        private static string BuildNodePath(Transform transform)
+        {
+            var builder = new StringBuilder(64);
+            AppendNodePath(builder, transform);
+            return builder.ToString();
+        }
+
+        private static GameObject ResolveRoot(Scene scene, ReadOnlySpan<char> segment, string normalizedPath, string commandName)
+        {
+            InspectorUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int rootIndex);
+            ReadOnlySpan<char> name = segment.Slice(0, nameLength);
+            GameObject[] roots = scene.GetRootGameObjects();
+            int matchIndex = 0;
+            for (int index = 0; index < roots.Length; index++)
+            {
+                GameObject root = roots[index];
+                if (!name.Equals(root.name.AsSpan(), StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                int index = componentIndices.TryGetValue(component.GetType(), out int currentIndex)
-                    ? currentIndex
-                    : 0;
-                componentIndices[component.GetType()] = index + 1;
-
-                var componentToken = new JObject
+                if (matchIndex == rootIndex)
                 {
-                    ["type"] = component.GetType().FullName,
-                    ["componentIndex"] = index,
-                };
+                    return root;
+                }
+
+                matchIndex++;
+            }
+
+            throw new CommandFailureException("SCENE_NODE_NOT_FOUND", commandName + " path를 찾지 못했습니다: " + normalizedPath);
+        }
+
+        private static void WriteComponents(JsonTextWriter writer, GameObject gameObject, bool withValues, bool omitDefaults)
+        {
+            _componentBuffer.Clear();
+            gameObject.GetComponents(_componentBuffer);
+
+            int componentCount = CountInspectableComponents(_componentBuffer);
+            if (omitDefaults && componentCount == 0)
+            {
+                return;
+            }
+
+            writer.WritePropertyName("components");
+            writer.WriteStartArray();
+            for (int index = 0; index < _componentBuffer.Count; index++)
+            {
+                Component component = _componentBuffer[index];
+                if (component == null || component is Transform)
+                {
+                    continue;
+                }
+
+                Type componentType = component.GetType();
+                writer.WriteStartObject();
+                writer.WritePropertyName("type");
+                writer.WriteValue(componentType.FullName);
+                writer.WritePropertyName("componentIndex");
+                writer.WriteValue(CountPriorComponentMatches(_componentBuffer, index, componentType));
+
                 if (withValues)
                 {
                     JObject values = SerializedValueApplier.BuildInspectableValues(component);
@@ -182,72 +316,127 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                     if (!omitDefaults || values.HasValues)
                     {
-                        componentToken["values"] = values;
+                        writer.WritePropertyName("values");
+                        values.WriteTo(writer);
                     }
                 }
 
-                components.Add(componentToken);
+                writer.WriteEndObject();
             }
 
-            node["components"] = components;
+            writer.WriteEndArray();
+        }
 
-            JArray children;
+        private static void WriteChildren(JsonTextWriter writer, Transform parent, string nodePath, bool withValues, int? maxDepth, bool omitDefaults, int currentDepth)
+        {
+            int childCount = parent.childCount;
+            if (omitDefaults && childCount == 0)
+            {
+                return;
+            }
+
+            writer.WritePropertyName("children");
+            writer.WriteStartArray();
             if (maxDepth.HasValue && currentDepth >= maxDepth.Value)
             {
-                children = InspectorUtility.BuildChildStubTokens(gameObject.transform, BuildNodePath);
+                for (int index = 0; index < childCount; index++)
+                {
+                    Transform child = parent.GetChild(index);
+                    string childPath = BuildChildPath(nodePath, child);
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("name");
+                    writer.WriteValue(child.name);
+                    writer.WritePropertyName("path");
+                    writer.WriteValue(childPath);
+                    writer.WritePropertyName("childCount");
+                    writer.WriteValue(child.childCount);
+                    writer.WriteEndObject();
+                }
             }
             else
             {
-                children = new JArray();
-                for (int index = 0; index < gameObject.transform.childCount; index++)
+                for (int index = 0; index < childCount; index++)
                 {
-                    children.Add(BuildNodeToken(gameObject.transform.GetChild(index).gameObject, withValues, maxDepth, omitDefaults, currentDepth + 1));
+                    Transform child = parent.GetChild(index);
+                    WriteNode(writer, child.gameObject, BuildChildPath(nodePath, child), withValues, maxDepth, omitDefaults, currentDepth + 1);
                 }
             }
-            node["children"] = children;
 
-            if (omitDefaults)
-            {
-                InspectorUtility.ApplyNodeDefaultOmissions(node, gameObject);
-            }
-
-            return node;
+            writer.WriteEndArray();
         }
 
-        internal static string BuildNodePath(GameObject gameObject)
+        private static int CountInspectableComponents(List<Component> components)
         {
-            return BuildNodePath(gameObject.transform);
-        }
-
-        private static string BuildNodePath(Transform transform)
-        {
-            var segments = new List<string>();
-            Transform current = transform;
-            while (current != null)
+            int count = 0;
+            for (int index = 0; index < components.Count; index++)
             {
-                int siblingIndex = current.parent == null
-                    ? GetRootIndex(current)
-                    : GetSiblingIndex(current);
-                segments.Add(current.name + "[" + siblingIndex + "]");
-                current = current.parent;
+                Component component = components[index];
+                if (component != null && !(component is Transform))
+                {
+                    count++;
+                }
             }
 
-            segments.Reverse();
-            return "/" + string.Join("/", segments);
+            return count;
         }
 
-        private static GameObject ResolveRoot(Scene scene, string segment, string normalizedPath, string commandName)
+        private static int CountPriorComponentMatches(List<Component> components, int endExclusive, Type componentType)
         {
-            (string name, int rootIndex) = InspectorUtility.ParsePathSegment(segment, commandName, "SCENE");
-            GameObject[] matches = scene.GetRootGameObjects()
-                .Where(gameObject => string.Equals(gameObject.name, name, StringComparison.Ordinal))
-                .ToArray();
-            if (rootIndex < 0 || rootIndex >= matches.Length)
+            int count = 0;
+            for (int index = 0; index < endExclusive; index++)
             {
-                throw new CommandFailureException("SCENE_NODE_NOT_FOUND", commandName + " path를 찾지 못했습니다: " + normalizedPath);
+                Component component = components[index];
+                if (component == null || component is Transform)
+                {
+                    continue;
+                }
+
+                if (component.GetType() == componentType)
+                {
+                    count++;
+                }
             }
 
-            return matches[rootIndex];
+            return count;
+        }
+
+        private static void AppendNodePath(StringBuilder builder, Transform transform)
+        {
+            if (transform.parent == null)
+            {
+                builder.Append('/');
+                AppendPathSegment(builder, transform.name, GetRootIndex(transform));
+                return;
+            }
+
+            AppendNodePath(builder, transform.parent);
+            builder.Append('/');
+            AppendPathSegment(builder, transform.name, GetSiblingIndex(transform));
+        }
+
+        private static string BuildChildPath(string parentPath, Transform child)
+        {
+            var builder = new StringBuilder(parentPath.Length + child.name.Length + 16);
+            if (string.Equals(parentPath, "/", StringComparison.Ordinal))
+            {
+                builder.Append('/');
+            }
+            else
+            {
+                builder.Append(parentPath);
+                builder.Append('/');
+            }
+
+            AppendPathSegment(builder, child.name, GetSiblingIndex(child));
+            return builder.ToString();
+        }
+
+        private static void AppendPathSegment(StringBuilder builder, string name, int index)
+        {
+            builder.Append(name);
+            builder.Append('[');
+            builder.Append(index);
+            builder.Append(']');
         }
 
         private static int GetRootIndex(Transform transform)

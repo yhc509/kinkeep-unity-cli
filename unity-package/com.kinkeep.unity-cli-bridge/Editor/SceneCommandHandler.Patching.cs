@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
 using UnityEngine;
@@ -11,13 +10,28 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed partial class SceneCommandHandler
     {
+        // Reused to avoid GC allocations. Safe because all callers run on the
+        // main thread and no method using this buffer calls another that also uses it.
+        private static readonly List<Component> _componentBuffer = new List<Component>(8);
+
         private static bool HasDestructiveOperation(ScenePatchSpec spec)
         {
-            return spec.Operations.Any(operation =>
-                operation != null
-                && !string.IsNullOrWhiteSpace(operation.Operation)
-                && (string.Equals(operation.Operation, "delete-gameobject", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(operation.Operation, "remove-component", StringComparison.OrdinalIgnoreCase)));
+            for (int index = 0; index < spec.Operations.Length; index++)
+            {
+                ScenePatchOperationSpec operation = spec.Operations[index];
+                if (operation == null || string.IsNullOrWhiteSpace(operation.Operation))
+                {
+                    continue;
+                }
+
+                if (string.Equals(operation.Operation, "delete-gameobject", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(operation.Operation, "remove-component", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static ScenePatchApplyResult ApplyPatchOperations(Scene scene, ScenePatchOperationSpec[] operations)
@@ -48,20 +62,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     case "modify-gameobject":
                     {
                         GameObject target = SceneInspector.ResolveNode(scene, operation.Target, "modify-gameobject");
-                        JObject? rawValues = operation.Values as JObject;
-                        SceneNodeMutationSpec? values = operation.Values == null
-                            ? null
-                            : operation.Values.ToObject<SceneNodeMutationSpec>(_serializer);
-                        if (values == null)
+                        if (operation.Values is not JObject rawValues)
                         {
                             throw new CommandFailureException("SCENE_SPEC_INVALID", "`modify-gameobject`에는 `values`가 필요합니다.");
-                        }
-
-                        if (rawValues == null)
-                        {
-                            SceneInspector.ApplyNodeState(target, values);
-                            result.Patched = true;
-                            break;
                         }
 
                         NodeMutationAnalysis analysis = InspectorUtility.AnalyzeNodeMutationValues(rawValues);
@@ -71,7 +74,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             break;
                         }
 
-                        SceneInspector.ApplyNodeState(target, values);
+                        SceneInspector.ApplyNodeState(target, rawValues, "modify-gameobject");
                         result.Patched = true;
                         break;
                     }
@@ -125,12 +128,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 }
             }
 
-            GameObject[] survivingCreatedRoots = createdRoots
-                .Where(gameObject => gameObject != null)
-                .ToArray();
+            GameObject? survivingCreatedRoot = null;
+            int survivingCreatedRootCount = 0;
+            for (int index = 0; index < createdRoots.Count; index++)
+            {
+                GameObject candidate = createdRoots[index];
+                if (candidate == null)
+                {
+                    continue;
+                }
 
-            result.CreatedPath = survivingCreatedRoots.Length == 1
-                ? SceneInspector.BuildNodePath(survivingCreatedRoots[0])
+                survivingCreatedRoot = candidate;
+                survivingCreatedRootCount++;
+                if (survivingCreatedRootCount > 1)
+                {
+                    break;
+                }
+            }
+
+            result.CreatedPath = survivingCreatedRootCount == 1 && survivingCreatedRoot != null
+                ? SceneInspector.BuildNodePath(survivingCreatedRoot)
                 : null;
 
             return result;
@@ -265,21 +282,38 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static Component ResolveComponent(GameObject target, string? componentTypeName, int? componentIndex, string commandName)
         {
             Type componentType = ResolveComponentType(componentTypeName, commandName);
-            Component[] matches = target.GetComponents<Component>()
-                .Where(component => component != null && componentType.IsAssignableFrom(component.GetType()))
-                .ToArray();
-            if (matches.Length == 0)
+            int requestedIndex = componentIndex ?? 0;
+            if (requestedIndex < 0)
+            {
+                throw new CommandFailureException("SCENE_COMPONENT_NOT_FOUND", commandName + " component index가 범위를 벗어났습니다: " + requestedIndex);
+            }
+
+            _componentBuffer.Clear();
+            target.GetComponents(_componentBuffer);
+
+            int matchedCount = 0;
+            for (int index = 0; index < _componentBuffer.Count; index++)
+            {
+                Component component = _componentBuffer[index];
+                if (component == null || !componentType.IsAssignableFrom(component.GetType()))
+                {
+                    continue;
+                }
+
+                if (matchedCount == requestedIndex)
+                {
+                    return component;
+                }
+
+                matchedCount++;
+            }
+
+            if (matchedCount == 0)
             {
                 throw new CommandFailureException("SCENE_COMPONENT_NOT_FOUND", commandName + " 대상 component를 찾지 못했습니다: " + componentTypeName);
             }
 
-            int index = componentIndex ?? 0;
-            if (index < 0 || index >= matches.Length)
-            {
-                throw new CommandFailureException("SCENE_COMPONENT_NOT_FOUND", commandName + " component index가 범위를 벗어났습니다: " + index);
-            }
-
-            return matches[index];
+            throw new CommandFailureException("SCENE_COMPONENT_NOT_FOUND", commandName + " component index가 범위를 벗어났습니다: " + requestedIndex);
         }
 
         private static Type ResolveComponentType(string? typeName, string commandName)
@@ -290,37 +324,72 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_COMPONENT_INVALID", commandName + " component type이 비어 있습니다.");
             }
 
-            List<Type> exactMatches = TypeDiscoveryUtility.FindTypes(type =>
-                typeof(Component).IsAssignableFrom(type)
-                && !type.IsAbstract
-                && !type.ContainsGenericParameters
-                && string.Equals(type.FullName, normalized, StringComparison.Ordinal));
-            if (exactMatches.Count == 1)
+            Type? exactMatch = null;
+            int exactMatchCount = 0;
+            IReadOnlyList<Type> exactCandidates = TypeDiscoveryUtility.FindTypesByFullName(normalized);
+            for (int index = 0; index < exactCandidates.Count; index++)
             {
-                return exactMatches[0];
+                Type candidate = exactCandidates[index];
+                if (!IsResolvableComponentType(candidate))
+                {
+                    continue;
+                }
+
+                exactMatch = candidate;
+                exactMatchCount++;
+                if (exactMatchCount > 1)
+                {
+                    break;
+                }
             }
 
-            if (exactMatches.Count > 1)
+            if (exactMatchCount == 1 && exactMatch != null)
+            {
+                return exactMatch;
+            }
+
+            if (exactMatchCount > 1)
             {
                 throw new CommandFailureException("SCENE_COMPONENT_INVALID", "동일한 full name의 component 타입이 여러 개 있습니다: " + normalized);
             }
 
-            List<Type> shortMatches = TypeDiscoveryUtility.FindTypes(type =>
-                typeof(Component).IsAssignableFrom(type)
-                && !type.IsAbstract
-                && !type.ContainsGenericParameters
-                && string.Equals(type.Name, normalized, StringComparison.Ordinal));
-            if (shortMatches.Count == 1)
+            Type? shortMatch = null;
+            int shortMatchCount = 0;
+            IReadOnlyList<Type> shortCandidates = TypeDiscoveryUtility.FindTypesByShortName(normalized);
+            for (int index = 0; index < shortCandidates.Count; index++)
             {
-                return shortMatches[0];
+                Type candidate = shortCandidates[index];
+                if (!IsResolvableComponentType(candidate))
+                {
+                    continue;
+                }
+
+                shortMatch = candidate;
+                shortMatchCount++;
+                if (shortMatchCount > 1)
+                {
+                    break;
+                }
             }
 
-            if (shortMatches.Count > 1)
+            if (shortMatchCount == 1 && shortMatch != null)
+            {
+                return shortMatch;
+            }
+
+            if (shortMatchCount > 1)
             {
                 throw new CommandFailureException("SCENE_COMPONENT_INVALID", "짧은 이름이 같은 component 타입이 여러 개 있습니다. full name을 사용하세요: " + normalized);
             }
 
             throw new CommandFailureException("SCENE_COMPONENT_INVALID", "component 타입을 찾지 못했습니다: " + normalized);
+        }
+
+        private static bool IsResolvableComponentType(Type type)
+        {
+            return typeof(Component).IsAssignableFrom(type)
+                && !type.IsAbstract
+                && !type.ContainsGenericParameters;
         }
 
         private sealed class ScenePatchApplyResult

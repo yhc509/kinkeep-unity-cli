@@ -12,8 +12,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed partial class SceneCommandHandler
     {
-        private static readonly JsonSerializer _serializer = JsonSerializer.CreateDefault(BridgeJsonSettings.CamelCaseIgnoreNull);
-
         public bool CanHandle(string command)
         {
             return ProtocolHelpers.IsSceneCommand(command);
