@@ -9,8 +9,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed partial class PrefabCommandHandler
     {
-        private static readonly JsonSerializer _serializer = JsonSerializer.CreateDefault(BridgeJsonSettings.CamelCaseIgnoreNull);
-
         public bool CanHandle(string command)
         {
             return ProtocolHelpers.IsPrefabCommand(command);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using UnityCli.Protocol;
 using UnityEditor;
@@ -75,20 +74,25 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         "ASSET_DEPENDENCY_MISSING",
                         "Input System setup API를 찾지 못했습니다.");
 
-                    MethodInfo addActionMap = extensionsType
-                        .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                        .FirstOrDefault(method =>
+                    MethodInfo addActionMap = null;
+                    MethodInfo[] methods = extensionsType.GetMethods(BindingFlags.Public | BindingFlags.Static);
+                    for (int methodIndex = 0; methodIndex < methods.Length; methodIndex++)
+                    {
+                        MethodInfo method = methods[methodIndex];
+                        if (method.Name != "AddActionMap")
                         {
-                            if (method.Name != "AddActionMap")
-                            {
-                                return false;
-                            }
+                            continue;
+                        }
 
-                            ParameterInfo[] parameters = method.GetParameters();
-                            return parameters.Length == 2
-                                && parameters[0].ParameterType == assetType
-                                && parameters[1].ParameterType == typeof(string);
-                        });
+                        ParameterInfo[] parameters = method.GetParameters();
+                        if (parameters.Length == 2
+                            && parameters[0].ParameterType == assetType
+                            && parameters[1].ParameterType == typeof(string))
+                        {
+                            addActionMap = method;
+                            break;
+                        }
+                    }
 
                     if (addActionMap == null)
                     {
@@ -248,33 +252,50 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static Type ResolveTypeByName(string typeName)
         {
-            List<Type> exactMatches = TypeDiscoveryUtility.FindTypes(candidate =>
-                IsValidScriptableObjectType(candidate)
-                && string.Equals(candidate.FullName, typeName, StringComparison.Ordinal));
-            if (exactMatches.Count == 1)
+            Type exactMatch = FindSingleScriptableObjectType(
+                TypeDiscoveryUtility.FindTypesByFullName(typeName),
+                "ASSET_TYPE_AMBIGUOUS",
+                "동일한 full name의 타입이 여러 개 있습니다: " + typeName);
+            if (exactMatch != null)
             {
-                return exactMatches[0];
+                return exactMatch;
             }
 
-            if (exactMatches.Count > 1)
+            Type shortMatch = FindSingleScriptableObjectType(
+                TypeDiscoveryUtility.FindTypesByShortName(typeName),
+                "ASSET_TYPE_AMBIGUOUS",
+                "짧은 이름이 같은 타입이 여러 개 있습니다. full name을 사용하세요: " + typeName);
+            if (shortMatch != null)
             {
-                throw new CommandFailureException("ASSET_TYPE_AMBIGUOUS", "동일한 full name의 타입이 여러 개 있습니다: " + typeName);
-            }
-
-            List<Type> shortMatches = TypeDiscoveryUtility.FindTypes(candidate =>
-                IsValidScriptableObjectType(candidate)
-                && string.Equals(candidate.Name, typeName, StringComparison.Ordinal));
-            if (shortMatches.Count == 1)
-            {
-                return shortMatches[0];
-            }
-
-            if (shortMatches.Count > 1)
-            {
-                throw new CommandFailureException("ASSET_TYPE_AMBIGUOUS", "짧은 이름이 같은 타입이 여러 개 있습니다. full name을 사용하세요: " + typeName);
+                return shortMatch;
             }
 
             throw new CommandFailureException("ASSET_TYPE_NOT_FOUND", "타입을 찾지 못했습니다: " + typeName);
+        }
+
+        private static Type FindSingleScriptableObjectType(
+            IReadOnlyList<Type> candidates,
+            string errorCode,
+            string ambiguousMessage)
+        {
+            Type match = null;
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                Type candidate = candidates[i];
+                if (!IsValidScriptableObjectType(candidate))
+                {
+                    continue;
+                }
+
+                if (match != null)
+                {
+                    throw new CommandFailureException(errorCode, ambiguousMessage);
+                }
+
+                match = candidate;
+            }
+
+            return match;
         }
 
         private static bool IsValidScriptableObjectType(Type candidate)
@@ -302,16 +323,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static Type RequireType(string fullName, string errorCode, string message)
         {
-            Type type = AppDomain.CurrentDomain.GetAssemblies()
-                .Select(assembly => assembly.GetType(fullName, false))
-                .FirstOrDefault(candidate => candidate != null);
-
-            if (type == null)
+            IReadOnlyList<Type> matches = TypeDiscoveryUtility.FindTypesByFullName(fullName);
+            if (matches.Count == 0)
             {
                 throw new CommandFailureException(errorCode, message);
             }
 
-            return type;
+            return matches[0];
         }
 
         [Serializable]

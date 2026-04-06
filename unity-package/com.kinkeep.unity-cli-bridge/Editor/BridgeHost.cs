@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
-using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
@@ -33,6 +32,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
     internal sealed class BridgeHost : IDisposable
     {
+        private static readonly UTF8Encoding _utf8WithoutBomEncoding = new UTF8Encoding(false);
+        private static readonly IComparer<InstanceRecord> _instanceRecordComparer = new InstanceRecordProjectNameComparer();
         private readonly ConcurrentQueue<PendingRequest> _pendingRequests = new ConcurrentQueue<PendingRequest>();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly string[] _capabilities;
@@ -124,11 +125,35 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             if (Path.DirectorySeparatorChar == '\\')
             {
-                Task.Run(() => RunNamedPipeLoopAsync(_cancellationTokenSource.Token));
+                StartNamedPipeListener();
                 return;
             }
 
-            Task.Run(() => RunUnixSocketLoopAsync(_cancellationTokenSource.Token));
+            StartUnixSocketListener();
+        }
+
+        private async void StartNamedPipeListener()
+        {
+            try
+            {
+                await RunNamedPipeLoopAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("named pipe listener", exception);
+            }
+        }
+
+        private async void StartUnixSocketListener()
+        {
+            try
+            {
+                await RunUnixSocketLoopAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("unix socket listener", exception);
+            }
         }
 
         private async Task RunNamedPipeLoopAsync(CancellationToken cancellationToken)
@@ -146,8 +171,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         2,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
-                    await server.WaitForConnectionAsync(cancellationToken);
-                    _ = Task.Run(() => HandleStreamClientAsync(server, cancellationToken));
+                    await server.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+                    HandleNamedPipeClient(server, cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -175,8 +200,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Socket client = await listener.AcceptAsync();
-                    _ = Task.Run(() => HandleSocketClientAsync(client, cancellationToken));
+                    Socket client = await listener.AcceptAsync().ConfigureAwait(false);
+                    HandleSocketClient(client, cancellationToken);
                 }
             }
             catch (ObjectDisposedException)
@@ -198,6 +223,38 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+        private async void HandleNamedPipeClient(NamedPipeServerStream server, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleStreamClientAsync(server, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("named pipe client", exception);
+            }
+        }
+
+        private async void HandleSocketClient(Socket client, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleSocketClientAsync(client, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    client.Dispose();
+                }
+                catch
+                {
+                }
+
+                ReportBackgroundException("unix socket client", exception);
+            }
+        }
+
         private Task HandleSocketClientAsync(Socket client, CancellationToken cancellationToken)
         {
             return HandleStreamClientAsync(new NetworkStream(client, true), cancellationToken);
@@ -206,10 +263,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private async Task HandleStreamClientAsync(Stream stream, CancellationToken cancellationToken)
         {
             using (stream)
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true))
+            using (var writer = new StreamWriter(stream, _utf8WithoutBomEncoding, 1024, true))
             using (var reader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
             {
-                string? line = await reader.ReadLineAsync();
+                string? line = await reader.ReadLineAsync().ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     return;
@@ -242,12 +299,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 var pending = new PendingRequest(command);
                 _pendingRequests.Enqueue(pending);
 
-                using (cancellationToken.Register(() => pending.Completion.TrySetCanceled()))
+                using (cancellationToken.Register(CancelPendingRequest, pending))
                 {
                     ResponseEnvelope response;
                     try
                     {
-                        response = await pending.Completion.Task;
+                        response = await pending.Completion.Task.ConfigureAwait(false);
                     }
                     catch (TaskCanceledException)
                     {
@@ -262,15 +319,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             null);
                     }
 
-                    await WriteResponseAsync(writer, response);
+                    await WriteResponseAsync(writer, response).ConfigureAwait(false);
                 }
             }
         }
 
+        private static void CancelPendingRequest(object state)
+        {
+            PendingRequest pending = state as PendingRequest;
+            if (pending == null)
+            {
+                return;
+            }
+
+            pending.Completion.TrySetCanceled();
+        }
+
         private static async Task WriteResponseAsync(StreamWriter writer, ResponseEnvelope response)
         {
-            await writer.WriteLineAsync(ProtocolJson.Serialize(response));
-            await writer.FlushAsync();
+            await writer.WriteLineAsync(ProtocolJson.Serialize(response)).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
         }
 
         private void OnEditorUpdate()
@@ -605,18 +673,43 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             UpdateRegistrySafely(delegate(InstanceRegistry registry)
             {
-                List<InstanceRecord> records = registry.instances
-                    .Where(record => !string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                InstanceRecord[] existingRecords = registry.instances ?? Array.Empty<InstanceRecord>();
+                var updatedRecords = new InstanceRecord[existingRecords.Length + 1];
+                int updatedCount = 0;
+                for (int i = 0; i < existingRecords.Length; i++)
+                {
+                    InstanceRecord record = existingRecords[i];
+                    if (string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
 
-                records.Add(BuildInstanceRecord());
-                registry.instances = records.OrderBy(record => record.projectName, StringComparer.OrdinalIgnoreCase).ToArray();
+                    updatedRecords[updatedCount] = record;
+                    updatedCount++;
+                }
+
+                updatedRecords[updatedCount] = BuildInstanceRecord();
+                updatedCount++;
+                if (updatedCount != updatedRecords.Length)
+                {
+                    Array.Resize(ref updatedRecords, updatedCount);
+                }
+
+                Array.Sort(updatedRecords, 0, updatedRecords.Length, _instanceRecordComparer);
+                registry.instances = updatedRecords;
 
                 InstanceRecord? activeRecord = null;
                 if (!string.IsNullOrWhiteSpace(registry.activeProjectHash))
                 {
-                    activeRecord = registry.instances.FirstOrDefault(
-                        record => string.Equals(record.projectHash, registry.activeProjectHash, StringComparison.OrdinalIgnoreCase));
+                    for (int i = 0; i < registry.instances.Length; i++)
+                    {
+                        InstanceRecord record = registry.instances[i];
+                        if (string.Equals(record.projectHash, registry.activeProjectHash, StringComparison.OrdinalIgnoreCase))
+                        {
+                            activeRecord = record;
+                            break;
+                        }
+                    }
                 }
 
                 bool isCurrentProjectPromotionNeeded = activeRecord == null
@@ -636,9 +729,27 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             UpdateRegistrySafely(delegate(InstanceRegistry registry)
             {
-                registry.instances = registry.instances
-                    .Where(record => !string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
+                InstanceRecord[] existingRecords = registry.instances ?? Array.Empty<InstanceRecord>();
+                var remainingRecords = new InstanceRecord[existingRecords.Length];
+                int remainingCount = 0;
+                for (int i = 0; i < existingRecords.Length; i++)
+                {
+                    InstanceRecord record = existingRecords[i];
+                    if (string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    remainingRecords[remainingCount] = record;
+                    remainingCount++;
+                }
+
+                if (remainingCount != remainingRecords.Length)
+                {
+                    Array.Resize(ref remainingRecords, remainingCount);
+                }
+
+                registry.instances = remainingRecords;
 
                 if (string.Equals(registry.activeProjectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
                 {
@@ -751,6 +862,29 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             public CommandEnvelope Command { get; private set; }
             public TaskCompletionSource<ResponseEnvelope> Completion { get; private set; }
+        }
+
+        private sealed class InstanceRecordProjectNameComparer : IComparer<InstanceRecord>
+        {
+            public int Compare(InstanceRecord x, InstanceRecord y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return 0;
+                }
+
+                if (x == null)
+                {
+                    return -1;
+                }
+
+                if (y == null)
+                {
+                    return 1;
+                }
+
+                return StringComparer.OrdinalIgnoreCase.Compare(x.projectName, y.projectName);
+            }
         }
     }
 }

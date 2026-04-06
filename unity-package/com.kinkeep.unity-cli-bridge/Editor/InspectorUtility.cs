@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
 using UnityEngine;
@@ -10,26 +10,35 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal static class InspectorUtility
     {
-        internal static JObject BuildAssetToken(string path)
+        internal static void WriteAssetToken(JsonWriter writer, string path)
         {
             AssetRecord record = AssetCommandSupport.BuildRecordFromPath(path, allowPackages: true);
-            return new JObject
-            {
-                ["path"] = record.path,
-                ["guid"] = record.guid,
-                ["assetName"] = record.assetName,
-                ["mainType"] = record.mainType,
-                ["isFolder"] = record.isFolder,
-                ["exists"] = record.exists,
-            };
+            writer.WriteStartObject();
+            writer.WritePropertyName("path");
+            writer.WriteValue(record.path);
+            writer.WritePropertyName("guid");
+            writer.WriteValue(record.guid);
+            writer.WritePropertyName("assetName");
+            writer.WriteValue(record.assetName);
+            writer.WritePropertyName("mainType");
+            writer.WriteValue(record.mainType);
+            writer.WritePropertyName("isFolder");
+            writer.WriteValue(record.isFolder);
+            writer.WritePropertyName("exists");
+            writer.WriteValue(record.exists);
+            writer.WriteEndObject();
         }
 
-        internal static JToken BuildLayerToken(int layerIndex)
+        internal static void WriteLayerToken(JsonWriter writer, int layerIndex)
         {
             string layerName = LayerMask.LayerToName(layerIndex);
-            return string.IsNullOrWhiteSpace(layerName)
-                ? (JToken)new JValue(layerIndex)
-                : new JValue(layerName);
+            if (string.IsNullOrWhiteSpace(layerName))
+            {
+                writer.WriteValue(layerIndex);
+                return;
+            }
+
+            writer.WriteValue(layerName);
         }
 
         internal static Vector3? MergeVector3(Vector3 current, float? x, float? y, float? z)
@@ -45,52 +54,48 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 z ?? current.z);
         }
 
-        internal static JObject BuildVector3Token(Vector3 vector)
+        internal static bool ShouldWriteTransformToken(Transform transform, bool omitDefaults)
         {
-            return new JObject
-            {
-                ["x"] = vector.x,
-                ["y"] = vector.y,
-                ["z"] = vector.z,
-            };
+            return !omitDefaults
+                || !IsExactlyZero(transform.localPosition)
+                || !IsExactlyIdentity(transform.localRotation)
+                || !IsExactlyOne(transform.localScale);
         }
 
-        internal static JObject BuildTransformToken(Transform transform, bool omitDefaults)
+        internal static void WriteTransformToken(JsonWriter writer, Transform transform, bool omitDefaults)
         {
-            var transformToken = new JObject();
+            writer.WriteStartObject();
             if (!omitDefaults || !IsExactlyZero(transform.localPosition))
             {
-                transformToken["localPosition"] = BuildVector3Token(transform.localPosition);
+                writer.WritePropertyName("localPosition");
+                WriteVector3Token(writer, transform.localPosition);
             }
 
             if (!omitDefaults || !IsExactlyIdentity(transform.localRotation))
             {
-                transformToken["localRotationEuler"] = BuildVector3Token(transform.localEulerAngles);
+                writer.WritePropertyName("localRotationEuler");
+                WriteVector3Token(writer, transform.localEulerAngles);
             }
 
             if (!omitDefaults || !IsExactlyOne(transform.localScale))
             {
-                transformToken["localScale"] = BuildVector3Token(transform.localScale);
+                writer.WritePropertyName("localScale");
+                WriteVector3Token(writer, transform.localScale);
             }
 
-            return transformToken;
+            writer.WriteEndObject();
         }
 
-        internal static JArray BuildChildStubTokens(Transform parent, Func<Transform, string> buildPath)
+        internal static void WriteVector3Token(JsonWriter writer, Vector3 vector)
         {
-            var children = new JArray();
-            for (int index = 0; index < parent.childCount; index++)
-            {
-                Transform child = parent.GetChild(index);
-                children.Add(new JObject
-                {
-                    ["name"] = child.name,
-                    ["path"] = buildPath(child),
-                    ["childCount"] = child.childCount,
-                });
-            }
-
-            return children;
+            writer.WriteStartObject();
+            writer.WritePropertyName("x");
+            writer.WriteValue(vector.x);
+            writer.WritePropertyName("y");
+            writer.WriteValue(vector.y);
+            writer.WritePropertyName("z");
+            writer.WriteValue(vector.z);
+            writer.WriteEndObject();
         }
 
         internal static int? ParseOptionalMaxDepth(string? argumentsJson, string errorCode)
@@ -115,41 +120,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return token.Value<int>();
         }
 
-        internal static void ApplyNodeDefaultOmissions(JObject node, GameObject gameObject)
-        {
-            if (gameObject.activeSelf)
-            {
-                node.Remove("active");
-            }
-
-            if (string.Equals(gameObject.tag, "Untagged", System.StringComparison.Ordinal))
-            {
-                node.Remove("tag");
-            }
-
-            if (gameObject.layer == 0)
-            {
-                node.Remove("layer");
-            }
-
-            RemoveIfEmptyArray(node, "components");
-            RemoveIfEmptyArray(node, "children");
-
-            JToken? transform = node["transform"];
-            if (transform is JObject transformObject && !transformObject.HasValues)
-            {
-                node.Remove("transform");
-            }
-        }
-
         internal static void PruneDefaultInspectableValues(JObject values)
         {
-            foreach (JProperty property in values.Properties().ToArray())
+            JToken? token = values.First;
+            while (token != null)
             {
+                JToken? next = token.Next;
+                var property = (JProperty)token;
                 if (ShouldOmitInspectableValue(property.Value))
                 {
                     property.Remove();
                 }
+
+                token = next;
             }
         }
 
@@ -212,15 +195,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
-        private static void RemoveIfEmptyArray(JObject node, string propertyName)
-        {
-            JToken? token = node[propertyName];
-            if (token is JArray array && array.Count == 0)
-            {
-                node.Remove(propertyName);
-            }
-        }
-
         private static bool IsExactlyZero(Vector3 value)
         {
             return value.x == 0f && value.y == 0f && value.z == 0f;
@@ -236,6 +210,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return value.x == 0f && value.y == 0f && value.z == 0f && value.w == 1f;
         }
 
+        private static bool IsWhiteSpace(ReadOnlySpan<char> value)
+        {
+            for (int index = 0; index < value.Length; index++)
+            {
+                if (!char.IsWhiteSpace(value[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         internal static string RequireNodeName(string? name, string commandName, string errorPrefix)
         {
             string normalized = string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
@@ -249,23 +236,116 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         internal static (string name, int index) ParsePathSegment(string segment, string commandName, string errorPrefix)
         {
+            ParsePathSegment(segment.AsSpan(), commandName, errorPrefix, out int nameLength, out int index);
+            string name = nameLength == segment.Length
+                ? segment
+                : segment.Substring(0, nameLength);
+            return (name, index);
+        }
+
+        internal static void ParsePathSegment(ReadOnlySpan<char> segment, string commandName, string errorPrefix, out int nameLength, out int index)
+        {
             int bracketIndex = segment.LastIndexOf('[');
-            if (bracketIndex > 0 && segment.EndsWith("]", System.StringComparison.Ordinal))
+            if (bracketIndex > 0 && segment[segment.Length - 1] == ']')
             {
-                string name = segment.Substring(0, bracketIndex);
-                string indexText = segment.Substring(bracketIndex + 1, segment.Length - bracketIndex - 2);
-                if (int.TryParse(indexText, out int index))
+                ReadOnlySpan<char> indexText = segment.Slice(bracketIndex + 1, segment.Length - bracketIndex - 2);
+                if (int.TryParse(indexText, out index))
                 {
-                    return (name, index);
+                    nameLength = bracketIndex;
+                    return;
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(segment))
+            if (IsWhiteSpace(segment))
             {
                 throw new CommandFailureException(errorPrefix + "_NODE_INVALID", commandName + " path segment가 비어 있습니다.");
             }
 
-            return (segment, 0);
+            nameLength = segment.Length;
+            index = 0;
+        }
+
+        internal static bool TryGetNextPathSegment(string path, ref int position, out int segmentStart, out int segmentLength)
+        {
+            int pathLength = path.Length;
+            while (position < pathLength && path[position] == '/')
+            {
+                position++;
+            }
+
+            if (position >= pathLength)
+            {
+                segmentStart = 0;
+                segmentLength = 0;
+                return false;
+            }
+
+            segmentStart = position;
+            while (position < pathLength && path[position] != '/')
+            {
+                position++;
+            }
+
+            segmentLength = position - segmentStart;
+            return true;
+        }
+
+        internal static JToken? ReadOptionalProperty(JObject? values, string propertyName)
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            if (!values.TryGetValue(propertyName, StringComparison.OrdinalIgnoreCase, out JToken? token))
+            {
+                return null;
+            }
+
+            return IsNullLike(token) ? null : token;
+        }
+
+        internal static bool? ReadOptionalBoolean(JObject? values, string propertyName)
+        {
+            JToken? token = ReadOptionalProperty(values, propertyName);
+            return token == null ? null : token.Value<bool>();
+        }
+
+        internal static float? ReadOptionalFloat(JObject? values, string propertyName)
+        {
+            JToken? token = ReadOptionalProperty(values, propertyName);
+            return token == null ? null : token.Value<float>();
+        }
+
+        internal static string? ReadOptionalString(JObject? values, string propertyName)
+        {
+            JToken? token = ReadOptionalProperty(values, propertyName);
+            return token == null ? null : token.Value<string>();
+        }
+
+        internal static JObject? ReadOptionalObject(JObject? values, string propertyName, string errorCode, string errorMessage)
+        {
+            JToken? token = ReadOptionalProperty(values, propertyName);
+            if (token == null)
+            {
+                return null;
+            }
+
+            if (token is JObject obj)
+            {
+                return obj;
+            }
+
+            throw new CommandFailureException(errorCode, errorMessage);
+        }
+
+        internal static Vector3? MergeVector3(Vector3 current, JObject? values)
+        {
+            return MergeVector3(
+                current,
+                ReadOptionalFloat(values, "x"),
+                ReadOptionalFloat(values, "y"),
+                ReadOptionalFloat(values, "z"));
         }
 
         internal static int ResolveLayer(JToken token, string errorPrefix)
