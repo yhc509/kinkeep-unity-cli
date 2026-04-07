@@ -24,7 +24,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             writer.Formatting = Formatting.None;
             writer.WriteStartObject();
             writer.WritePropertyName("asset");
-            InspectorUtility.WriteAssetToken(writer, path);
+            InspectorJsonWriterUtility.WriteAssetToken(writer, path);
             writer.WritePropertyName("root");
             WriteNode(writer, root, "/", withValues, maxDepth, omitDefaults, 0);
             writer.WriteEndObject();
@@ -47,10 +47,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             Transform current = root.transform;
             int position = 0;
-            while (InspectorUtility.TryGetNextPathSegment(normalizedPath, ref position, out int segmentStart, out int segmentLength))
+            while (InspectorPathParserUtility.TryGetNextPathSegment(normalizedPath, ref position, out int segmentStart, out int segmentLength))
             {
                 ReadOnlySpan<char> segment = normalizedPath.AsSpan(segmentStart, segmentLength);
-                InspectorUtility.ParsePathSegment(segment, commandName, "PREFAB", out int nameLength, out int siblingIndex);
+                InspectorPathParserUtility.ParsePathSegment(segment, commandName, "PREFAB", out int nameLength, out int siblingIndex);
                 ReadOnlySpan<char> name = segment.Slice(0, nameLength);
                 Transform? matchedChild = null;
                 int matchIndex = 0;
@@ -90,7 +90,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             string name = string.IsNullOrWhiteSpace(spec.Name)
-                ? (allowMissingName ? defaultName : InspectorUtility.RequireNodeName(spec.Name, "prefab", "PREFAB"))
+                ? (allowMissingName ? defaultName : InspectorPathParserUtility.RequireNodeName(spec.Name, "prefab", "PREFAB"))
                 : spec.Name.Trim();
             target.name = name;
 
@@ -116,7 +116,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             if (spec.Name != null)
             {
-                target.name = InspectorUtility.RequireNodeName(spec.Name, "set-node", "PREFAB");
+                target.name = InspectorPathParserUtility.RequireNodeName(spec.Name, "set-node", "PREFAB");
             }
 
             PrefabTransformSpec? transformSpec = spec.Transform;
@@ -139,28 +139,28 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "node values가 비어 있습니다.");
             }
 
-            string? name = InspectorUtility.ReadOptionalString(values, "name");
+            string? name = InspectorMutationReaderUtility.ReadOptionalString(values, "name");
             if (name != null)
             {
-                target.name = InspectorUtility.RequireNodeName(name, commandName, "PREFAB");
+                target.name = InspectorPathParserUtility.RequireNodeName(name, commandName, "PREFAB");
             }
 
-            JObject? transformValues = InspectorUtility.ReadOptionalObject(values, "transform", "PREFAB_SPEC_INVALID", commandName + " transform 값은 object여야 합니다.");
+            JObject? transformValues = InspectorMutationReaderUtility.ReadOptionalObject(values, "transform", "PREFAB_SPEC_INVALID", commandName + " transform 값은 object여야 합니다.");
             Transform transform = target.transform;
             InspectorUtility.ApplyNodeStateCore(
                 target,
-                InspectorUtility.ReadOptionalBoolean(values, "active"),
-                InspectorUtility.ReadOptionalString(values, "tag"),
-                InspectorUtility.ReadOptionalProperty(values, "layer"),
-                InspectorUtility.MergeVector3(
+                InspectorMutationReaderUtility.ReadOptionalBoolean(values, "active"),
+                InspectorMutationReaderUtility.ReadOptionalString(values, "tag"),
+                InspectorMutationReaderUtility.ReadOptionalProperty(values, "layer"),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localPosition,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localPosition", "PREFAB_SPEC_INVALID", commandName + " transform.localPosition 값은 object여야 합니다.")),
-                InspectorUtility.MergeVector3(
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localPosition", "PREFAB_SPEC_INVALID", commandName + " transform.localPosition 값은 object여야 합니다.")),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localEulerAngles,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localRotationEuler", "PREFAB_SPEC_INVALID", commandName + " transform.localRotationEuler 값은 object여야 합니다.")),
-                InspectorUtility.MergeVector3(
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localRotationEuler", "PREFAB_SPEC_INVALID", commandName + " transform.localRotationEuler 값은 object여야 합니다.")),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localScale,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localScale", "PREFAB_SPEC_INVALID", commandName + " transform.localScale 값은 object여야 합니다.")),
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localScale", "PREFAB_SPEC_INVALID", commandName + " transform.localScale 값은 object여야 합니다.")),
                 "PREFAB");
         }
 
@@ -187,13 +187,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (!omitDefaults || gameObject.layer != 0)
             {
                 writer.WritePropertyName("layer");
-                InspectorUtility.WriteLayerToken(writer, gameObject.layer);
+                InspectorJsonWriterUtility.WriteLayerToken(writer, gameObject.layer);
             }
 
-            if (InspectorUtility.ShouldWriteTransformToken(gameObject.transform, omitDefaults))
+            if (InspectorJsonWriterUtility.ShouldWriteTransformToken(gameObject.transform, omitDefaults))
             {
                 writer.WritePropertyName("transform");
-                InspectorUtility.WriteTransformToken(writer, gameObject.transform, omitDefaults);
+                InspectorJsonWriterUtility.WriteTransformToken(writer, gameObject.transform, omitDefaults);
             }
 
             WriteComponents(writer, gameObject, withValues, omitDefaults);
@@ -246,7 +246,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     JObject values = SerializedValueApplier.BuildInspectableValues(component);
                     if (omitDefaults)
                     {
-                        InspectorUtility.PruneDefaultInspectableValues(values);
+                        InspectorDefaultPruningUtility.PruneDefaultInspectableValues(values);
                     }
 
                     if (!omitDefaults || values.HasValues)

@@ -56,6 +56,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private bool _originalRunInBackground;
         private bool _isStarted;
         private bool _isDisposed;
+        private bool _isInstanceRegistered;
+        private volatile bool _isListenerReady;
 
         public BridgeHost()
         {
@@ -85,7 +87,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             _isStarted = true;
             ConsoleLogBuffer.Start();
-            RegisterInstance();
             _lastHeartbeatTime = EditorApplication.timeSinceStartup;
             StartListener();
 
@@ -171,6 +172,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         2,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous);
+                    _isListenerReady = true;
                     await server.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                     HandleNamedPipeClient(server, cancellationToken);
                 }
@@ -190,14 +192,27 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             CleanupSocketFile();
 
-            var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            _unixListener = listener;
+            Socket listener;
 
             try
             {
-                listener.Bind(new UnixDomainSocketEndPoint(_pipeName));
-                listener.Listen(8);
+                listener = await CreateUnixSocketListenerAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("unix socket listener", exception);
+                return;
+            }
 
+            _unixListener = listener;
+            _isListenerReady = true;
+
+            try
+            {
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     Socket client = await listener.AcceptAsync().ConfigureAwait(false);
@@ -221,6 +236,28 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 listener.Dispose();
                 CleanupSocketFile();
             }
+        }
+
+        private Task<Socket> CreateUnixSocketListenerAsync(CancellationToken cancellationToken)
+        {
+            return Task.Run(delegate
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Bind/Listen are synchronous and can briefly stall editor startup if they stay on the main thread.
+                var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                try
+                {
+                    listener.Bind(new UnixDomainSocketEndPoint(_pipeName));
+                    listener.Listen(8);
+                    return listener;
+                }
+                catch
+                {
+                    listener.Dispose();
+                    throw;
+                }
+            }, cancellationToken);
         }
 
         private async void HandleNamedPipeClient(NamedPipeServerStream server, CancellationToken cancellationToken)
@@ -348,7 +385,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 return;
             }
 
-            if (EditorApplication.timeSinceStartup - _lastHeartbeatTime >= ProtocolConstants.RegistryHeartbeatSeconds)
+            if (!_isInstanceRegistered && _isListenerReady)
+            {
+                RegisterInstance();
+                _isInstanceRegistered = true;
+                _lastHeartbeatTime = EditorApplication.timeSinceStartup;
+            }
+            else if (_isInstanceRegistered
+                && EditorApplication.timeSinceStartup - _lastHeartbeatTime >= ProtocolConstants.RegistryHeartbeatSeconds)
             {
                 RegisterInstance();
                 _lastHeartbeatTime = EditorApplication.timeSinceStartup;

@@ -24,8 +24,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     continue;
                 }
 
-                if (string.Equals(operation.Operation, "delete-gameobject", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(operation.Operation, "remove-component", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(operation.Operation, "delete-gameobject", StringComparison.Ordinal)
+                    || string.Equals(operation.Operation, "remove-component", StringComparison.Ordinal))
                 {
                     return true;
                 }
@@ -45,7 +45,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     throw new CommandFailureException("SCENE_SPEC_INVALID", "patch operation `op`가 비어 있습니다.");
                 }
 
-                switch (operation.Operation.Trim().ToLowerInvariant())
+                switch (operation.Operation)
                 {
                     case "add-gameobject":
                     {
@@ -67,7 +67,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             throw new CommandFailureException("SCENE_SPEC_INVALID", "`modify-gameobject`에는 `values`가 필요합니다.");
                         }
 
-                        NodeMutationAnalysis analysis = InspectorUtility.AnalyzeNodeMutationValues(rawValues);
+                        NodeMutationAnalysis analysis = InspectorMutationReaderUtility.AnalyzeNodeMutationValues(rawValues);
                         result.Warnings.AddRange(analysis.Warnings);
                         if (!analysis.HasRecognizedKeys)
                         {
@@ -153,6 +153,27 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return result;
         }
 
+        private static void NormalizeOperationNames(ScenePatchOperationSpec[] operations)
+        {
+            for (int index = 0; index < operations.Length; index++)
+            {
+                ScenePatchOperationSpec operation = operations[index];
+                if (operation == null)
+                {
+                    continue;
+                }
+
+                operation.Operation = NormalizeOperationName(operation.Operation);
+            }
+        }
+
+        private static string NormalizeOperationName(string? operation)
+        {
+            return string.IsNullOrWhiteSpace(operation)
+                ? string.Empty
+                : operation.Trim().ToLowerInvariant();
+        }
+
         private static void AddNodes(Scene scene, Transform? parent, SceneNodeSpec[]? children, string commandName)
         {
             if (children == null)
@@ -173,7 +194,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_SPEC_INVALID", commandName + " node spec이 비어 있습니다.");
             }
 
-            string childName = InspectorUtility.RequireNodeName(childSpec.Name, commandName, "SCENE");
+            string childName = InspectorPathParserUtility.RequireNodeName(childSpec.Name, commandName, "SCENE");
             GameObject child = CreateSceneObject(childName, childSpec.Primitive, commandName);
             SceneManager.MoveGameObjectToScene(child, scene);
             if (parent != null)

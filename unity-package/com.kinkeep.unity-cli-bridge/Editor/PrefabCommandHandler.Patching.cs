@@ -21,7 +21,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (PrefabNodeSpec childSpec in children)
             {
-                string childName = InspectorUtility.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName, "PREFAB");
+                string childName = InspectorPathParserUtility.RequireNodeName(childSpec == null ? null : childSpec.Name, commandName, "PREFAB");
                 var child = new GameObject(childName);
                 child.transform.SetParent(parent, false);
                 PrefabInspector.ApplyNodeState(child, childSpec, childName, allowMissingName: false);
@@ -91,7 +91,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     throw new CommandFailureException("PREFAB_SPEC_INVALID", "patch operation `op`가 비어 있습니다.");
                 }
 
-                switch (operation.Operation.Trim().ToLowerInvariant())
+                switch (operation.Operation)
                 {
                     case "add-child":
                     {
@@ -125,7 +125,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             throw new CommandFailureException("PREFAB_SPEC_INVALID", "`set-node`에는 `values`가 필요합니다.");
                         }
 
-                        NodeMutationAnalysis analysis = InspectorUtility.AnalyzeNodeMutationValues(rawValues);
+                        NodeMutationAnalysis analysis = InspectorMutationReaderUtility.AnalyzeNodeMutationValues(rawValues);
                         result.Warnings.AddRange(analysis.Warnings);
                         if (!analysis.HasRecognizedKeys)
                         {
@@ -180,6 +180,27 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return result;
+        }
+
+        private static void NormalizeOperationNames(PrefabPatchOperationSpec[] operations)
+        {
+            for (int index = 0; index < operations.Length; index++)
+            {
+                PrefabPatchOperationSpec operation = operations[index];
+                if (operation == null)
+                {
+                    continue;
+                }
+
+                operation.Operation = NormalizeOperationName(operation.Operation);
+            }
+        }
+
+        private static string NormalizeOperationName(string? operation)
+        {
+            return string.IsNullOrWhiteSpace(operation)
+                ? string.Empty
+                : operation.Trim().ToLowerInvariant();
         }
 
         private static Component ResolveComponent(GameObject target, string componentTypeName, int? componentIndex, string commandName)

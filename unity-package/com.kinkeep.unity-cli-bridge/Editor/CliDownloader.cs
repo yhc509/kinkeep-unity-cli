@@ -13,6 +13,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
     {
         private const string TarExecutablePath = "/usr/bin/tar";
         private const string ChmodExecutablePath = "/bin/chmod";
+        private const int DownloadRequestTimeoutSeconds = 60;
         private static DownloadInstallOperation? _activeOperation;
 
         public static void DownloadAndInstallAsync(
@@ -55,6 +56,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             string archivePath = CreateTemporaryArchivePath(url);
             var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbGET);
             request.downloadHandler = new DownloadHandlerFile(archivePath);
+            request.timeout = DownloadRequestTimeoutSeconds;
 
             _activeOperation = new DownloadInstallOperation(
                 request,

@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -62,8 +63,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static string HandleInspect(string argumentsJson)
         {
-            SceneInspectArgs args = ProtocolJson.Deserialize<SceneInspectArgs>(argumentsJson) ?? new SceneInspectArgs();
-            int? maxDepth = args.maxDepth ?? InspectorUtility.ParseOptionalMaxDepth(argumentsJson, "SCENE_INSPECT_INVALID");
+            JObject arguments = InspectorMutationReaderUtility.ParseArgumentsObject(argumentsJson);
+            SceneInspectArgs args = InspectorMutationReaderUtility.DeserializeArguments<SceneInspectArgs>(arguments);
+            int? maxDepth = args.maxDepth ?? InspectorMutationReaderUtility.ParseOptionalMaxDepth(arguments, "SCENE_INSPECT_INVALID");
             string path = RequireExistingScenePath(args.path, "scene-inspect");
             if (maxDepth.HasValue && maxDepth.Value <= 0)
             {
@@ -86,6 +88,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_SPEC_INVALID", "`operations`가 비어 있습니다.");
             }
 
+            NormalizeOperationNames(spec.Operations);
             if (HasDestructiveOperation(spec) && !args.force)
             {
                 throw new CommandFailureException("SCENE_FORCE_REQUIRED", "`delete-gameobject` 또는 `remove-component`를 쓰려면 --force가 필요합니다.");
@@ -180,12 +183,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             Scene scene = RequireActiveSavedScene("scene-list-components");
             GameObject target = SceneInspector.ResolveNode(scene, args.node, "scene-list-components");
-            var entries = ComponentOperations.ListComponents(target);
+            ComponentOperations.ComponentEntry[] entries = ComponentOperations.ListComponentEntries(target);
 
             return ProtocolJson.Serialize(new SceneListComponentsPayload
             {
                 node = args.node,
-                components = entries.ToArray(),
+                components = entries,
             });
         }
 

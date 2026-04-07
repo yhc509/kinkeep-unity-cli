@@ -10,5 +10,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore,
         };
+
+        internal static readonly JsonSerializer CamelCaseIgnoreNullSerializer = JsonSerializer.Create(CamelCaseIgnoreNull);
     }
 }
