@@ -308,7 +308,7 @@ namespace UnityCli.Protocol
                 notes: new[] { "Requires at least one of --position, --rotation, or --scale.", "Uses the active scene instead of --path.", "Saves the active scene immediately after mutation." }),
             new CliCommandDescriptor(
                 "scene add-component",
-                "scene add-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--values <json>]",
+                "scene add-component --path <Assets/...> --node <scenePath> --type <ComponentType> [--values <json>]",
                 "Adds a component to a GameObject; shortcut for a single add-component scene patch operation.",
                 CliCommandGroup.SceneWorkflows,
                 ProtocolConstants.CommandScenePatch,
@@ -318,7 +318,7 @@ namespace UnityCli.Protocol
                 notes: new[] { "Internally delegates to scene patch." }),
             new CliCommandDescriptor(
                 "scene remove-component",
-                "scene remove-component --path <Assets/...> --target <scenePath> --type <ComponentType> [--index N] --force",
+                "scene remove-component --path <Assets/...> --node <scenePath> --type <ComponentType> [--index N] --force",
                 "Removes a component from a GameObject; shortcut for a single remove-component scene patch operation.",
                 CliCommandGroup.SceneWorkflows,
                 ProtocolConstants.CommandScenePatch,
@@ -378,7 +378,7 @@ namespace UnityCli.Protocol
                 notes: new[] { "Detailed prefab patch rules live in docs/prefab-spec.md." }),
             new CliCommandDescriptor(
                 "prefab add-component",
-                "prefab add-component --path <Assets/...> --target <nodePath> --type <ComponentType> [--values <json>]",
+                "prefab add-component --path <Assets/...> --node <nodePath> --type <ComponentType> [--values <json>]",
                 "Adds a component to a prefab node; shortcut for a single add-component prefab patch operation.",
                 CliCommandGroup.PrefabWorkflows,
                 ProtocolConstants.CommandPrefabPatch,
@@ -388,7 +388,7 @@ namespace UnityCli.Protocol
                 notes: new[] { "Internally delegates to prefab patch." }),
             new CliCommandDescriptor(
                 "prefab remove-component",
-                "prefab remove-component --path <Assets/...> --target <nodePath> --type <ComponentType> [--index N] --force",
+                "prefab remove-component --path <Assets/...> --node <nodePath> --type <ComponentType> [--index N] --force",
                 "Removes a component from a prefab node; shortcut for a single remove-component prefab patch operation.",
                 CliCommandGroup.PrefabWorkflows,
                 ProtocolConstants.CommandPrefabPatch,

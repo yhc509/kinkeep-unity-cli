@@ -155,13 +155,13 @@ public static partial class CliArgumentParser
             case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.PrefabPath):
                 throw new CliUsageException("`prefab add-component`에는 `--path`가 필요합니다.");
             case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
-                throw new CliUsageException("`prefab add-component`에는 `--target`이 필요합니다.");
+                throw new CliUsageException("`prefab add-component`에는 `--node`가 필요합니다.");
             case CommandKind.PrefabAddComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
                 throw new CliUsageException("`prefab add-component`에는 `--type`이 필요합니다.");
             case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.PrefabPath):
                 throw new CliUsageException("`prefab remove-component`에는 `--path`가 필요합니다.");
             case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
-                throw new CliUsageException("`prefab remove-component`에는 `--target`이 필요합니다.");
+                throw new CliUsageException("`prefab remove-component`에는 `--node`가 필요합니다.");
             case CommandKind.PrefabRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
                 throw new CliUsageException("`prefab remove-component`에는 `--type`이 필요합니다.");
             case CommandKind.PrefabRemoveComponent when !parsed.Force:
@@ -205,13 +205,13 @@ public static partial class CliArgumentParser
             case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.ScenePath):
                 throw new CliUsageException("`scene add-component`에는 `--path`가 필요합니다.");
             case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
-                throw new CliUsageException("`scene add-component`에는 `--target`이 필요합니다.");
+                throw new CliUsageException("`scene add-component`에는 `--node`가 필요합니다.");
             case CommandKind.SceneAddComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
                 throw new CliUsageException("`scene add-component`에는 `--type`이 필요합니다.");
             case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.ScenePath):
                 throw new CliUsageException("`scene remove-component`에는 `--path`가 필요합니다.");
             case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneTarget):
-                throw new CliUsageException("`scene remove-component`에는 `--target`이 필요합니다.");
+                throw new CliUsageException("`scene remove-component`에는 `--node`가 필요합니다.");
             case CommandKind.SceneRemoveComponent when string.IsNullOrWhiteSpace(parsed.SceneComponentType):
                 throw new CliUsageException("`scene remove-component`에는 `--type`이 필요합니다.");
             case CommandKind.SceneRemoveComponent when !parsed.Force:

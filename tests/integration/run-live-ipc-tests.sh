@@ -1069,7 +1069,7 @@ test_scene_add_component() {
   run_cli_main scene add-object --path "$SCENE_TEST_PATH" --name "$object_name"
   assert_success_response || return 1
 
-  run_cli_main scene add-component --path "$SCENE_TEST_PATH" --target "$object_path" --type "UnityEngine.BoxCollider" --values '{"m_IsTrigger":true}'
+  run_cli_main scene add-component --path "$SCENE_TEST_PATH" --node "$object_path" --type "UnityEngine.BoxCollider" --values '{"m_IsTrigger":true}'
   assert_success_response || return 1
 
   run_cli_main scene inspect --path "$SCENE_TEST_PATH" --with-values
@@ -1092,10 +1092,10 @@ test_scene_remove_component() {
   run_cli_main scene add-object --path "$SCENE_TEST_PATH" --name "$object_name" --components "UnityEngine.BoxCollider"
   assert_success_response || return 1
 
-  run_cli_main scene remove-component --path "$SCENE_TEST_PATH" --target "$object_path" --type "UnityEngine.BoxCollider" --force
+  run_cli_main scene remove-component --path "$SCENE_TEST_PATH" --node "$object_path" --type "UnityEngine.BoxCollider" --force
   assert_success_response || return 1
 
-  run_cli_main scene remove-component --path "$SCENE_TEST_PATH" --target "$object_path" --type "UnityEngine.BoxCollider" --force
+  run_cli_main scene remove-component --path "$SCENE_TEST_PATH" --node "$object_path" --type "UnityEngine.BoxCollider" --force
   assert_error_response 1 SCENE_COMPONENT_NOT_FOUND || return 1
   TEST_MESSAGE="scene remove-component removed the BoxCollider from SampleScene"
 }

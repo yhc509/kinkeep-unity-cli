@@ -128,8 +128,8 @@ unity-cli scene assign-material --node "/Cube[0]" --material Assets/Materials/Re
 
 # Component operations
 unity-cli scene list-components --node "/Cube[0]"
-unity-cli scene add-component --path Assets/Scenes/Main.unity --target "/Player[0]" --type Rigidbody --values '{"mass":5}'
-unity-cli scene remove-component --path Assets/Scenes/Main.unity --target "/Player[0]" --type BoxCollider --index 0 --force
+unity-cli scene add-component --path Assets/Scenes/Main.unity --node "/Player[0]" --type Rigidbody --values '{"mass":5}'
+unity-cli scene remove-component --path Assets/Scenes/Main.unity --node "/Player[0]" --type BoxCollider --index 0 --force
 
 # Or use spec-based patching for complex edits
 unity-cli scene patch --path ... --spec-file patch.json
@@ -145,8 +145,8 @@ unity-cli prefab patch --path ... --spec-json '{"operations":[...]}'
 
 # Component operations
 unity-cli prefab list-components --path Assets/Prefabs/Player.prefab --node "/Root[0]"
-unity-cli prefab add-component --path Assets/Prefabs/Player.prefab --target "/Root[0]" --type Rigidbody --values '{"mass":5}'
-unity-cli prefab remove-component --path Assets/Prefabs/Player.prefab --target "/Root[0]" --type BoxCollider --force
+unity-cli prefab add-component --path Assets/Prefabs/Player.prefab --node "/Root[0]" --type Rigidbody --values '{"mass":5}'
+unity-cli prefab remove-component --path Assets/Prefabs/Player.prefab --node "/Root[0]" --type BoxCollider --force
 ```
 
 Patch ops: `add-child`, `remove-node`, `set-node`, `add-component`, `remove-component`, `set-component-values`
