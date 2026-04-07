@@ -163,15 +163,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     continue;
                 }
 
-                operation.Operation = NormalizeOperationName(operation.Operation);
+                operation.Operation = PatchUtility.NormalizeOperationName(operation.Operation);
             }
-        }
-
-        private static string NormalizeOperationName(string? operation)
-        {
-            return string.IsNullOrWhiteSpace(operation)
-                ? string.Empty
-                : operation.Trim().ToLowerInvariant();
         }
 
         private static void AddNodes(Scene scene, Transform? parent, SceneNodeSpec[]? children, string commandName)
