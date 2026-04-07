@@ -125,17 +125,12 @@ namespace UnityCli.Protocol
             },
         };
 
+        private static readonly AssetCreateTypeDescriptor[] _descriptorCache = CloneDescriptors(_descriptors);
         private static readonly Dictionary<string, string> _typeMap = BuildTypeMap();
 
         public static AssetCreateTypeDescriptor[] GetDescriptors()
         {
-            var descriptors = new AssetCreateTypeDescriptor[_descriptors.Length];
-            for (int index = 0; index < _descriptors.Length; index++)
-            {
-                descriptors[index] = CloneDescriptor(_descriptors[index]);
-            }
-
-            return descriptors;
+            return (AssetCreateTypeDescriptor[])_descriptorCache.Clone();
         }
 
         public static AssetCreateTypeDescriptor GetDescriptor(string typeId)
@@ -237,6 +232,17 @@ namespace UnityCli.Protocol
                 aliases = (string[])descriptor.aliases.Clone(),
                 notes = (string[])descriptor.notes.Clone(),
             };
+        }
+
+        private static AssetCreateTypeDescriptor[] CloneDescriptors(AssetCreateTypeDescriptor[] descriptors)
+        {
+            var clonedDescriptors = new AssetCreateTypeDescriptor[descriptors.Length];
+            for (int index = 0; index < descriptors.Length; index++)
+            {
+                clonedDescriptors[index] = CloneDescriptor(descriptors[index]);
+            }
+
+            return clonedDescriptors;
         }
     }
 }

@@ -556,6 +556,8 @@ namespace UnityCli.Protocol
                 notes: new[] { "This bypasses typed CLI validation." }),
         };
 
+        private static readonly string[] _supportedProtocolCommands = BuildSupportedProtocolCommands();
+
         public static CliCommandDescriptor[] GetCommands()
         {
             return (CliCommandDescriptor[])_commands.Clone();
@@ -582,6 +584,11 @@ namespace UnityCli.Protocol
         }
 
         public static string[] GetSupportedProtocolCommands()
+        {
+            return (string[])_supportedProtocolCommands.Clone();
+        }
+
+        private static string[] BuildSupportedProtocolCommands()
         {
             var commands = new List<string> { ProtocolConstants.CommandPing };
             foreach (CliCommandDescriptor descriptor in _commands)

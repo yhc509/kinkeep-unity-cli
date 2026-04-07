@@ -24,11 +24,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private string _pathCommand = string.Empty;
         private string _errorMessage = string.Empty;
         private string _skillFeedbackMessage = string.Empty;
+        private string _cachedUpdateAvailabilityPackageVersion = string.Empty;
+        private string _cachedUpdateAvailabilityLatestReleaseVersion = string.Empty;
         private MessageType _skillFeedbackType = MessageType.Info;
         private float _downloadProgress;
         private bool _hasLoadedState;
         private bool _isDownloading;
         private bool _isFetchingLatestVersion;
+        private bool _isUpdateAvailable;
         private SkillTarget _skillTarget;
 
         [MenuItem(OpenWindowMenuItemPath)]
@@ -326,6 +329,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 _pathCommand = string.Empty;
                 _status = CliInstallStatus.NotInstalled;
                 _isFetchingLatestVersion = false;
+                ResetUpdateAvailabilityCache();
 
                 if (string.IsNullOrWhiteSpace(_errorMessage))
                 {
@@ -337,6 +341,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private void RefreshLatestReleaseVersion()
         {
             _latestReleaseVersion = CliInstallerState.GetCachedLatestReleaseVersion() ?? string.Empty;
+            UpdateUpdateAvailabilityCache();
             if (_isFetchingLatestVersion || !CliInstallerState.IsLatestReleaseCacheExpired())
             {
                 return;
@@ -350,6 +355,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             _latestReleaseVersion = latestReleaseVersion ?? string.Empty;
             _isFetchingLatestVersion = false;
+            UpdateUpdateAvailabilityCache();
             Repaint();
         }
 
@@ -384,12 +390,34 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private bool IsUpdateAvailable()
         {
-            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_packageVersion))
+            return _isUpdateAvailable;
+        }
+
+        private void ResetUpdateAvailabilityCache()
+        {
+            _cachedUpdateAvailabilityPackageVersion = string.Empty;
+            _cachedUpdateAvailabilityLatestReleaseVersion = string.Empty;
+            _isUpdateAvailable = false;
+        }
+
+        private void UpdateUpdateAvailabilityCache()
+        {
+            if (string.Equals(_cachedUpdateAvailabilityPackageVersion, _packageVersion, StringComparison.Ordinal)
+                && string.Equals(_cachedUpdateAvailabilityLatestReleaseVersion, _latestReleaseVersion, StringComparison.Ordinal))
             {
-                return false;
+                return;
             }
 
-            return CliInstallerState.CompareVersions(_packageVersion, _latestReleaseVersion) < 0;
+            _cachedUpdateAvailabilityPackageVersion = _packageVersion;
+            _cachedUpdateAvailabilityLatestReleaseVersion = _latestReleaseVersion;
+
+            if (string.IsNullOrWhiteSpace(_latestReleaseVersion) || string.IsNullOrWhiteSpace(_packageVersion))
+            {
+                _isUpdateAvailable = false;
+                return;
+            }
+
+            _isUpdateAvailable = CliInstallerState.CompareVersions(_packageVersion, _latestReleaseVersion) < 0;
         }
 
         private static string GetPathCommand()

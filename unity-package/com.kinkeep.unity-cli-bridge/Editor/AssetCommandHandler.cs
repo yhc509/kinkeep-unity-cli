@@ -169,7 +169,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     throw new InvalidOperationException("비어 있는 폴더 이름은 만들 수 없습니다.");
                 }
 
-                string next = current + "/" + segment;
+                string next = string.Concat(current, "/", segment);
                 if (AssetCommandSupport.AssetExists(next))
                 {
                     if (!AssetDatabase.IsValidFolder(next))

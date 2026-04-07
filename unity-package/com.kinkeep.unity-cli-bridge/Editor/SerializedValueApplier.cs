@@ -215,7 +215,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
             property.arraySize = array.Count;
             for (int index = 0; index < array.Count; index++)
             {
-                ApplyToken(property.GetArrayElementAtIndex(index), array[index], propertyPath + "[" + index + "]");
+                SerializedProperty elementProperty = property.GetArrayElementAtIndex(index);
+                ApplyToken(elementProperty, array[index], elementProperty.propertyPath);
             }
         }
 
@@ -235,7 +236,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     throw new CommandFailureException("PREFAB_FIELD_INVALID", "serialized field를 찾지 못했습니다: " + propertyPath + "." + child.Name);
                 }
 
-                ApplyToken(childProperty, child.Value, propertyPath + "." + child.Name);
+                ApplyToken(childProperty, child.Value, childProperty.propertyPath);
             }
         }
 
@@ -571,19 +572,32 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             string enumName = ReadString(token, propertyPath);
-            int nameIndex = Array.FindIndex(property.enumNames, value => string.Equals(value, enumName, StringComparison.Ordinal));
+            int nameIndex = FindStringIndex(property.enumNames, enumName);
             if (nameIndex >= 0)
             {
                 return nameIndex;
             }
 
-            int displayIndex = Array.FindIndex(property.enumDisplayNames, value => string.Equals(value, enumName, StringComparison.Ordinal));
+            int displayIndex = FindStringIndex(property.enumDisplayNames, enumName);
             if (displayIndex >= 0)
             {
                 return displayIndex;
             }
 
             throw new CommandFailureException("PREFAB_FIELD_INVALID", "enum 값을 찾지 못했습니다: " + propertyPath + " (" + enumName + ")");
+        }
+
+        private static int FindStringIndex(string[] values, string target)
+        {
+            for (int index = 0; index < values.Length; index++)
+            {
+                if (string.Equals(values[index], target, StringComparison.Ordinal))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
         }
 
         private static long ReadLong(JToken token, string propertyPath)

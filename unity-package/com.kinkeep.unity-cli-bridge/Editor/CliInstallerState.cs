@@ -39,6 +39,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private const string MacPlatformDisplayName = "macOS arm64";
         private const string WindowsPlatformDisplayName = "Windows x64";
         private const int CacheExpirationMinutes = 60;
+        private const int LatestReleaseRequestTimeoutSeconds = 15;
         private static LatestReleaseFetchOperation? _activeLatestReleaseFetch;
 
         public static bool IsInstalled => File.Exists(GetExecutablePath());
@@ -130,6 +131,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             UnityWebRequest request = UnityWebRequest.Get(GitHubApiLatestReleaseUrl);
             request.SetRequestHeader("User-Agent", GitHubApiUserAgent);
+            request.timeout = LatestReleaseRequestTimeoutSeconds;
 
             _activeLatestReleaseFetch = new LatestReleaseFetchOperation(request, onComplete);
 
@@ -218,18 +220,31 @@ namespace KinKeep.UnityCli.Bridge.Editor
             EditorApplication.update -= PollLatestReleaseFetch;
             _activeLatestReleaseFetch = null;
 
-            string? latestReleaseVersion;
+            string? latestReleaseVersion = GetCachedLatestReleaseVersion();
             try
             {
-                latestReleaseVersion = operation.Request.result == UnityWebRequest.Result.Success
-                    ? ParseLatestReleaseVersion(operation.Request.downloadHandler.text)
-                    : null;
-                SetLatestReleaseCache(latestReleaseVersion);
+                if (operation.Request.result == UnityWebRequest.Result.Success)
+                {
+                    string? fetchedLatestReleaseVersion = ParseLatestReleaseVersion(operation.Request.downloadHandler.text);
+                    if (!string.IsNullOrWhiteSpace(fetchedLatestReleaseVersion))
+                    {
+                        latestReleaseVersion = fetchedLatestReleaseVersion;
+                        SetLatestReleaseCache(fetchedLatestReleaseVersion);
+                    }
+                    else
+                    {
+                        SetLatestReleaseCache(latestReleaseVersion);
+                    }
+                }
+                else
+                {
+                    SetLatestReleaseCache(latestReleaseVersion);
+                }
             }
             catch
             {
-                latestReleaseVersion = null;
-                SetLatestReleaseCache(null);
+                // Parse failure: keep the last known good version from cache.
+                SetLatestReleaseCache(latestReleaseVersion);
             }
 
             try

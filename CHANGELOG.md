@@ -11,8 +11,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - An AI skill installer in `KinKeep > CLI Manager` for Claude Code and Codex (#8).
 - Latest GitHub release version display in `KinKeep > CLI Manager` to simplify update checks (#9).
 
+### Changed
+- Split `InspectorUtility` into focused utility classes (`InspectorJsonWriterUtility`, `InspectorPathParserUtility`, `InspectorMutationReaderUtility`, `InspectorDefaultPruningUtility`) for maintainability.
+- Reduced GC allocations across bridge handlers: single-parse `argumentsJson`, `ComponentEntry` struct conversion, cached protocol commands and asset descriptors, closure and LINQ elimination.
+- Moved `Socket.Bind`/`Listen` to a background thread in `BridgeHost` to avoid editor startup hitch.
+
 ### Fixed
 - A null check after `AddComponent` to prevent a null reference exception during component creation (#7).
+- CLI Manager now preserves the last known release version on network failure instead of clearing the cache.
+- Added `UnityWebRequest` timeouts (15 s for version checks, 60 s for downloads).
+- Cached `IsUpdateAvailable()` result to avoid repeated version parsing in `OnGUI`.
 
 ## [0.1.1] - 2026-04-05
 

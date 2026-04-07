@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
@@ -33,8 +34,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static string HandleInspect(string argumentsJson)
         {
-            PrefabInspectArgs args = ProtocolJson.Deserialize<PrefabInspectArgs>(argumentsJson) ?? new PrefabInspectArgs();
-            int? maxDepth = args.maxDepth ?? InspectorUtility.ParseOptionalMaxDepth(argumentsJson, "PREFAB_INSPECT_INVALID");
+            JObject arguments = InspectorMutationReaderUtility.ParseArgumentsObject(argumentsJson);
+            PrefabInspectArgs args = InspectorMutationReaderUtility.DeserializeArguments<PrefabInspectArgs>(arguments);
+            int? maxDepth = args.maxDepth ?? InspectorMutationReaderUtility.ParseOptionalMaxDepth(arguments, "PREFAB_INSPECT_INVALID");
             string path = RequireExistingPrefabPath(args.path, "prefab-inspect");
             if (maxDepth.HasValue && maxDepth.Value <= 0)
             {
@@ -112,6 +114,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("PREFAB_SPEC_INVALID", "`operations`가 비어 있습니다.");
             }
 
+            NormalizeOperationNames(spec.Operations);
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             PrefabPatchApplyResult patchResult;
             try
@@ -164,11 +167,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
             try
             {
                 GameObject target = PrefabInspector.ResolveNode(root, args.node, "prefab-list-components");
-                var entries = ComponentOperations.ListComponents(target);
+                ComponentOperations.ComponentEntry[] entries = ComponentOperations.ListComponentEntries(target);
                 return ProtocolJson.Serialize(new PrefabListComponentsPayload
                 {
                     node = args.node,
-                    components = entries.ToArray(),
+                    components = entries,
                 });
             }
             finally

@@ -25,7 +25,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             writer.Formatting = Formatting.None;
             writer.WriteStartObject();
             writer.WritePropertyName("asset");
-            InspectorUtility.WriteAssetToken(writer, path);
+            InspectorJsonWriterUtility.WriteAssetToken(writer, path);
             writer.WritePropertyName("activeScenePath");
             writer.WriteValue(activeScenePath);
             writer.WritePropertyName("scene");
@@ -80,16 +80,16 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             int position = 0;
-            if (!InspectorUtility.TryGetNextPathSegment(normalizedPath, ref position, out int rootStart, out int rootLength))
+            if (!InspectorPathParserUtility.TryGetNextPathSegment(normalizedPath, ref position, out int rootStart, out int rootLength))
             {
                 throw new CommandFailureException("SCENE_NODE_INVALID", commandName + " path가 비어 있습니다.");
             }
 
             GameObject current = ResolveRoot(scene, normalizedPath.AsSpan(rootStart, rootLength), normalizedPath, commandName);
-            while (InspectorUtility.TryGetNextPathSegment(normalizedPath, ref position, out int segmentStart, out int segmentLength))
+            while (InspectorPathParserUtility.TryGetNextPathSegment(normalizedPath, ref position, out int segmentStart, out int segmentLength))
             {
                 ReadOnlySpan<char> segment = normalizedPath.AsSpan(segmentStart, segmentLength);
-                InspectorUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int siblingIndex);
+                InspectorPathParserUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int siblingIndex);
                 ReadOnlySpan<char> name = segment.Slice(0, nameLength);
                 Transform? matchedChild = null;
                 int matchIndex = 0;
@@ -130,7 +130,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             string name = string.IsNullOrWhiteSpace(spec.Name)
-                ? (allowMissingName ? defaultName : InspectorUtility.RequireNodeName(spec.Name, "scene", "SCENE"))
+                ? (allowMissingName ? defaultName : InspectorPathParserUtility.RequireNodeName(spec.Name, "scene", "SCENE"))
                 : spec.Name.Trim();
             target.name = name;
 
@@ -156,7 +156,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             if (spec.Name != null)
             {
-                target.name = InspectorUtility.RequireNodeName(spec.Name, "modify-gameobject", "SCENE");
+                target.name = InspectorPathParserUtility.RequireNodeName(spec.Name, "modify-gameobject", "SCENE");
             }
 
             SceneTransformSpec? transformSpec = spec.Transform;
@@ -179,28 +179,28 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new CommandFailureException("SCENE_SPEC_INVALID", "node values가 비어 있습니다.");
             }
 
-            string? name = InspectorUtility.ReadOptionalString(values, "name");
+            string? name = InspectorMutationReaderUtility.ReadOptionalString(values, "name");
             if (name != null)
             {
-                target.name = InspectorUtility.RequireNodeName(name, commandName, "SCENE");
+                target.name = InspectorPathParserUtility.RequireNodeName(name, commandName, "SCENE");
             }
 
-            JObject? transformValues = InspectorUtility.ReadOptionalObject(values, "transform", "SCENE_SPEC_INVALID", commandName + " transform 값은 object여야 합니다.");
+            JObject? transformValues = InspectorMutationReaderUtility.ReadOptionalObject(values, "transform", "SCENE_SPEC_INVALID", commandName + " transform 값은 object여야 합니다.");
             Transform transform = target.transform;
             InspectorUtility.ApplyNodeStateCore(
                 target,
-                InspectorUtility.ReadOptionalBoolean(values, "active"),
-                InspectorUtility.ReadOptionalString(values, "tag"),
-                InspectorUtility.ReadOptionalProperty(values, "layer"),
-                InspectorUtility.MergeVector3(
+                InspectorMutationReaderUtility.ReadOptionalBoolean(values, "active"),
+                InspectorMutationReaderUtility.ReadOptionalString(values, "tag"),
+                InspectorMutationReaderUtility.ReadOptionalProperty(values, "layer"),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localPosition,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localPosition", "SCENE_SPEC_INVALID", commandName + " transform.localPosition 값은 object여야 합니다.")),
-                InspectorUtility.MergeVector3(
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localPosition", "SCENE_SPEC_INVALID", commandName + " transform.localPosition 값은 object여야 합니다.")),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localEulerAngles,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localRotationEuler", "SCENE_SPEC_INVALID", commandName + " transform.localRotationEuler 값은 object여야 합니다.")),
-                InspectorUtility.MergeVector3(
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localRotationEuler", "SCENE_SPEC_INVALID", commandName + " transform.localRotationEuler 값은 object여야 합니다.")),
+                InspectorMutationReaderUtility.MergeVector3(
                     transform.localScale,
-                    InspectorUtility.ReadOptionalObject(transformValues, "localScale", "SCENE_SPEC_INVALID", commandName + " transform.localScale 값은 object여야 합니다.")),
+                    InspectorMutationReaderUtility.ReadOptionalObject(transformValues, "localScale", "SCENE_SPEC_INVALID", commandName + " transform.localScale 값은 object여야 합니다.")),
                 "SCENE");
         }
 
@@ -227,13 +227,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (!omitDefaults || gameObject.layer != 0)
             {
                 writer.WritePropertyName("layer");
-                InspectorUtility.WriteLayerToken(writer, gameObject.layer);
+                InspectorJsonWriterUtility.WriteLayerToken(writer, gameObject.layer);
             }
 
-            if (InspectorUtility.ShouldWriteTransformToken(gameObject.transform, omitDefaults))
+            if (InspectorJsonWriterUtility.ShouldWriteTransformToken(gameObject.transform, omitDefaults))
             {
                 writer.WritePropertyName("transform");
-                InspectorUtility.WriteTransformToken(writer, gameObject.transform, omitDefaults);
+                InspectorJsonWriterUtility.WriteTransformToken(writer, gameObject.transform, omitDefaults);
             }
 
             WriteComponents(writer, gameObject, withValues, omitDefaults);
@@ -255,7 +255,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static GameObject ResolveRoot(Scene scene, ReadOnlySpan<char> segment, string normalizedPath, string commandName)
         {
-            InspectorUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int rootIndex);
+            InspectorPathParserUtility.ParsePathSegment(segment, commandName, "SCENE", out int nameLength, out int rootIndex);
             ReadOnlySpan<char> name = segment.Slice(0, nameLength);
             GameObject[] roots = scene.GetRootGameObjects();
             int matchIndex = 0;
@@ -311,7 +311,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     JObject values = SerializedValueApplier.BuildInspectableValues(component);
                     if (omitDefaults)
                     {
-                        InspectorUtility.PruneDefaultInspectableValues(values);
+                        InspectorDefaultPruningUtility.PruneDefaultInspectableValues(values);
                     }
 
                     if (!omitDefaults || values.HasValues)
