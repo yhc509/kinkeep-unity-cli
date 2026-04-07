@@ -68,6 +68,7 @@ unity-package/com.kinkeep.unity-cli-bridge/
   │   ├── PrefabInspector.cs  Prefab inspection, node-path resolution, inspect payload building
   │   ├── PrefabSpecModels.cs  Prefab DTO/spec models
   │   ├── SerializedValueApplier.cs  Applies values via SerializedProperty.propertyPath with friendly key fallback
+  │   ├── SerializedValueApplier.ComplexTypes.cs  AnimationCurve, Gradient, ManagedReference, Hash128 serialization (partial class)
   │   ├── TypeDiscoveryUtility.cs  Shared component/type scanning utility
   │   ├── BridgeJsonSettings.cs  Shared JSON serializer settings
   │   ├── CliInstallerWindow.cs  EditorWindow for one-click CLI install/update

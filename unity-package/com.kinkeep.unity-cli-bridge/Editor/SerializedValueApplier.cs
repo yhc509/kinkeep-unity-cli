@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace KinKeep.UnityCli.Bridge.Editor
 {
-    internal static class SerializedValueApplier
+    internal static partial class SerializedValueApplier
     {
         private static readonly HashSet<string> _skippedPropertyPaths = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -121,11 +121,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private static void ApplyToken(SerializedProperty property, JToken token, string propertyPath)
         {
-            if (property.propertyType == SerializedPropertyType.ManagedReference)
-            {
-                throw new CommandFailureException("PREFAB_FIELD_INVALID", "managed reference는 아직 지원하지 않습니다: " + propertyPath);
-            }
-
             if (property.isArray && property.propertyType != SerializedPropertyType.String)
             {
                 ApplyArray(property, token, propertyPath);
@@ -177,9 +172,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     property.intValue = ReadChar(token, propertyPath);
                     break;
                 case SerializedPropertyType.AnimationCurve:
-                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "AnimationCurve는 아직 지원하지 않습니다: " + propertyPath);
+                    property.animationCurveValue = ReadAnimationCurve(token, propertyPath);
+                    break;
                 case SerializedPropertyType.Bounds:
                     property.boundsValue = ReadBounds(token, propertyPath);
+                    break;
+                case SerializedPropertyType.Gradient:
+                    property.gradientValue = ReadGradient(token, propertyPath);
                     break;
                 case SerializedPropertyType.Quaternion:
                     property.quaternionValue = ReadQuaternion(token, propertyPath);
@@ -195,6 +194,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     break;
                 case SerializedPropertyType.BoundsInt:
                     property.boundsIntValue = ReadBoundsInt(token, propertyPath);
+                    break;
+                case SerializedPropertyType.ManagedReference:
+                    ApplyManagedReference(property, token, propertyPath);
+                    break;
+                case SerializedPropertyType.Hash128:
+                    property.hash128Value = ReadHash128(token, propertyPath);
                     break;
                 case SerializedPropertyType.Generic:
                     ApplyObject(property, token, propertyPath);
@@ -243,11 +248,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static bool TrySerializeProperty(SerializedProperty property, out JToken token)
         {
             token = null;
-
-            if (property.propertyType == SerializedPropertyType.ManagedReference)
-            {
-                return false;
-            }
 
             if (property.isArray && property.propertyType != SerializedPropertyType.String)
             {
@@ -343,6 +343,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case SerializedPropertyType.Character:
                     token = Convert.ToChar(property.intValue).ToString();
                     return true;
+                case SerializedPropertyType.AnimationCurve:
+                    token = SerializeAnimationCurve(property.animationCurveValue);
+                    return true;
                 case SerializedPropertyType.Bounds:
                     token = new JObject
                     {
@@ -359,6 +362,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             ["z"] = property.boundsValue.size.z,
                         },
                     };
+                    return true;
+                case SerializedPropertyType.Gradient:
+                    token = SerializeGradient(property.gradientValue);
                     return true;
                 case SerializedPropertyType.Quaternion:
                     token = new JObject
@@ -409,6 +415,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
                             ["z"] = property.boundsIntValue.size.z,
                         },
                     };
+                    return true;
+                case SerializedPropertyType.ManagedReference:
+                    return TrySerializeManagedReference(property, out token);
+                case SerializedPropertyType.Hash128:
+                    token = property.hash128Value.ToString();
                     return true;
                 case SerializedPropertyType.Generic:
                     var jobject = new JObject();
@@ -805,5 +816,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 ReadVector3Int(obj["position"], propertyPath + ".position"),
                 ReadVector3Int(obj["size"], propertyPath + ".size"));
         }
+
     }
 }
