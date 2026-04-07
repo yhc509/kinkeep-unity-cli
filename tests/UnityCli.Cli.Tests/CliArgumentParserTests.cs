@@ -861,9 +861,23 @@ public sealed class CliArgumentParserTests
     public void Parse_SceneAddComponent_RequiresType()
     {
         var ex = Assert.Throws<CliUsageException>(() =>
-            CliArgumentParser.Parse(["scene", "add-component", "--path", "Assets/Scenes/Test.unity", "--target", "/Root[0]"]));
+            CliArgumentParser.Parse(["scene", "add-component", "--path", "Assets/Scenes/Test.unity", "--node", "/Root[0]"]));
 
         Assert.Contains("--type", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_SceneAddComponent_RejectsLegacyTargetFlag()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "scene", "add-component",
+                "--path", "Assets/Scenes/Test.unity",
+                "--target", "/Root[0]",
+                "--type", "BoxCollider"
+            ]));
+
+        Assert.Contains("지원하지 않는 옵션입니다: --target", ex.Message);
     }
 
     [Fact]
@@ -872,7 +886,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "scene", "add-component",
             "--path", "Assets/Scenes/Test.unity",
-            "--target", "/Root[0]",
+            "--node", "/Root[0]",
             "--type", "BoxCollider",
             "--values", "{\"center\":{\"x\":0,\"y\":0.5,\"z\":0}}"
         ]);
@@ -894,7 +908,7 @@ public sealed class CliArgumentParserTests
             CliArgumentParser.Parse([
                 "scene", "remove-component",
                 "--path", "Assets/Scenes/Test.unity",
-                "--target", "/Root[0]",
+                "--node", "/Root[0]",
                 "--type", "BoxCollider"
             ]));
 
@@ -907,7 +921,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "scene", "remove-component",
             "--path", "Assets/Scenes/Test.unity",
-            "--target", "/Root[0]",
+            "--node", "/Root[0]",
             "--type", "BoxCollider",
             "--force"
         ]);
@@ -928,7 +942,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "scene", "remove-component",
             "--path", "Assets/Scenes/Test.unity",
-            "--target", "/Player[0]",
+            "--node", "/Player[0]",
             "--type", "BoxCollider",
             "--index", "1",
             "--force"
@@ -997,10 +1011,24 @@ public sealed class CliArgumentParserTests
             CliArgumentParser.Parse([
                 "prefab", "add-component",
                 "--path", "Assets/Prefabs/P.prefab",
-                "--target", "/Root[0]"
+                "--node", "/Root[0]"
             ]));
 
         Assert.Contains("--type", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_PrefabAddComponent_RejectsLegacyTargetFlag()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "prefab", "add-component",
+                "--path", "Assets/Prefabs/P.prefab",
+                "--target", "/Root[0]",
+                "--type", "BoxCollider"
+            ]));
+
+        Assert.Contains("지원하지 않는 옵션입니다: --target", ex.Message);
     }
 
     [Fact]
@@ -1009,7 +1037,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "prefab", "add-component",
             "--path", "Assets/Prefabs/Player.prefab",
-            "--target", "/Root[0]",
+            "--node", "/Root[0]",
             "--type", "Rigidbody",
             "--values", "{\"mass\":5}"
         ]);
@@ -1031,7 +1059,7 @@ public sealed class CliArgumentParserTests
             CliArgumentParser.Parse([
                 "prefab", "remove-component",
                 "--path", "Assets/Prefabs/P.prefab",
-                "--target", "/Root[0]",
+                "--node", "/Root[0]",
                 "--type", "BoxCollider"
             ]));
 
@@ -1044,7 +1072,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "prefab", "remove-component",
             "--path", "Assets/Prefabs/Player.prefab",
-            "--target", "/Root[0]",
+            "--node", "/Root[0]",
             "--type", "BoxCollider",
             "--force"
         ]);
@@ -1064,7 +1092,7 @@ public sealed class CliArgumentParserTests
         var parsed = CliArgumentParser.Parse([
             "prefab", "remove-component",
             "--path", "Assets/Prefabs/Player.prefab",
-            "--target", "/Player[0]",
+            "--node", "/Player[0]",
             "--type", "BoxCollider",
             "--index", "1",
             "--force"

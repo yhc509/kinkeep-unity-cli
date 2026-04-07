@@ -595,10 +595,8 @@ public static partial class CliArgumentParser
                 case CommandKind.SceneAddObject when token == "--components":
                     parsed.SceneComponents = RequireValue(tokens, "--components");
                     break;
-                case CommandKind.SceneAddComponent when token == "--target":
-                case CommandKind.SceneRemoveComponent when token == "--target":
-                    parsed.SceneTarget = RequireValue(tokens, "--target");
-                    break;
+                case CommandKind.SceneAddComponent when token == "--node":
+                case CommandKind.SceneRemoveComponent when token == "--node":
                 case CommandKind.SceneListComponents when token == "--node":
                 case CommandKind.SceneSetTransform when token == "--node":
                 case CommandKind.SceneAssignMaterial when token == "--node":
@@ -661,10 +659,8 @@ public static partial class CliArgumentParser
                 case CommandKind.PrefabPatch when token == "--spec-json":
                     parsed.PrefabSpecJson = RequireValue(tokens, "--spec-json");
                     break;
-                case CommandKind.PrefabAddComponent when token == "--target":
-                case CommandKind.PrefabRemoveComponent when token == "--target":
-                    parsed.SceneTarget = RequireValue(tokens, "--target");
-                    break;
+                case CommandKind.PrefabAddComponent when token == "--node":
+                case CommandKind.PrefabRemoveComponent when token == "--node":
                 case CommandKind.PrefabListComponents when token == "--node":
                     parsed.SceneTarget = RequireValue(tokens, "--node");
                     break;

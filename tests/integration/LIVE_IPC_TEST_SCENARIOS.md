@@ -524,7 +524,7 @@ EOF
 
 ```bash
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene add-object --path "$LIVE_IPC_SCENE" --name PhysicsNode_SCENE_006
-"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene add-component --path "$LIVE_IPC_SCENE" --target /PhysicsNode_SCENE_006[0] --type UnityEngine.BoxCollider --values '{"m_IsTrigger":true}'
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene add-component --path "$LIVE_IPC_SCENE" --node /PhysicsNode_SCENE_006[0] --type UnityEngine.BoxCollider --values '{"m_IsTrigger":true}'
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene inspect --path "$LIVE_IPC_SCENE" --with-values
 ```
 
@@ -538,8 +538,8 @@ EOF
 
 ```bash
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene add-object --path "$LIVE_IPC_SCENE" --name PhysicsNode_SCENE_007 --components "UnityEngine.BoxCollider"
-"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene remove-component --path "$LIVE_IPC_SCENE" --target /PhysicsNode_SCENE_007[0] --type UnityEngine.BoxCollider --force
-"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene remove-component --path "$LIVE_IPC_SCENE" --target /PhysicsNode_SCENE_007[0] --type UnityEngine.BoxCollider --force
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene remove-component --path "$LIVE_IPC_SCENE" --node /PhysicsNode_SCENE_007[0] --type UnityEngine.BoxCollider --force
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" scene remove-component --path "$LIVE_IPC_SCENE" --node /PhysicsNode_SCENE_007[0] --type UnityEngine.BoxCollider --force
 ```
 
 - 기대 결과: component가 제거된다.
