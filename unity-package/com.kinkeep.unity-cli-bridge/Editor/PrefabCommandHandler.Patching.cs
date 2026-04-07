@@ -192,15 +192,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     continue;
                 }
 
-                operation.Operation = NormalizeOperationName(operation.Operation);
+                operation.Operation = PatchUtility.NormalizeOperationName(operation.Operation);
             }
-        }
-
-        private static string NormalizeOperationName(string? operation)
-        {
-            return string.IsNullOrWhiteSpace(operation)
-                ? string.Empty
-                : operation.Trim().ToLowerInvariant();
         }
 
         private static Component ResolveComponent(GameObject target, string componentTypeName, int? componentIndex, string commandName)
