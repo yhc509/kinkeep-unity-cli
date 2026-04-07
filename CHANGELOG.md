@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- Improved error message for unsupported SerializedPropertyType to include the actual type name
+
+### Documentation
+- ExposedReference and FixedBufferSize are intentionally unsupported (extremely rare in typical scene/prefab workflows)
+
 ## [0.1.2] - 2026-04-07
 
 ### Added

@@ -119,6 +119,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
             return serializedObject.FindProperty("m_" + ToPascalCase(key));
         }
 
+        private static string BuildUnsupportedSerializedPropertyTypeMessage(SerializedProperty property, string? propertyPath = null)
+        {
+            return string.IsNullOrEmpty(propertyPath)
+                ? $"Unsupported SerializedPropertyType: {property.propertyType}"
+                : $"Unsupported SerializedPropertyType: {property.propertyType} ({propertyPath})";
+        }
+
         private static void ApplyToken(SerializedProperty property, JToken token, string propertyPath)
         {
             if (property.isArray && property.propertyType != SerializedPropertyType.String)
@@ -205,7 +212,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     ApplyObject(property, token, propertyPath);
                     break;
                 default:
-                    throw new CommandFailureException("PREFAB_FIELD_INVALID", "지원하지 않는 serialized field 타입입니다: " + propertyPath + " (" + property.propertyType + ")");
+                    throw new CommandFailureException("PREFAB_FIELD_INVALID", BuildUnsupportedSerializedPropertyTypeMessage(property, propertyPath));
             }
         }
 
@@ -439,6 +446,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     token = jobject;
                     return true;
                 default:
+                    token = new JValue(BuildUnsupportedSerializedPropertyTypeMessage(property));
                     return false;
             }
         }
