@@ -430,7 +430,26 @@ namespace KinKeep.UnityCli.Bridge.Editor
             assemblyName = null;
             fullTypeName = null;
 
-            int commaIndex = typeName.IndexOf(',');
+            int commaIndex = -1;
+            int bracketDepth = 0;
+            for (int i = 0; i < typeName.Length; i++)
+            {
+                char currentCharacter = typeName[i];
+                if (currentCharacter == '[')
+                {
+                    bracketDepth++;
+                }
+                else if (currentCharacter == ']')
+                {
+                    bracketDepth--;
+                }
+                else if (currentCharacter == ',' && bracketDepth == 0)
+                {
+                    commaIndex = i;
+                    break;
+                }
+            }
+
             if (commaIndex >= 0)
             {
                 fullTypeName = typeName.Substring(0, commaIndex).Trim();
