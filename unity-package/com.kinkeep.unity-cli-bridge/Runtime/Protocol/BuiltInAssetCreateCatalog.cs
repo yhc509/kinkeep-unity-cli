@@ -130,7 +130,7 @@ namespace UnityCli.Protocol
 
         public static AssetCreateTypeDescriptor[] GetDescriptors()
         {
-            return (AssetCreateTypeDescriptor[])_descriptorCache.Clone();
+            return CloneDescriptors(_descriptorCache);
         }
 
         public static AssetCreateTypeDescriptor GetDescriptor(string typeId)
