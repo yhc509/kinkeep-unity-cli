@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Component operations for scenes and prefabs: list, add, and remove components from the CLI (`scene list-components`, `scene add-component`, `scene remove-component`, `prefab list-components`, `prefab add-component`, and `prefab remove-component`) (#6).
 - An AI skill installer in `KinKeep > CLI Manager` for Claude Code and Codex (#8).
 - Latest GitHub release version display in `KinKeep > CLI Manager` to simplify update checks (#9).
+- `SerializedValueApplier` support for `AnimationCurve` (with `preWrapMode`/`postWrapMode`), `Gradient`, `ManagedReference` (`[SerializeReference]`), and `Hash128` property types — enabling inspect/patch for virtually all Unity built-in components.
 
 ### Changed
 - **Breaking:** Unified `--target` to `--node` in scene/prefab `add-component` and `remove-component` commands for consistency with other node-targeting commands.

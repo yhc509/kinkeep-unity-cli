@@ -73,12 +73,12 @@ unity-cli does not have dedicated script create/delete commands. Use this combin
 - `unity-cli prefab list-components --path Assets/Prefabs/Player.prefab --node "/Root[0]"`
 
 **Add component (with optional initial values):**
-- `unity-cli scene add-component --path Assets/Scenes/S.unity --target "/Player[0]" --type Rigidbody --values '{"mass":5,"drag":1}'`
-- `unity-cli prefab add-component --path Assets/Prefabs/P.prefab --target "/Root[0]" --type BoxCollider`
+- `unity-cli scene add-component --path Assets/Scenes/S.unity --node "/Player[0]" --type Rigidbody --values '{"mass":5,"drag":1}'`
+- `unity-cli prefab add-component --path Assets/Prefabs/P.prefab --node "/Root[0]" --type BoxCollider`
 
 **Remove component:**
-- `unity-cli scene remove-component --path Assets/Scenes/S.unity --target "/Player[0]" --type BoxCollider --force`
-- `unity-cli prefab remove-component --path Assets/Prefabs/P.prefab --target "/Root[0]" --type BoxCollider --force`
+- `unity-cli scene remove-component --path Assets/Scenes/S.unity --node "/Player[0]" --type BoxCollider --force`
+- `unity-cli prefab remove-component --path Assets/Prefabs/P.prefab --node "/Root[0]" --type BoxCollider --force`
 
 **Friendly key mapping:** Values like `mass`, `drag`, `isKinematic` are automatically resolved to Unity's internal `m_Mass`, `m_Drag`, `m_IsKinematic` paths. If a key is not found, use `list-components` then `inspect --with-values` to find the exact property name.
 
@@ -94,7 +94,7 @@ unity-cli does not have dedicated script create/delete commands. Use this combin
 | 타입 기반 에셋 검색 | `asset find --type Material` | --name 필수였음 |
 
 - `scene add-object` 응답에는 `createdPath`가 포함되므로, 후속 명령에서 별도 inspect 없이 바로 경로를 사용할 수 있다.
-- `scene set-transform`과 `scene assign-material`은 **현재 열린 씬(active scene)**을 대상으로 하므로 `--path`가 아니라 `--node`를 사용한다.
+- scene/prefab hierarchy node를 가리키는 편의 명령은 `--node`를 사용한다. JSON patch spec 내부 필드는 계속 `target`/`parent`를 사용한다.
 - `set-node`에서 인식 안 되는 키를 넣으면 `warnings` 필드로 경고가 반환된다. 모든 키가 실패하면 `patched: false`가 된다.
 
 ## What To Read Next
