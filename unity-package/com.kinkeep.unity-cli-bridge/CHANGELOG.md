@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-04-08
+
 ### Changed
 - Improved error message for unsupported SerializedPropertyType to include the actual type name
 

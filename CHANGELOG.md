@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-04-08
+
 ### Added
 - QA screenshot coordinate conversion: `qa tap` and coordinate-based `qa swipe` now accept top-origin screenshot-space coordinates with automatic Y-axis inversion and resolution scaling when screenshot dimensions are available.
 - `--screenshot-width` / `--screenshot-height` options for `qa tap` and `qa swipe` to explicitly specify screenshot resolution for coordinate scaling.
