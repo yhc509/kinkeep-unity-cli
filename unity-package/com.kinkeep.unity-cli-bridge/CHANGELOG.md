@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Improved error message for unsupported SerializedPropertyType to include the actual type name
+
+### Documentation
+- ExposedReference and FixedBufferSize are intentionally unsupported (extremely rare in typical scene/prefab workflows)
+
 ## [0.1.0] - 2026-03-17
 
 - Initial package release
