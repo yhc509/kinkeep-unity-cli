@@ -90,7 +90,8 @@ public static partial class CliArgumentParser
     {
         string[] notes =
         [
-            "qa swipe --from/--to use absolute screen pixel coordinates unless --target is supplied; with --target they become pixel offsets from the target RectTransform center.",
+            "qa tap and coordinate-based qa swipe treat coordinates as screenshot pixels with a top-left origin; they auto-use the last captured screenshot size when available, and --screenshot-width/--screenshot-height still work as explicit overrides.",
+            "qa swipe --target still treats --from/--to as pixel offsets from the target RectTransform center.",
             "screenshot --view game in Play Mode captures at the native Game View size first; --width/--height only downscale it, and larger requests save at native size with a warning."
         ];
 
@@ -447,6 +448,14 @@ public static partial class CliArgumentParser
                     break;
                 case CommandKind.QaTap when token == "--y":
                     parsed.QaTapY = RequireInt(RequireValue(tokens, "--y"), "--y", minimumValue: null);
+                    break;
+                case CommandKind.QaTap when token == "--screenshot-width":
+                case CommandKind.QaSwipe when token == "--screenshot-width":
+                    parsed.QaScreenshotWidth = RequireInt(RequireValue(tokens, "--screenshot-width"), "--screenshot-width");
+                    break;
+                case CommandKind.QaTap when token == "--screenshot-height":
+                case CommandKind.QaSwipe when token == "--screenshot-height":
+                    parsed.QaScreenshotHeight = RequireInt(RequireValue(tokens, "--screenshot-height"), "--screenshot-height");
                     break;
                 case CommandKind.QaSwipe when token == "--from":
                     parsed.QaSwipeFrom = RequireValue(tokens, "--from");

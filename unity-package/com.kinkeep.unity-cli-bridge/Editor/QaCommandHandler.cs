@@ -174,17 +174,46 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private static string HandleTap(string argumentsJson)
         {
             QaTapArgs args = ProtocolJson.Deserialize<QaTapArgs>(argumentsJson) ?? new QaTapArgs();
+            Vector2Int screenPosition = ResolveTapScreenPosition(args);
 
-#if ENABLE_INPUT_SYSTEM
-            QaInputSimulator.TapAtScreenPosition(args.x, args.y);
-#else
-            throw CreateInputSystemRequiredException("qa tap");
-#endif
+            EventSystem eventSystem = RequireEventSystem();
+            var pointerData = new PointerEventData(eventSystem)
+            {
+                position = new Vector2(screenPosition.x, screenPosition.y),
+                button = PointerEventData.InputButton.Left,
+            };
+
+            var results = new List<RaycastResult>();
+            eventSystem.RaycastAll(pointerData, results);
+
+            if (results.Count == 0)
+            {
+                throw new CommandFailureException(
+                    "QA_TAP_NO_TARGET",
+                    $"No UI element found at screen coordinates ({screenPosition.x}, {screenPosition.y}).",
+                    false,
+                    null);
+            }
+
+            GameObject rawTarget = results[0].gameObject;
+            pointerData.pointerCurrentRaycast = results[0];
+
+            GameObject clickTarget = ExecuteEvents.GetEventHandler<IPointerClickHandler>(rawTarget) ?? rawTarget;
+            ClickGameObject(clickTarget);
 
             return ProtocolJson.Serialize(new QaTapPayload
             {
                 completed = true,
             });
+        }
+
+        private static Vector2Int ResolveTapScreenPosition(QaTapArgs args)
+        {
+            int screenshotWidth = args.screenshotWidth > 0 ? args.screenshotWidth : ScreenshotCommandHandler.LastCapturedWidth;
+            int screenshotHeight = args.screenshotHeight > 0 ? args.screenshotHeight : ScreenshotCommandHandler.LastCapturedHeight;
+            int screenX = QaCoordinateConverter.ConvertScreenshotXToScreenX(args.x, Screen.width, screenshotWidth);
+            int screenY = QaCoordinateConverter.ConvertScreenshotYToScreenY(args.y, Screen.height, screenshotHeight);
+            return new Vector2Int(screenX, screenY);
         }
 
         private static string HandleKey(string argumentsJson)
@@ -450,12 +479,21 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (string.IsNullOrWhiteSpace(args.target))
             {
                 return new SwipeScreenPositions(
-                    new Vector2(args.fromX, args.fromY),
-                    new Vector2(args.toX, args.toY));
+                    ConvertRawSwipeCoordinateToScreenPosition(args.fromX, args.fromY, args.screenshotWidth, args.screenshotHeight),
+                    ConvertRawSwipeCoordinateToScreenPosition(args.toX, args.toY, args.screenshotWidth, args.screenshotHeight));
             }
 
             GameObject target = ResolveSwipeTarget(args);
             return ResolveTargetSwipeScreenPositions(target, args);
+        }
+
+        private static Vector2 ConvertRawSwipeCoordinateToScreenPosition(int rawX, int rawY, int screenshotWidth, int screenshotHeight)
+        {
+            int resolvedScreenshotWidth = screenshotWidth > 0 ? screenshotWidth : ScreenshotCommandHandler.LastCapturedWidth;
+            int resolvedScreenshotHeight = screenshotHeight > 0 ? screenshotHeight : ScreenshotCommandHandler.LastCapturedHeight;
+            int screenX = QaCoordinateConverter.ConvertScreenshotXToScreenX(rawX, Screen.width, resolvedScreenshotWidth);
+            int screenY = QaCoordinateConverter.ConvertScreenshotYToScreenY(rawY, Screen.height, resolvedScreenshotHeight);
+            return new Vector2(screenX, screenY);
         }
 
         private static GameObject ResolveSwipeTarget(QaSwipeArgs args)

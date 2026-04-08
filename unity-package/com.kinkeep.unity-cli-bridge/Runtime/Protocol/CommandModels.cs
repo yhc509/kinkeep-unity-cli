@@ -477,6 +477,8 @@ namespace UnityCli.Protocol
     {
         public int x;
         public int y;
+        public int screenshotWidth;
+        public int screenshotHeight;
     }
 
     [Serializable]
@@ -494,6 +496,8 @@ namespace UnityCli.Protocol
         public int toX;
         public int toY;
         public int durationMs = ProtocolConstants.DefaultQaSwipeDurationMs;
+        public int screenshotWidth;
+        public int screenshotHeight;
     }
 
     [Serializable]

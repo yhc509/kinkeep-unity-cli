@@ -113,8 +113,8 @@ Commands for Play Mode QA interactions such as click, tap, swipe, key input, and
 | Command | Synopsis | Modes | Summary |
 | --- | --- | --- | --- |
 | `qa click` | `qa click (--qa-id <id> \| --target <path>)` | live | Clicks a UI element identified by QA ID or GameObject path; requires Play Mode. |
-| `qa tap` | `qa tap --x <int> --y <int>` | live | Taps at a screen coordinate; requires Play Mode. |
-| `qa swipe` | `qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]` | live | Swipes over multiple frames; when --target is supplied, --from/--to become pixel offsets from the target RectTransform center before resolving to screen coordinates; requires Play Mode. |
+| `qa tap` | `qa tap --x <int> --y <int> [--screenshot-width <int> --screenshot-height <int>]` | live | Taps at a screenshot-derived coordinate. Coordinates use a top-origin image space and auto-scale from the last captured screenshot when available; pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode. |
+| `qa swipe` | `qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>] [--screenshot-width <int> --screenshot-height <int>]` | live | Swipes over multiple frames; without --target, --from/--to use screenshot-style top-origin coordinates and auto-scale from the last captured screenshot when available, while --target keeps them as pixel offsets from the target RectTransform center; pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode. |
 | `qa key` | `qa key --key <keyName>` | live | Simulates a key press via Input System; requires Play Mode. |
 | `qa wait` | `qa wait --ms <int>` | local | Waits for the specified number of milliseconds (local only, does not contact the editor). |
 | `qa wait-until` | `qa wait-until (--scene <name> \| --log-contains <text> \| --object-exists <qa-id\|path>) [--timeout <ms>]` | live | Polls the editor until a condition is met or timeout expires; requires Play Mode. |

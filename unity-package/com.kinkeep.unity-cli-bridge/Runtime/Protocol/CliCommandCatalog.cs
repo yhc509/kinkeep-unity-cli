@@ -474,8 +474,8 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false),
             new CliCommandDescriptor(
                 "qa tap",
-                "qa tap --x <int> --y <int>",
-                "Taps at a screen coordinate; requires Play Mode.",
+                "qa tap --x <int> --y <int> [--screenshot-width <int> --screenshot-height <int>]",
+                "Taps at a screenshot-derived coordinate. Coordinates use a top-origin image space and auto-scale from the last captured screenshot when available; pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode.",
                 CliCommandGroup.QaWorkflows,
                 ProtocolConstants.CommandQaTap,
                 canUseLocal: false,
@@ -483,8 +483,8 @@ namespace UnityCli.Protocol
                 isAllowedWhileBusy: false),
             new CliCommandDescriptor(
                 "qa swipe",
-                "qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]",
-                "Swipes over multiple frames; when --target is supplied, --from/--to become pixel offsets from the target RectTransform center before resolving to screen coordinates; requires Play Mode.",
+                "qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>] [--screenshot-width <int> --screenshot-height <int>]",
+                "Swipes over multiple frames; without --target, --from/--to use screenshot-style top-origin coordinates and auto-scale from the last captured screenshot when available, while --target keeps them as pixel offsets from the target RectTransform center; pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode.",
                 CliCommandGroup.QaWorkflows,
                 ProtocolConstants.CommandQaSwipe,
                 canUseLocal: false,

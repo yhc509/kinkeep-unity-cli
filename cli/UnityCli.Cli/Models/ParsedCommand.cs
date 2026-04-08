@@ -147,6 +147,8 @@ public sealed class ParsedCommand
     public string? QaTarget { get; set; }
     public int? QaTapX { get; set; }
     public int? QaTapY { get; set; }
+    public int? QaScreenshotWidth { get; set; }
+    public int? QaScreenshotHeight { get; set; }
     public string? QaSwipeFrom { get; set; }
     public string? QaSwipeTo { get; set; }
     public int QaSwipeDuration { get; set; } = ProtocolConstants.DefaultQaSwipeDurationMs;
@@ -314,6 +316,8 @@ public sealed class ParsedCommand
             {
                 x = QaTapX ?? 0,
                 y = QaTapY ?? 0,
+                screenshotWidth = QaScreenshotWidth ?? 0,
+                screenshotHeight = QaScreenshotHeight ?? 0,
             },
             CommandKind.QaSwipe => new QaSwipeArgs
             {
@@ -323,6 +327,8 @@ public sealed class ParsedCommand
                 toX = ParseCoordinate(QaSwipeTo, 0, "--to", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
                 toY = ParseCoordinate(QaSwipeTo, 1, "--to", usesTargetRelativeOffsets: !string.IsNullOrWhiteSpace(QaTarget)),
                 durationMs = QaSwipeDuration,
+                screenshotWidth = QaScreenshotWidth ?? 0,
+                screenshotHeight = QaScreenshotHeight ?? 0,
             },
             CommandKind.QaKey => new QaKeyArgs
             {
