@@ -51,7 +51,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
         private readonly PackageCommandHandler _packageCommandHandler;
         private readonly MaterialCommandHandler _materialCommandHandler;
         private readonly QaCommandHandler _qaCommandHandler;
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
         private Socket? _unixListener;
+#endif
         private double _lastHeartbeatTime;
         private bool _originalRunInBackground;
         private bool _isStarted;
@@ -115,7 +117,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             {
             }
 
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
             DisposeUnixListener();
+#endif
             ConsoleLogBuffer.Stop();
             RemoveInstance();
             CleanupSocketFile();
@@ -124,13 +128,14 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         private void StartListener()
         {
-            if (Path.DirectorySeparatorChar == '\\')
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+            if (Path.DirectorySeparatorChar != '\\')
             {
-                StartNamedPipeListener();
+                StartUnixSocketListener();
                 return;
             }
-
-            StartUnixSocketListener();
+#endif
+            StartNamedPipeListener();
         }
 
         private async void StartNamedPipeListener()
@@ -145,6 +150,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
         private async void StartUnixSocketListener()
         {
             try
@@ -156,6 +162,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 ReportBackgroundException("unix socket listener", exception);
             }
         }
+#endif
 
         private async Task RunNamedPipeLoopAsync(CancellationToken cancellationToken)
         {
@@ -188,6 +195,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
         private async Task RunUnixSocketLoopAsync(CancellationToken cancellationToken)
         {
             CleanupSocketFile();
@@ -259,6 +267,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 }
             }, cancellationToken);
         }
+#endif
 
         private async void HandleNamedPipeClient(NamedPipeServerStream server, CancellationToken cancellationToken)
         {
@@ -272,6 +281,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
         private async void HandleSocketClient(Socket client, CancellationToken cancellationToken)
         {
             try
@@ -296,6 +306,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             return HandleStreamClientAsync(new NetworkStream(client, true), cancellationToken);
         }
+#endif
 
         private async Task HandleStreamClientAsync(Stream stream, CancellationToken cancellationToken)
         {
@@ -866,6 +877,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
         }
 
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
         private void DisposeUnixListener()
         {
             if (_unixListener == null)
@@ -883,6 +895,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             _unixListener = null;
         }
+#endif
 
         private void ReportBackgroundException(string operation, Exception exception)
         {

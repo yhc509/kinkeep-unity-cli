@@ -178,8 +178,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     property.boundsValue = ReadBounds(token, propertyPath);
                     break;
                 case SerializedPropertyType.Gradient:
+#if UNITY_2022_1_OR_NEWER
                     property.gradientValue = ReadGradient(token, propertyPath);
                     break;
+#else
+                    throw new CommandFailureException("UNSUPPORTED_PROPERTY", "Gradient properties require Unity 2022.1 or newer: " + propertyPath);
+#endif
                 case SerializedPropertyType.Quaternion:
                     property.quaternionValue = ReadQuaternion(token, propertyPath);
                     break;
@@ -364,8 +368,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     };
                     return true;
                 case SerializedPropertyType.Gradient:
+#if UNITY_2022_1_OR_NEWER
                     token = SerializeGradient(property.gradientValue);
                     return true;
+#else
+                    token = null;
+                    return false;
+#endif
                 case SerializedPropertyType.Quaternion:
                     token = new JObject
                     {

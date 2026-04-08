@@ -73,7 +73,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
             QaIdCache.Clear();
             PathCache.Clear();
 
+#if UNITY_2022_2_OR_NEWER
             Transform[] transforms = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
+#else
+            Transform[] transforms = UnityEngine.Object.FindObjectsOfType<Transform>();
+#endif
             foreach (Transform transform in transforms)
             {
                 if (transform == null || transform.parent != null || !transform.gameObject.activeInHierarchy)
@@ -84,7 +88,11 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 CacheHierarchy(transform, string.Empty);
             }
 
+#if UNITY_2022_2_OR_NEWER
             MonoBehaviour[] monoBehaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+#else
+            MonoBehaviour[] monoBehaviours = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>();
+#endif
             foreach (MonoBehaviour monoBehaviour in monoBehaviours)
             {
                 if (monoBehaviour == null || !monoBehaviour.gameObject.activeInHierarchy)
