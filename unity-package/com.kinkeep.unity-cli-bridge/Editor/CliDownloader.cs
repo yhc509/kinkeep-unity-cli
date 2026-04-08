@@ -203,13 +203,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
         {
             foreach (string sourceSubdirectory in Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
             {
-                string relativePath = Path.GetRelativePath(sourceDirectory, sourceSubdirectory);
+                string relativePath = sourceSubdirectory.Substring(sourceDirectory.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 Directory.CreateDirectory(Path.Combine(destinationDirectory, relativePath));
             }
 
             foreach (string sourceFilePath in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
             {
-                string relativePath = Path.GetRelativePath(sourceDirectory, sourceFilePath);
+                string relativePath = sourceFilePath.Substring(sourceDirectory.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 string destinationFilePath = Path.Combine(destinationDirectory, relativePath);
                 string? destinationParentDirectory = Path.GetDirectoryName(destinationFilePath);
                 if (string.IsNullOrWhiteSpace(destinationParentDirectory))

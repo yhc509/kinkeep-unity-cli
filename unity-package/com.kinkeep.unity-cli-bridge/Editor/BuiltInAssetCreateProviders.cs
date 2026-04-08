@@ -63,10 +63,17 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             public AssetCreateArtifact Create(AssetCreateRequest request)
             {
+#if UNITY_6000_0_OR_NEWER
                 var asset = new PhysicsMaterial(Path.GetFileNameWithoutExtension(request.AssetPath));
                 return new AssetCreateArtifact(
                     delegate { AssetDatabase.CreateAsset(asset, request.AssetPath); },
                     typeof(PhysicsMaterial));
+#else
+                var asset = new PhysicMaterial(Path.GetFileNameWithoutExtension(request.AssetPath));
+                return new AssetCreateArtifact(
+                    delegate { AssetDatabase.CreateAsset(asset, request.AssetPath); },
+                    typeof(PhysicMaterial));
+#endif
             }
         }
 

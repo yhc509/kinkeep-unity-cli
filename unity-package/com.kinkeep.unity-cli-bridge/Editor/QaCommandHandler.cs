@@ -564,7 +564,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 bool found = false;
                 foreach (ConsoleLogEntry entry in entries)
                 {
-                    if (entry.message.Contains(args.logContains!, StringComparison.OrdinalIgnoreCase))
+                    if (entry.message.IndexOf(args.logContains!, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         found = true;
                         break;

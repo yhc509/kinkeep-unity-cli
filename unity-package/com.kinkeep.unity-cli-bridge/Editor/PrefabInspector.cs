@@ -57,7 +57,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 for (int childIndex = 0; childIndex < current.childCount; childIndex++)
                 {
                     Transform child = current.GetChild(childIndex);
-                    if (!name.Equals(child.name.AsSpan(), StringComparison.Ordinal))
+                    if (!name.SequenceEqual(child.name.AsSpan()))
                     {
                         continue;
                     }

@@ -134,7 +134,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 case ShaderPropertyType.Texture:
                     return IsDefaultTexture(material.GetTexture(propertyName), shader.GetPropertyTextureDefaultName(propertyIndex));
                 case ShaderPropertyType.Int:
-#if UNITY_2021_1_OR_NEWER
+#if UNITY_2022_1_OR_NEWER
                     return material.GetInt(propertyName) == shader.GetPropertyDefaultIntValue(propertyIndex);
 #else
                     return false;

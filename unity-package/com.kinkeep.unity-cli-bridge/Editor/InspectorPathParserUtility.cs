@@ -30,7 +30,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             int bracketIndex = segment.LastIndexOf('[');
             if (bracketIndex > 0 && segment[segment.Length - 1] == ']')
             {
-                ReadOnlySpan<char> indexText = segment.Slice(bracketIndex + 1, segment.Length - bracketIndex - 2);
+                string indexText = segment.Slice(bracketIndex + 1, segment.Length - bracketIndex - 2).ToString();
                 if (int.TryParse(indexText, out index))
                 {
                     nameLength = bracketIndex;
