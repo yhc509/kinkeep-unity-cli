@@ -27,17 +27,35 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 
 ## Quick Start
 
-### 1. Install the CLI
+### 1. Add the Unity Package
 
-**Option A: From Unity Editor** (recommended)
+**Option A: Unity Package Manager**
 
-Paste this URL in Unity Package Manager → **Add package from git URL**:
+In Unity, open Package Manager and choose **Add package from git URL**. Paste:
 
 ```
 https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main
 ```
 
-After adding the Unity package (step 2), open `KinKeep > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.kinkeep/unity-cli/`.
+**Option B: Edit `Packages/manifest.json` manually**
+
+Add the following to your `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
+  }
+}
+```
+
+The bridge starts automatically when the Editor opens. No configuration needed.
+
+### 2. Install the CLI
+
+**Option A: From Unity Editor** (recommended)
+
+Open `KinKeep > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.kinkeep/unity-cli/`.
 
 **Option B: Manual download**
 
@@ -51,20 +69,6 @@ Download from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/rele
 Extract and add the binary to your PATH.
 
 > **Tip:** A short, fixed install path (`~/.kinkeep/unity-cli/`) saves tokens when AI agents invoke the CLI repeatedly — every character in the path is repeated on each call.
-
-### 2. Add the Unity Package
-
-Add the following to your `Packages/manifest.json`:
-
-```json
-{
-  "dependencies": {
-    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
-  }
-}
-```
-
-The bridge starts automatically when the Editor opens. No configuration needed.
 
 ### 3. Install AI Agent Skill
 
