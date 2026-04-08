@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- QA screenshot coordinate conversion: `qa tap` and coordinate-based `qa swipe` now accept top-origin screenshot-space coordinates with automatic Y-axis inversion and resolution scaling when screenshot dimensions are available.
+- `--screenshot-width` / `--screenshot-height` options for `qa tap` and `qa swipe` to explicitly specify screenshot resolution for coordinate scaling.
+- Auto screenshot dimension fallback: bridge stores last Game View screenshot resolution and uses it automatically for subsequent QA coordinate conversion.
+- macOS ad-hoc codesigning (`codesign -s -`) added to `publish-osx-arm64.sh`.
+
 ### Changed
+- `qa tap` and coordinate-based `qa swipe` now convert coordinates from screenshot space (Y=0 at top) to Unity screen space (Y=0 at bottom) when screenshot dimensions are known (explicit or auto-detected). Without screenshot dimensions, coordinates pass through as raw screen pixels (backward-compatible).
 - Improved error message for unsupported SerializedPropertyType to include the actual type name
 
 ### Documentation

@@ -172,11 +172,15 @@ unity-cli package search --query "input"
 
 ```bash
 unity-cli qa click --qa-id StartButton
+unity-cli screenshot --view game --path /tmp/qa-reference.png
 unity-cli qa tap --x 400 --y 300
+unity-cli qa swipe --from 100,200 --to 300,400
 unity-cli qa swipe --target ... --from 0,0 --to 100,0 --duration 500
 unity-cli qa key --key space
 unity-cli qa wait-until --scene GameScene --timeout 5000
 ```
+
+`qa tap` accepts screenshot pixel coordinates, reuses the last successful `screenshot` dimensions, and auto-converts them into Unity screen space. See [qa-testing.md](tools/skills/kinkeep-unity-cli/references/qa-testing.md) for the coordinate workflow.
 
 ## Token Optimization
 

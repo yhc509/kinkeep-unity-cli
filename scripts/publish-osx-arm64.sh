@@ -15,4 +15,6 @@ dotnet publish \
   -p:IncludeNativeLibrariesForSelfExtract=true \
   -o "$OUTPUT_DIR"
 
+codesign -f -s - "$OUTPUT_DIR/unity-cli"
+
 echo "published to $OUTPUT_DIR"

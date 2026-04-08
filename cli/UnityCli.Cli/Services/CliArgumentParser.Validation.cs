@@ -322,12 +322,21 @@ public static partial class CliArgumentParser
             }
             case CommandKind.QaTap when !parsed.QaTapX.HasValue || !parsed.QaTapY.HasValue:
                 throw new CliUsageException("`qa tap`에는 `--x`와 `--y`가 모두 필요합니다.");
+            case CommandKind.QaTap:
+                ValidateQaScreenshotDimensions(parsed, "`qa tap`");
+                break;
             case CommandKind.QaSwipe when string.IsNullOrWhiteSpace(parsed.QaSwipeFrom) || string.IsNullOrWhiteSpace(parsed.QaSwipeTo):
                 throw new CliUsageException("`qa swipe`에는 `--from`과 `--to`가 모두 필요합니다.");
             case CommandKind.QaSwipe:
                 bool usesTargetRelativeOffsets = !string.IsNullOrWhiteSpace(parsed.QaTarget);
                 RequireQaSwipeCoordinatePair(parsed.QaSwipeFrom!, "--from", usesTargetRelativeOffsets);
                 RequireQaSwipeCoordinatePair(parsed.QaSwipeTo!, "--to", usesTargetRelativeOffsets);
+                ValidateQaScreenshotDimensions(parsed, "`qa swipe`");
+                if (usesTargetRelativeOffsets && (parsed.QaScreenshotWidth.HasValue || parsed.QaScreenshotHeight.HasValue))
+                {
+                    throw new CliUsageException("`qa swipe`에서 `--target`과 `--screenshot-width`/`--screenshot-height`는 함께 사용할 수 없습니다.");
+                }
+
                 break;
             case CommandKind.QaKey when string.IsNullOrWhiteSpace(parsed.QaKeyName):
                 throw new CliUsageException("`qa key`에는 `--key`가 필요합니다.");
@@ -355,6 +364,16 @@ public static partial class CliArgumentParser
 
                 break;
             }
+        }
+    }
+
+    private static void ValidateQaScreenshotDimensions(ParsedCommand parsed, string commandName)
+    {
+        bool hasScreenshotWidth = parsed.QaScreenshotWidth.HasValue;
+        bool hasScreenshotHeight = parsed.QaScreenshotHeight.HasValue;
+        if (hasScreenshotWidth != hasScreenshotHeight)
+        {
+            throw new CliUsageException($"{commandName}에서 `--screenshot-width`와 `--screenshot-height`는 함께 지정해야 합니다.");
         }
     }
 

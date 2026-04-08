@@ -10,6 +10,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class ScreenshotCommandHandler
     {
+        internal static int LastCapturedWidth { get; private set; }
+        internal static int LastCapturedHeight { get; private set; }
+
         public bool CanHandle(string command)
         {
             return string.Equals(command, ProtocolConstants.CommandScreenshot, StringComparison.Ordinal);
@@ -164,6 +167,8 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     : capturedTexture;
 
                 WriteTextureToPath(outputTexture, path);
+                LastCapturedWidth = width;
+                LastCapturedHeight = height;
                 return (path, width, height);
             }
             finally

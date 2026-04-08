@@ -22,26 +22,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
         }
 
         /// <summary>
-        /// Queues a press and release at the same screen position in the current frame.
-        /// </summary>
-        public static void TapAtScreenPosition(int x, int y)
-        {
-            Vector2 screenPosition = new Vector2(x, y);
-
-            Touchscreen? touchscreen = Touchscreen.current;
-            if (touchscreen != null)
-            {
-                QueueTouchState(touchscreen, screenPosition, UnityEngine.InputSystem.TouchPhase.Began);
-                QueueTouchState(touchscreen, screenPosition, UnityEngine.InputSystem.TouchPhase.Ended);
-                return;
-            }
-
-            Mouse mouse = RequireMouse();
-            QueueMouseState(mouse, screenPosition, true);
-            QueueMouseState(mouse, screenPosition, false);
-        }
-
-        /// <summary>
         /// Queues a key press and release in the current frame.
         /// </summary>
         public static void SimulateKey(string keyName)
@@ -88,17 +68,6 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return keyboard;
-        }
-
-        private static Mouse RequireMouse()
-        {
-            Mouse? mouse = Mouse.current;
-            if (mouse == null)
-            {
-                throw new CommandFailureException("QA_NO_POINTER_DEVICE", "No pointer device found in Input System.", false, null);
-            }
-
-            return mouse;
         }
 
         private static void QueueKeyboardState(Keyboard keyboard, Key key, bool isPressed)

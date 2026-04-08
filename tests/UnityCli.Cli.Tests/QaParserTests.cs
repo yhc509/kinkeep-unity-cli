@@ -38,6 +38,22 @@ public sealed class QaParserTests
     }
 
     [Fact]
+    public void Parse_QaTap_AcceptsScreenshotDimensions()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "qa", "tap",
+            "--x", "100",
+            "--y", "200",
+            "--screenshot-width", "1920",
+            "--screenshot-height", "1080"
+        ]);
+
+        Assert.Equal(CommandKind.QaTap, parsed.Kind);
+        Assert.Equal(1920, parsed.QaScreenshotWidth);
+        Assert.Equal(1080, parsed.QaScreenshotHeight);
+    }
+
+    [Fact]
     public void Parse_QaSwipe_AcceptsDuration()
     {
         var parsed = CliArgumentParser.Parse(["qa", "swipe", "--from", "100,200", "--to", "300,400", "--duration", "500"]);
@@ -58,6 +74,22 @@ public sealed class QaParserTests
         Assert.Equal("0,0", parsed.QaSwipeFrom);
         Assert.Equal("100,0", parsed.QaSwipeTo);
         Assert.Equal(500, parsed.QaSwipeDuration);
+    }
+
+    [Fact]
+    public void Parse_QaSwipe_AcceptsScreenshotDimensions()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "qa", "swipe",
+            "--from", "100,200",
+            "--to", "300,400",
+            "--screenshot-width", "1920",
+            "--screenshot-height", "1080"
+        ]);
+
+        Assert.Equal(CommandKind.QaSwipe, parsed.Kind);
+        Assert.Equal(1920, parsed.QaScreenshotWidth);
+        Assert.Equal(1080, parsed.QaScreenshotHeight);
     }
 
     [Fact]
@@ -156,6 +188,20 @@ public sealed class QaParserTests
     }
 
     [Fact]
+    public void Parse_QaTap_WithOnlyScreenshotWidth_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "tap",
+            "--x", "100",
+            "--y", "200",
+            "--screenshot-width", "1920"
+        ]));
+
+        Assert.Contains("--screenshot-width", ex.Message);
+        Assert.Contains("--screenshot-height", ex.Message);
+    }
+
+    [Fact]
     public void Parse_QaSwipe_WithInvalidCoordinate_ThrowsUsage()
     {
         var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
@@ -180,6 +226,20 @@ public sealed class QaParserTests
 
         Assert.Contains("--from", ex.Message);
         Assert.Contains("target 중심 기준 픽셀 오프셋", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_QaSwipe_WithOnlyScreenshotHeight_ThrowsUsage()
+    {
+        var ex = Assert.Throws<CliUsageException>(() => CliArgumentParser.Parse([
+            "qa", "swipe",
+            "--from", "100,200",
+            "--to", "300,400",
+            "--screenshot-height", "1080"
+        ]));
+
+        Assert.Contains("--screenshot-width", ex.Message);
+        Assert.Contains("--screenshot-height", ex.Message);
     }
 
     [Fact]
@@ -229,6 +289,24 @@ public sealed class QaParserTests
     }
 
     [Fact]
+    public void Parse_QaTap_ToEnvelope_IncludesScreenshotDimensions()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "qa", "tap",
+            "--x", "100",
+            "--y", "200",
+            "--screenshot-width", "1920",
+            "--screenshot-height", "1080"
+        ]);
+
+        var envelope = parsed.ToEnvelope();
+        var arguments = ParseArguments(envelope.argumentsJson);
+
+        Assert.Equal(1920, arguments.GetProperty("screenshotWidth").GetInt32());
+        Assert.Equal(1080, arguments.GetProperty("screenshotHeight").GetInt32());
+    }
+
+    [Fact]
     public void Parse_QaSwipe_ToEnvelope_UsesQaSwipeCommand()
     {
         var parsed = CliArgumentParser.Parse(["qa", "swipe", "--from", "100,200", "--to", "300,400", "--duration", "500"]);
@@ -242,6 +320,24 @@ public sealed class QaParserTests
         Assert.Equal(300, arguments.GetProperty("toX").GetInt32());
         Assert.Equal(400, arguments.GetProperty("toY").GetInt32());
         Assert.Equal(500, arguments.GetProperty("durationMs").GetInt32());
+    }
+
+    [Fact]
+    public void Parse_QaSwipe_ToEnvelope_IncludesScreenshotDimensions()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "qa", "swipe",
+            "--from", "100,200",
+            "--to", "300,400",
+            "--screenshot-width", "1920",
+            "--screenshot-height", "1080"
+        ]);
+
+        var envelope = parsed.ToEnvelope();
+        var arguments = ParseArguments(envelope.argumentsJson);
+
+        Assert.Equal(1920, arguments.GetProperty("screenshotWidth").GetInt32());
+        Assert.Equal(1080, arguments.GetProperty("screenshotHeight").GetInt32());
     }
 
     [Fact]
@@ -315,20 +411,25 @@ public sealed class QaParserTests
 
         Assert.Contains("qa click", helpText);
         Assert.Contains("qa tap", helpText);
-        Assert.Contains("qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>]", helpText);
+        Assert.Contains("qa swipe [--target <path>] --from <x,y> --to <x,y> [--duration <ms>] [--screenshot-width <int> --screenshot-height <int>]", helpText);
         Assert.Contains("qa key", helpText);
         Assert.Contains("qa wait --ms <int>", helpText);
         Assert.Contains("qa wait-until", helpText);
-        Assert.Contains("qa swipe --from/--to use absolute screen pixel coordinates unless --target is supplied; with --target they become pixel offsets from the target RectTransform center.", helpText);
+        Assert.Contains("qa tap and coordinate-based qa swipe treat coordinates as screenshot pixels with a top-left origin", helpText);
+        Assert.Contains("last captured screenshot size", helpText);
+        Assert.Contains("qa swipe --target still treats --from/--to as pixel offsets from the target RectTransform center.", helpText);
     }
 
     [Fact]
-    public void QaSwipe_CommandCatalog_DescribesTargetRelativeOffsets()
+    public void QaSwipe_CommandCatalog_DescribesAutoDetectedScreenshotScalingAndTargetRelativeOffsets()
     {
         CliCommandDescriptor? descriptor = CliCommandCatalog.FindByCommand("qa swipe");
 
         Assert.NotNull(descriptor);
         Assert.Contains("--target <path>", descriptor!.Synopsis);
+        Assert.Contains("--screenshot-width <int> --screenshot-height <int>", descriptor.Synopsis);
+        Assert.Contains("top-origin coordinates", descriptor.Summary);
+        Assert.Contains("last captured screenshot", descriptor.Summary);
         Assert.Contains("pixel offsets from the target RectTransform center", descriptor.Summary);
         Assert.Contains("multiple frames", descriptor.Summary);
     }
