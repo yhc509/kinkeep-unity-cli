@@ -31,6 +31,12 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 
 **Option A: From Unity Editor** (recommended)
 
+Paste this URL in Unity Package Manager → **Add package from git URL**:
+
+```
+https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main
+```
+
 After adding the Unity package (step 2), open `KinKeep > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.kinkeep/unity-cli/`.
 
 **Option B: Manual download**
@@ -56,12 +62,6 @@ Add the following to your `Packages/manifest.json`:
     "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
   }
 }
-```
-
-Or paste this URL in Unity Package Manager → **Add package from git URL**:
-
-```
-https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main
 ```
 
 The bridge starts automatically when the Editor opens. No configuration needed.
