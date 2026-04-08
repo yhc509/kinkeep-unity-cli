@@ -97,7 +97,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 for (int childIndex = 0; childIndex < currentTransform.childCount; childIndex++)
                 {
                     Transform child = currentTransform.GetChild(childIndex);
-                    if (!name.Equals(child.name.AsSpan(), StringComparison.Ordinal))
+                    if (!name.SequenceEqual(child.name.AsSpan()))
                     {
                         continue;
                     }
@@ -262,7 +262,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             for (int index = 0; index < roots.Length; index++)
             {
                 GameObject root = roots[index];
-                if (!name.Equals(root.name.AsSpan(), StringComparison.Ordinal))
+                if (!name.SequenceEqual(root.name.AsSpan()))
                 {
                     continue;
                 }
