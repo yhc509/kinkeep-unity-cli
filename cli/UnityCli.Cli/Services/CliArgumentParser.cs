@@ -90,7 +90,7 @@ public static partial class CliArgumentParser
     {
         string[] notes =
         [
-            "qa tap and coordinate-based qa swipe treat coordinates as screenshot pixels with a top-left origin; they auto-use the last captured screenshot size when available, and --screenshot-width/--screenshot-height still work as explicit overrides.",
+            "qa tap and coordinate-based qa swipe treat coordinates as screenshot pixels with a top-left origin; pass screenshot image coordinates directly because the bridge handles Y-flip and scaling, auto-uses the last captured screenshot size when available, and still accepts --screenshot-width/--screenshot-height as explicit overrides.",
             "qa swipe --target still treats --from/--to as pixel offsets from the target RectTransform center.",
             "screenshot --view game in Play Mode captures at the native Game View size first; --width/--height only downscale it, and larger requests save at native size with a warning."
         ];

@@ -184,7 +184,7 @@ unity-cli qa key --key space
 unity-cli qa wait-until --scene GameScene --timeout 5000
 ```
 
-`qa tap` accepts screenshot pixel coordinates, reuses the last successful `screenshot` dimensions, and auto-converts them into Unity screen space. See [qa-testing.md](tools/skills/kinkeep-unity-cli/references/qa-testing.md) for the coordinate workflow.
+`screenshot` responses include both image size (`width`/`height`) and live input metadata (`screenWidth`/`screenHeight`, `imageOrigin=top-left`, `coordinateOrigin=bottom-left`). `qa tap` takes screenshot image coordinates as-is, reuses the last successful `screenshot` dimensions when `--screenshot-width`/`--screenshot-height` are omitted, and lets the bridge handle Y-flip plus resolution scaling into Unity screen space. See [qa-testing.md](tools/skills/kinkeep-unity-cli/references/qa-testing.md) for the coordinate workflow.
 
 ## Token Optimization
 

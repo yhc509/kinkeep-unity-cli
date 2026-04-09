@@ -141,7 +141,7 @@ namespace UnityCli.Protocol
             new CliCommandDescriptor(
                 "screenshot",
                 "screenshot [--view game|scene (default: game) | --camera <name>] [--path <output.png>] [--width N] [--height N]",
-                "Captures a screenshot from the Game View, Scene View, or a named camera. Defaults to Game View when neither --view nor --camera is supplied. In Play Mode, --view game can downscale the native Game View capture but does not upscale it.",
+                "Captures a screenshot from the Game View, Scene View, or a named camera. Defaults to Game View when neither --view nor --camera is supplied. The response includes image size plus screen-space metadata (`screenWidth`, `screenHeight`, `imageOrigin`, `coordinateOrigin`) for QA coordinate alignment. In Play Mode, --view game can downscale the native Game View capture but does not upscale it.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandScreenshot,
                 canUseLocal: false,
@@ -475,7 +475,7 @@ namespace UnityCli.Protocol
             new CliCommandDescriptor(
                 "qa tap",
                 "qa tap --x <int> --y <int> [--screenshot-width <int> --screenshot-height <int>]",
-                "Taps at a screenshot-derived coordinate. Coordinates use a top-origin image space and auto-scale from the last captured screenshot when available; pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode.",
+                "Taps at a screenshot-derived coordinate. Pass screenshot image coordinates directly with a top-left origin; the bridge auto-uses the last captured screenshot size when available and handles Y-flip plus scaling internally. Pass --screenshot-width/--screenshot-height to override the source size; requires Play Mode.",
                 CliCommandGroup.QaWorkflows,
                 ProtocolConstants.CommandQaTap,
                 canUseLocal: false,

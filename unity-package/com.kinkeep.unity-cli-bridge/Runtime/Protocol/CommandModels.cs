@@ -83,6 +83,10 @@ namespace UnityCli.Protocol
         public string savedPath = string.Empty;
         public int width;
         public int height;
+        public int screenWidth;
+        public int screenHeight;
+        public string coordinateOrigin = "bottom-left";
+        public string imageOrigin = "top-left";
         public long fileSizeBytes;
     }
 
