@@ -39,6 +39,7 @@ status → play → (입력 시뮬레이션) → 검증 (로그 + 스크린샷) 
 
 ### UI 좌표 탭 → EventSystem raycast 경로 (tap)
 - 스크린샷에서 읽은 좌표로 현재 화면의 UGUI 대상을 찾을 때 사용
+- `screenshot` 응답의 `imageOrigin`은 `top-left`, `coordinateOrigin`은 `bottom-left`다. 일반적으로는 스크린샷에서 읽은 이미지 좌표 `(x, y)`를 그대로 `qa tap --x --y`에 넘기면 된다.
 - `qa tap`은 top-origin 스크린샷 좌표를 받아 실행 시 Unity 화면 좌표계(bottom-origin)로 자동 변환한다.
 - 최근 성공한 `screenshot` 캡처의 `width`/`height`를 기본값으로 사용해 현재 `Screen.width`/`Screen.height`에 맞게 자동 스케일링한다.
 - EventSystem이 좌표 위치를 raycast해 최상단 대상을 찾고, 클릭 핸들러가 자식에 걸려 있으면 상위 hierarchy에서 실제 `IPointerClickHandler`를 찾아 실행한다.
@@ -137,17 +138,18 @@ ucli screenshot --view game --path /tmp/qa-check.png --project "$P" --json
 - **`qa tap --x <X> --y <Y>`**: Use when you only have visual information from a screenshot (for example, you can see a button but do not know its path).
 
 ### qa tap Workflow
-1. Take a screenshot: `screenshot` -> note `width` and `height` from the response
+1. Take a screenshot: `screenshot` -> note `width`, `height`, and when needed `screenWidth`, `screenHeight`, `imageOrigin`, `coordinateOrigin` from the response
 2. Analyze the screenshot image to find the target pixel coordinates `(X, Y)` with `Y=0` at the top-left
-3. Tap: `qa tap --x <X> --y <Y>` -> the bridge automatically reuses the last screenshot dimensions for coordinate conversion
+3. Tap: `qa tap --x <X> --y <Y>` -> pass the screenshot image coordinates directly; the bridge automatically reuses the last screenshot dimensions for coordinate conversion
 4. Verify: `read-console` to check whether the expected log or event fired
 
 The bridge automatically:
+- Accepts screenshot image coordinates as-is, so you do not pre-flip Y or pre-scale for DPI/resolution differences
 - Inverts the Y axis (screenshot top-origin -> Unity bottom-origin)
 - Scales coordinates if the screenshot resolution differs from `Screen.width` / `Screen.height` (common in the Editor because of DPI)
 
 ### Explicit screenshot dimensions
-If you need to specify different dimensions, for example when the screenshot was resized:
+If you need to specify different dimensions, for example when the screenshot was resized. If you omit them, the bridge uses the last successful `screenshot` size automatically:
 
 ```bash
 ucli qa tap --x 480 --y 225 --screenshot-width 961 --screenshot-height 554 --project "$P" --json

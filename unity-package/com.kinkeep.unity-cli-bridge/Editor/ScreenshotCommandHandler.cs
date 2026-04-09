@@ -67,6 +67,10 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 savedPath = resolvedPath,
                 width = capturedWidth,
                 height = capturedHeight,
+                screenWidth = Screen.width,
+                screenHeight = Screen.height,
+                coordinateOrigin = "bottom-left",
+                imageOrigin = "top-left",
                 fileSizeBytes = fileInfo.Exists ? fileInfo.Length : 0,
             });
         }
