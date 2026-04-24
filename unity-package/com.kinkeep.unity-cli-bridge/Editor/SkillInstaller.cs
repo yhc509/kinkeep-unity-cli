@@ -50,18 +50,18 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
         internal static string GetDestination(SkillTarget target)
         {
-            string? projectRoot = Path.GetDirectoryName(Application.dataPath);
-            if (string.IsNullOrWhiteSpace(projectRoot))
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (string.IsNullOrWhiteSpace(home))
             {
-                throw new InvalidOperationException("Failed to resolve Unity project root.");
+                throw new InvalidOperationException("Failed to resolve user home directory.");
             }
 
             switch (target)
             {
                 case SkillTarget.ClaudeCode:
-                    return Path.Combine(projectRoot, ".claude", "skills", SkillName);
+                    return Path.Combine(home, ".claude", "skills", SkillName);
                 case SkillTarget.Codex:
-                    return Path.Combine(projectRoot, ".agents", "skills", SkillName);
+                    return Path.Combine(home, ".codex", "skills", SkillName);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported skill target.");
             }
