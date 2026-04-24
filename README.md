@@ -76,8 +76,8 @@ In the Unity Editor, open `KinKeep > CLI Manager`. Select your AI tool (Claude C
 
 | Tool | Install Path |
 |------|-------------|
-| Claude Code | `{ProjectRoot}/.claude/skills/kinkeep-unity-cli/` |
-| Codex | `{ProjectRoot}/.agents/skills/kinkeep-unity-cli/` |
+| Claude Code | `~/.claude/skills/kinkeep-unity-cli/` |
+| Codex | `~/.codex/skills/kinkeep-unity-cli/` |
 
 The skill teaches AI agents how to pick the right commands, run them safely, and verify results with `read-console`.
 
