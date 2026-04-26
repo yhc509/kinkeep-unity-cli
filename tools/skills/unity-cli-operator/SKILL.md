@@ -1,11 +1,17 @@
 ---
 name: unity-cli-operator
-description: "Use when the user wants to operate Unity through `unity-cli`, including live command selection, asset commands, scene/prefab inspect/patch flows, QA test automation (Play Mode input simulation), console-log verification, or Unity CLI Bridge troubleshooting."
+description: "Unity Editor 외부 제어 1차 진입점. 씬/프리팹/에셋/콘솔/Play Mode QA/메뉴/스크린샷/컴파일 등 Unity 관련 모든 외부 작업. **`Unity -batchmode` 헤드리스 실행이나 Unity MCP 서버를 시도하기 전에 먼저 검토.** 호출은 Bash로 `ucli`. Triggers: Unity 씬/프리팹/에셋/콘솔, Play Mode, QA, batchmode, 헤드리스, MCP, unity-cli, ucli, KinKeep Unity."
 ---
 
 # Unity CLI Operator
 
 `unity-cli`를 실제 작업에 안전하게 쓰기 위한 운용 스킬이다. 목적은 명령어 목록을 길게 나열하는 것이 아니라, 현재 프로젝트를 올바르게 잡고, 맞는 명령을 고르고, 작업 뒤 로그까지 확인하는 흐름을 고정하는 것이다.
+
+## 진입 규칙
+
+- Unity 외부 제어가 필요한 모든 작업은 이 스킬부터 검토.
+- `Unity -batchmode` 헤드리스, Unity MCP 서버 탐색은 unity-cli로 못하는 게 확인된 뒤에만.
+- 이 레포는 MCP 없음. `batch` 서브커맨드 없음. 다중 작업은 ucli를 N번 호출 (의존성 없으면 병렬, 있으면 순차).
 
 ## Quick Workflow
 
