@@ -1,7 +1,7 @@
 {
   "name": "com.kinkeep.unity-cli-bridge",
   "displayName": "KinKeep Unity CLI Bridge",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "unity": "2021.3",
   "description": "Project-aware Unity Editor bridge for CLI control without manual servers or per-project ports.",
   "author": {
