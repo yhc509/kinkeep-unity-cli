@@ -5,11 +5,12 @@
 ## [0.1.5] - 2026-04-26
 
 ### Added
-- Screenshot response now includes coordinate metadata (image origin, coordinate origin, screenshot dimensions, Unity screen dimensions).
+- `screenshot` response now includes 4 metadata fields — `screenWidth`, `screenHeight`, `coordinateOrigin`, `imageOrigin` — so callers can derive the `qa tap` coordinate system from a single screenshot response.
 
 ### Changed
-- AI skills installer writes to the user's global Claude/Codex skills directory instead of the project root.
-- Package author updated to `KinKeep`.
+- AI skills installer in `KinKeep > CLI Manager` writes to the user's global skills directory (`~/.claude/skills/`, `~/.codex/skills/`) instead of the project root.
+- Bundled `unity-cli-operator` skill rewritten to actively trigger on Unity tasks and explicitly close off `Unity -batchmode`/MCP detour paths.
+- Package author changed from `yhjang` to `KinKeep`.
 
 ## [0.1.4] - 2026-04-08
 
