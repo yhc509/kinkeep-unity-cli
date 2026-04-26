@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-04-26
+
+### Added
+- Screenshot response now includes coordinate metadata (`imageOrigin`, `coordinateOrigin`, screenshot/Unity screen dimensions) so callers can map screenshot pixels to Unity screen coordinates directly (#21).
+
+### Changed
+- AI skills installer in `KinKeep > CLI Manager` now writes to the user's global Claude/Codex skills directory instead of the project root (#23).
+- Strengthened the `unity-cli-operator` skill so agents pick it up on Unity-related work and stop detouring through `Unity -batchmode` headless runs or searching for a (nonexistent) Unity MCP server: rewrote `SKILL.md` description as a forward-firing trigger and populated the OpenAI agent stub with trigger keywords and rules (#24).
+- Unity package author updated to `KinKeep` (#22).
+
 ## [0.1.4] - 2026-04-08
 
 ### Added

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-04-26
+
+### Added
+- Screenshot response now includes coordinate metadata (image origin, coordinate origin, screenshot dimensions, Unity screen dimensions).
+
+### Changed
+- AI skills installer writes to the user's global Claude/Codex skills directory instead of the project root.
+- Package author updated to `KinKeep`.
+
 ## [0.1.4] - 2026-04-08
 
 ### Changed
