@@ -1,4 +1,23 @@
 interface:
   display_name: "Unity CLI Operator"
-  short_description: "unity-cli 운용과 prefab/asset 작업 절차를 안내한다"
-  default_prompt: "Use $unity-cli-operator to choose the right unity-cli commands, run them safely, and verify console logs."
+  short_description: "Unity Editor 외부 제어 1차 진입점. Unity batchmode·MCP·헤드리스 시도 전 먼저 검토."
+  default_prompt: |
+    Unity 외부 제어가 필요하면 $unity-cli-operator 먼저.
+    호출: Bash로 `ucli ...` (또는 `unity-cli ...`).
+    이 레포는 MCP 없고 `batch` 서브커맨드도 없음 — 다중 작업은 N번 호출(의존성 없으면 병렬).
+    필수: `--project <name|path>` 명시, 쓰기 전에 `ucli status`로 projectName 확인, LLM 소비용은 `--output compact`.
+
+  triggers:
+    - "Unity"
+    - "씬"
+    - "프리팹"
+    - "에셋"
+    - "콘솔 로그"
+    - "Play Mode"
+    - "QA"
+    - "batchmode"
+    - "헤드리스"
+    - "Unity MCP"
+    - "unity-cli"
+    - "ucli"
+    - "KinKeep Unity"
