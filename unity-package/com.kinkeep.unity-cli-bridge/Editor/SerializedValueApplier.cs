@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityCli.Protocol;
 
 namespace KinKeep.UnityCli.Bridge.Editor
 {
@@ -35,10 +36,25 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (JProperty property in values.Properties())
             {
-                SerializedProperty? serializedProperty = FindPropertyWithFallback(serializedObject, property.Name);
+                SerializedProperty? serializedProperty = FindPropertyWithFallback(serializedObject, component.GetType(), property.Name, out string? attemptedAliasPath);
                 if (serializedProperty == null)
                 {
                     string fallbackKey = "m_" + ToPascalCase(property.Name);
+                    if (attemptedAliasPath != null)
+                    {
+                        throw new CommandFailureException(
+                            "COMPONENT_VALUE_KEY_INVALID",
+                            "serialized field를 찾지 못했습니다: "
+                            + property.Name
+                            + " (시도한 키: alias='"
+                            + attemptedAliasPath
+                            + "', '"
+                            + property.Name
+                            + "', '"
+                            + fallbackKey
+                            + "'). list-components로 유효한 property 이름을 확인하세요.");
+                    }
+
                     throw new CommandFailureException(
                         "COMPONENT_VALUE_KEY_INVALID",
                         "serialized field를 찾지 못했습니다: "
@@ -108,8 +124,20 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 : char.ToUpperInvariant(key[0]) + key.Substring(1);
         }
 
-        private static SerializedProperty? FindPropertyWithFallback(SerializedObject serializedObject, string key)
+        private static SerializedProperty? FindPropertyWithFallback(SerializedObject serializedObject, Type componentType, string key, out string? attemptedAliasPath)
         {
+            attemptedAliasPath = null;
+
+            if (FriendlyKeyAliasCatalog.TryGetCanonicalPath(componentType, key, out string aliasPath))
+            {
+                attemptedAliasPath = aliasPath;
+                SerializedProperty aliasMatch = serializedObject.FindProperty(aliasPath);
+                if (aliasMatch != null)
+                {
+                    return aliasMatch;
+                }
+            }
+
             SerializedProperty directMatch = serializedObject.FindProperty(key);
             if (directMatch != null)
             {

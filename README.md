@@ -156,6 +156,13 @@ unity-cli prefab remove-component --path Assets/Prefabs/Player.prefab --node "/R
 
 Patch ops: `add-child`, `remove-node`, `set-node`, `add-component`, `remove-component`, `set-component-values`
 
+Friendly component keys are available in scene/prefab value patches for common Unity components:
+- Rigidbody: `mass`, `damping`, `angularDamping`, `useGravity`, `isKinematic`, `constraints`
+- Collider family: `isTrigger`, `material`, `contactOffset`, plus `size`, `radius`, `height`, `mesh`, `convex`
+- Renderer family: `materials`, `materials[0]`, `receiveShadows`, `shadowCastingMode`, `lightProbeUsage`
+- Light: `color`, `intensity`, `range`, `type`, `shadows`, `shadowStrength`
+- Camera: `fieldOfView`, `nearClipPlane`, `farClipPlane`, `backgroundColor`, `orthographicSize`
+
 ### Materials
 
 ```bash
@@ -220,6 +227,7 @@ docs/                          Generated CLI reference, specs
 - **Asset paths:** Write operations are `Assets/...` only. Reads allow `Packages/...` too.
 - **Scene paths:** `/Root[0]/Child[0]` format with sibling indices. `/` is the virtual scene root.
 - **Inspect before patch:** Always `scene inspect --with-values` or `prefab inspect --with-values` before writing patch specs.
+- **Friendly component keys:** Common Rigidbody, Collider, Renderer, Light, and Camera patch keys are resolved to Unity `SerializedProperty.propertyPath` values.
 - **set-node warnings:** Unrecognized keys now return warnings instead of silent success.
 
 ## Documentation
