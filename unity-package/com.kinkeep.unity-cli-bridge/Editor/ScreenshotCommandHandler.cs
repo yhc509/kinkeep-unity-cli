@@ -13,6 +13,34 @@ namespace KinKeep.UnityCli.Bridge.Editor
         internal static int LastCapturedWidth { get; private set; }
         internal static int LastCapturedHeight { get; private set; }
 
+        [InitializeOnLoadMethod]
+        private static void EnsurePlayModeStateChangedSubscribed()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        internal static void ResetLastCapturedSize()
+        {
+            LastCapturedWidth = 0;
+            LastCapturedHeight = 0;
+        }
+
+        internal static void SetLastCapturedSizeForTesting(int width, int height)
+        {
+            LastCapturedWidth = width;
+            LastCapturedHeight = height;
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode
+                || state == PlayModeStateChange.EnteredPlayMode)
+            {
+                ResetLastCapturedSize();
+            }
+        }
+
         public bool CanHandle(string command)
         {
             return string.Equals(command, ProtocolConstants.CommandScreenshot, StringComparison.Ordinal);

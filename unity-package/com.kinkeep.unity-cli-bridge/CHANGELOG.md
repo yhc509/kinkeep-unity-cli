@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Reset Game View screenshot dimensions on Play Mode transitions to prevent stale coordinate scaling when Enter Play Mode Options disables domain reload.
+
 ## [0.1.5] - 2026-04-26
 
 ### Added
