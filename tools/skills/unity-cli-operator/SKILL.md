@@ -83,14 +83,14 @@ unity-cli does not have dedicated script create/delete commands. Use this combin
 - `unity-cli prefab list-components --path Assets/Prefabs/Player.prefab --node "/Root[0]"`
 
 **Add component (with optional initial values):**
-- `unity-cli scene add-component --path Assets/Scenes/S.unity --node "/Player[0]" --type Rigidbody --values '{"mass":5,"drag":1}'`
+- `unity-cli scene add-component --path Assets/Scenes/S.unity --node "/Player[0]" --type Rigidbody --values '{"mass":5,"damping":1}'`
 - `unity-cli prefab add-component --path Assets/Prefabs/P.prefab --node "/Root[0]" --type BoxCollider`
 
 **Remove component:**
 - `unity-cli scene remove-component --path Assets/Scenes/S.unity --node "/Player[0]" --type BoxCollider --force`
 - `unity-cli prefab remove-component --path Assets/Prefabs/P.prefab --node "/Root[0]" --type BoxCollider --force`
 
-**Friendly key mapping:** Values like `mass`, `drag`, `isKinematic` are automatically resolved to Unity's internal `m_Mass`, `m_Drag`, `m_IsKinematic` paths. If a key is not found, use `list-components` then `inspect --with-values` to find the exact property name.
+**Friendly key mapping:** Rigidbody, Collider, Renderer, Light, and Camera values accept common keys like `mass`, `damping`, `isTrigger`, `materials[0]`, `shadowStrength`, and `fieldOfView`, which resolve to Unity `SerializedProperty.propertyPath` values. If a key is not found, use `list-components` then `inspect --with-values`.
 
 ## Convenience Commands — 편의 명령 우선 사용 원칙
 

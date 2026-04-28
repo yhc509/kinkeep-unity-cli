@@ -164,6 +164,7 @@ Runtime extension providers can add more rows to `asset types`, but they are not
 - Destructive or overwrite flows are guarded by `--force`, including `asset delete`, overwrite variants of `asset move`, `asset rename`, and `asset create`, `package remove`, plus destructive `scene patch` operations.
 - Use `scene inspect --with-values` before writing a scene patch spec.
 - Use `prefab inspect --with-values` before writing a prefab patch spec.
+- Scene/prefab component value patches accept friendly keys for common Rigidbody, Collider, Renderer, Light, and Camera properties; inspect remains the source of truth for unsupported fields.
 - `asset create --type prefab` only creates an empty prefab root. Use `prefab create` for structured prefab authoring.
 
 ## Related Docs

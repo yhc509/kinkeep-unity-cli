@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Added a friendly key alias catalog for Rigidbody, Collider, Renderer, Light, and Camera component value patches.
+
 ### Fixed
 - Reset Game View screenshot dimensions on Play Mode transitions to prevent stale coordinate scaling when Enter Play Mode Options disables domain reload.
 

@@ -138,6 +138,7 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine("- Destructive or overwrite flows are guarded by `--force`, including `asset delete`, overwrite variants of `asset move`, `asset rename`, and `asset create`, `package remove`, plus destructive `scene patch` operations.");
         builder.AppendLine("- Use `scene inspect --with-values` before writing a scene patch spec.");
         builder.AppendLine("- Use `prefab inspect --with-values` before writing a prefab patch spec.");
+        builder.AppendLine("- Scene/prefab component value patches accept friendly keys for common Rigidbody, Collider, Renderer, Light, and Camera properties; inspect remains the source of truth for unsupported fields.");
         builder.AppendLine("- `asset create --type prefab` only creates an empty prefab root. Use `prefab create` for structured prefab authoring.");
         builder.AppendLine();
     }

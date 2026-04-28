@@ -171,6 +171,7 @@ ucli scene patch --project "$PROJECT" --path Assets/Scenes/SampleScene.unity --s
 ### 안전 규칙
 
 - 먼저 `scene inspect --with-values`로 GameObject path와 component field를 확인한다
+- Rigidbody, Collider, Renderer, Light, Camera의 흔한 component value는 `mass`, `damping`, `isTrigger`, `materials[0]`, `shadowStrength`, `fieldOfView` 같은 friendly key를 쓸 수 있다
 - `--omit-defaults` 결과는 read-only이다. patch input으로 그대로 쓰면 생략된 필드가 복원되지 않는다
 - node path는 `/Root[0]/Child[0]` 형식으로 쓴다
 - `/`는 virtual scene root이고, root GameObject 추가의 parent로만 쓴다
