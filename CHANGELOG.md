@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-04-28
+
+### Added
+- `execute` now accepts `--args <json>` for passing structured JSON into inline or file-based code execution.
+- Execute wrapper code now exposes the supplied JSON as the `__pucArgsJson` string variable.
+
+### Notes
+- 이 기능은 bridge `0.1.6+` 필요. 구 bridge에 신규 CLI를 사용하면 `__pucArgsJson` 참조 시 컴파일 에러가 발생합니다.
+
 ## [0.1.5] - 2026-04-26
 
 ### Added

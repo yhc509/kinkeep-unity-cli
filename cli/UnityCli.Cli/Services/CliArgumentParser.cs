@@ -395,6 +395,9 @@ public static partial class CliArgumentParser
                 case CommandKind.ExecuteCode when token == "--file":
                     parsed.ExecuteCodeFile = RequireValue(tokens, "--file");
                     break;
+                case CommandKind.ExecuteCode when token == "--args":
+                    parsed.ExecuteCodeArgsJson = RequireJsonValue(tokens, "--args");
+                    break;
                 case CommandKind.ExecuteCode when token == "--force":
                     parsed.Force = true;
                     break;

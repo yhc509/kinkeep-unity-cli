@@ -94,6 +94,7 @@ namespace UnityCli.Protocol
     public sealed class ExecuteCodeArgs
     {
         public string code = string.Empty;
+        public string? argumentsJson;
     }
 
     [Serializable]

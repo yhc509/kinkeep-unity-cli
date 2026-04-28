@@ -1349,6 +1349,134 @@ public sealed class CliArgumentParserTests
     }
 
     [Fact]
+    public void Parse_Execute_AcceptsArgs()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "execute",
+            "--code", "Debug.Log(42);",
+            "--args", "{\"k\":\"v\",\"n\":1}",
+            "--force"
+        ]);
+
+        Assert.Equal(CommandKind.ExecuteCode, parsed.Kind);
+        Assert.Equal("{\"k\":\"v\",\"n\":1}", parsed.ExecuteCodeArgsJson);
+    }
+
+    [Fact]
+    public void Parse_Execute_ToEnvelope_IncludesArgsJson()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "execute",
+            "--code", "Debug.Log(42);",
+            "--args", "{\"k\":\"v\",\"n\":1}",
+            "--force"
+        ]);
+
+        var envelope = parsed.ToEnvelope();
+        var args = ProtocolJson.Deserialize<ExecuteCodeArgs>(envelope.argumentsJson);
+
+        Assert.Equal(ProtocolConstants.CommandExecuteCode, envelope.command);
+        Assert.Equal("Debug.Log(42);", args.code);
+        Assert.Equal("{\"k\":\"v\",\"n\":1}", args.argumentsJson);
+    }
+
+    [Fact]
+    public void Parse_Execute_AcceptsCodeAndArgs()
+    {
+        var parsed = CliArgumentParser.Parse([
+            "execute",
+            "--code", "Debug.Log(__pucArgsJson);",
+            "--args", "{\"message\":\"hello\"}",
+            "--force"
+        ]);
+
+        Assert.Equal("Debug.Log(__pucArgsJson);", parsed.ExecuteCodeSnippet);
+        Assert.Equal("{\"message\":\"hello\"}", parsed.ExecuteCodeArgsJson);
+        Assert.True(parsed.Force);
+    }
+
+    [Fact]
+    public void Parse_Execute_AcceptsFileAndArgs()
+    {
+        using var temp = new TempDirectory();
+        string codePath = Path.Combine(temp.Path, "setup.cs");
+        File.WriteAllText(codePath, "Debug.Log(__pucArgsJson);");
+
+        var parsed = CliArgumentParser.Parse([
+            "execute",
+            "--file", codePath,
+            "--args", "{\"scene\":\"Main\"}",
+            "--force"
+        ]);
+
+        var envelope = parsed.ToEnvelope();
+        var args = ProtocolJson.Deserialize<ExecuteCodeArgs>(envelope.argumentsJson);
+
+        Assert.Equal(codePath, parsed.ExecuteCodeFile);
+        Assert.Equal("{\"scene\":\"Main\"}", parsed.ExecuteCodeArgsJson);
+        Assert.Equal("Debug.Log(__pucArgsJson);", args.code);
+        Assert.Equal("{\"scene\":\"Main\"}", args.argumentsJson);
+    }
+
+    [Fact]
+    public void Parse_Execute_ArgsWithoutValue_Throws()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "execute",
+                "--code", "Debug.Log(42);",
+                "--args",
+                "--force"
+            ]));
+
+        Assert.Equal("--args 옵션은 JSON 값이 필요합니다.", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_Execute_ArgsMissingValueAtEnd_Throws()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "execute",
+                "--code", "Debug.Log(42);",
+                "--args"
+            ]));
+
+        Assert.Equal("--args 옵션은 JSON 값이 필요합니다.", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Parse_Execute_ArgsBlankValue_Throws(string argsJson)
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "execute",
+                "--code", "Debug.Log(42);",
+                "--args", argsJson,
+                "--force"
+            ]));
+
+        Assert.Equal("--args 옵션은 JSON 값이 필요합니다.", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_Execute_RejectsInvalidArgsJson()
+    {
+        var ex = Assert.Throws<CliUsageException>(() =>
+            CliArgumentParser.Parse([
+                "execute",
+                "--code", "Debug.Log(42);",
+                "--args", "{",
+                "--force"
+            ]));
+
+        Assert.Contains("--args", ex.Message);
+        Assert.Contains("JSON", ex.Message);
+    }
+
+    [Fact]
     public void Parse_Execute_RejectsBothCodeAndFile()
     {
         var ex = Assert.Throws<CliUsageException>(() =>

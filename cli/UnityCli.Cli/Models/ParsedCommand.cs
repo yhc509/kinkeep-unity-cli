@@ -92,6 +92,7 @@ public sealed class ParsedCommand
     public string? PackageQuery { get; set; }
     public string? ExecuteCodeSnippet { get; set; }
     public string? ExecuteCodeFile { get; set; }
+    public string? ExecuteCodeArgsJson { get; set; }
     public string? CustomCommandName { get; set; }
     public string? CustomArgsJson { get; set; }
     public string? MaterialPath { get; set; }
@@ -288,6 +289,7 @@ public sealed class ParsedCommand
             CommandKind.ExecuteCode => new ExecuteCodeArgs
             {
                 code = ResolveExecuteCode(),
+                argumentsJson = ExecuteCodeArgsJson,
             },
             CommandKind.Custom => new CustomCommandArgs
             {
