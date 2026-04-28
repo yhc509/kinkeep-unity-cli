@@ -42,6 +42,7 @@ status → play → (입력 시뮬레이션) → 검증 (로그 + 스크린샷) 
 - `screenshot` 응답의 `imageOrigin`은 `top-left`, `coordinateOrigin`은 `bottom-left`다. 일반적으로는 스크린샷에서 읽은 이미지 좌표 `(x, y)`를 그대로 `qa tap --x --y`에 넘기면 된다.
 - `qa tap`은 top-origin 스크린샷 좌표를 받아 실행 시 Unity 화면 좌표계(bottom-origin)로 자동 변환한다.
 - 최근 성공한 `screenshot` 캡처의 `width`/`height`를 기본값으로 사용해 현재 `Screen.width`/`Screen.height`에 맞게 자동 스케일링한다.
+- Play Mode 진입/종료 때 자동 fallback 캐시는 리셋되므로 domain reload가 꺼져 있어도 이전 세션의 스크린샷 크기를 재사용하지 않는다.
 - EventSystem이 좌표 위치를 raycast해 최상단 대상을 찾고, 클릭 핸들러가 자식에 걸려 있으면 상위 hierarchy에서 실제 `IPointerClickHandler`를 찾아 실행한다.
 - 좌표 아래에 UI 대상이 없으면 `QA_TAP_NO_TARGET` 에러를 반환한다.
 
@@ -58,6 +59,7 @@ status → play → (입력 시뮬레이션) → 검증 (로그 + 스크린샷) 
 - 좌표 기반 `qa swipe`는 **스크린샷 기준 좌표계**를 사용한다.
 - Y=0은 스크린샷 상단이며, Bridge가 실행 시 Unity 화면 좌표계(bottom-origin)로 자동 변환한다.
 - 최근 성공한 `screenshot` 캡처의 `width`/`height`를 기본값으로 사용해 현재 `Screen.width`/`Screen.height`에 맞게 자동 스케일링한다.
+- Play Mode 진입/종료 때 자동 fallback 캐시는 리셋되므로 domain reload가 꺼져 있어도 이전 세션의 스크린샷 크기를 재사용하지 않는다.
 - 다른 기준 이미지 크기로 변환해야 할 때만 `--screenshot-width/--screenshot-height`를 함께 넘겨 명시적으로 덮어쓴다.
 - 모든 `swipe`와 `key`는 deferred 또는 frame-based 입력 경로를 사용
 
@@ -147,6 +149,7 @@ The bridge automatically:
 - Accepts screenshot image coordinates as-is, so you do not pre-flip Y or pre-scale for DPI/resolution differences
 - Inverts the Y axis (screenshot top-origin -> Unity bottom-origin)
 - Scales coordinates if the screenshot resolution differs from `Screen.width` / `Screen.height` (common in the Editor because of DPI)
+- Resets cached screenshot dimensions when Play Mode enters or exits, so stale sizes from a previous session are not reused when domain reload is disabled
 
 ### Explicit screenshot dimensions
 If you need to specify different dimensions, for example when the screenshot was resized. If you omit them, the bridge uses the last successful `screenshot` size automatically:
