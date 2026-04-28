@@ -6,11 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-04-28
+
 ### Added
-- Added a friendly key alias catalog for Rigidbody, Collider, Renderer, Light, and Camera component value patches.
+- Friendly key alias catalog for Rigidbody, Collider, Renderer, Light, and Camera component value patches. Aliases like `damping`, `materials[0]`, `shadowStrength`, `fieldOfView`, and `backgroundColor` now resolve to Unity's internal `SerializedProperty.propertyPath` values; multi-candidate aliases (e.g. `damping → m_Drag` on Unity 2021.3 and `m_LinearDamping` on Unity 6) are tried in order before falling back to the original key and `m_PascalCase` (#29).
 
 ### Fixed
-- Reset Game View screenshot dimensions on Play Mode transitions to prevent stale coordinate scaling when Enter Play Mode Options disables domain reload.
+- Reset Game View screenshot dimensions on Play Mode transitions to prevent stale coordinate scaling when Enter Play Mode Options disables domain reload (#28).
 
 ## [0.1.6] - 2026-04-28
 

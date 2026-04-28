@@ -2,11 +2,18 @@
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-04-28
+
 ### Added
-- Added a friendly key alias catalog for Rigidbody, Collider, Renderer, Light, and Camera component value patches.
+- Friendly key alias catalog for Rigidbody, Collider, Renderer, Light, and Camera component value patches. Aliases resolve to Unity's `SerializedProperty.propertyPath`; multi-candidate aliases (e.g. `damping → m_Drag` on Unity 2021.3 and `m_LinearDamping` on Unity 6) are tried in order before falling back to the original key and `m_PascalCase`.
 
 ### Fixed
 - Reset Game View screenshot dimensions on Play Mode transitions to prevent stale coordinate scaling when Enter Play Mode Options disables domain reload.
+
+## [0.1.6] - 2026-04-28
+
+### Added
+- `execute-code` wrapper now exposes the JSON passed via the CLI's `--args` option as the `__pucArgsJson` string variable.
 
 ## [0.1.5] - 2026-04-26
 
