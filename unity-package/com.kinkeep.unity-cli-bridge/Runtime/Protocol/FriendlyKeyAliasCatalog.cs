@@ -6,93 +6,94 @@ namespace UnityCli.Protocol
 {
     internal static class FriendlyKeyAliasCatalog
     {
-        private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> _aliasesByTypeName =
-            new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal)
+        private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>> _aliasesByTypeName =
+            new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>>(StringComparer.Ordinal)
             {
-                ["UnityEngine.Rigidbody"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.Rigidbody"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    // Unity 2021.3 uses m_Drag/m_AngularDrag; Unity 6+ renamed these serialized fields to m_LinearDamping/m_AngularDamping.
-                    ["damping"] = "m_Drag",
-                    ["angularDamping"] = "m_AngularDrag",
-                    ["constraints"] = "m_Constraints",
-                    ["collisionDetection"] = "m_CollisionDetection",
-                    ["collisionDetectionMode"] = "m_CollisionDetection",
-                    ["isKinematic"] = "m_IsKinematic",
-                    ["useGravity"] = "m_UseGravity",
-                    ["mass"] = "m_Mass",
+                    // Unity 2021.3: m_Drag; Unity 6: m_LinearDamping.
+                    ["damping"] = new[] { "m_Drag", "m_LinearDamping" },
+                    // Unity 2021.3: m_AngularDrag; Unity 6: m_AngularDamping.
+                    ["angularDamping"] = new[] { "m_AngularDrag", "m_AngularDamping" },
+                    ["constraints"] = new[] { "m_Constraints" },
+                    ["collisionDetection"] = new[] { "m_CollisionDetection" },
+                    ["collisionDetectionMode"] = new[] { "m_CollisionDetection" },
+                    ["isKinematic"] = new[] { "m_IsKinematic" },
+                    ["useGravity"] = new[] { "m_UseGravity" },
+                    ["mass"] = new[] { "m_Mass" },
                 },
-                ["UnityEngine.Collider"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.Collider"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["isTrigger"] = "m_IsTrigger",
-                    ["material"] = "m_Material",
-                    ["contactOffset"] = "m_ContactOffset",
-                    ["enabled"] = "m_Enabled",
+                    ["isTrigger"] = new[] { "m_IsTrigger" },
+                    ["material"] = new[] { "m_Material" },
+                    ["contactOffset"] = new[] { "m_ContactOffset" },
+                    ["enabled"] = new[] { "m_Enabled" },
                 },
-                ["UnityEngine.BoxCollider"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.BoxCollider"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["size"] = "m_Size",
-                    ["center"] = "m_Center",
+                    ["size"] = new[] { "m_Size" },
+                    ["center"] = new[] { "m_Center" },
                 },
-                ["UnityEngine.SphereCollider"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.SphereCollider"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["radius"] = "m_Radius",
-                    ["center"] = "m_Center",
+                    ["radius"] = new[] { "m_Radius" },
+                    ["center"] = new[] { "m_Center" },
                 },
-                ["UnityEngine.CapsuleCollider"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.CapsuleCollider"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["radius"] = "m_Radius",
-                    ["height"] = "m_Height",
-                    ["direction"] = "m_Direction",
-                    ["center"] = "m_Center",
+                    ["radius"] = new[] { "m_Radius" },
+                    ["height"] = new[] { "m_Height" },
+                    ["direction"] = new[] { "m_Direction" },
+                    ["center"] = new[] { "m_Center" },
                 },
-                ["UnityEngine.MeshCollider"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.MeshCollider"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["mesh"] = "m_Mesh",
-                    ["convex"] = "m_Convex",
+                    ["mesh"] = new[] { "m_Mesh" },
+                    ["convex"] = new[] { "m_Convex" },
                 },
-                ["UnityEngine.Renderer"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.Renderer"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["materials"] = "m_Materials",
-                    ["sharedMaterial[0]"] = "m_Materials.Array.data[0]",
-                    ["sharedMaterials[0]"] = "m_Materials.Array.data[0]",
-                    ["materials[0]"] = "m_Materials.Array.data[0]",
-                    ["receiveShadows"] = "m_ReceiveShadows",
-                    ["shadowCastingMode"] = "m_CastShadows",
-                    ["lightProbeUsage"] = "m_LightProbeUsage",
-                    ["reflectionProbeUsage"] = "m_ReflectionProbeUsage",
-                    ["enabled"] = "m_Enabled",
+                    ["materials"] = new[] { "m_Materials" },
+                    ["sharedMaterial[0]"] = new[] { "m_Materials.Array.data[0]" },
+                    ["sharedMaterials[0]"] = new[] { "m_Materials.Array.data[0]" },
+                    ["materials[0]"] = new[] { "m_Materials.Array.data[0]" },
+                    ["receiveShadows"] = new[] { "m_ReceiveShadows" },
+                    ["shadowCastingMode"] = new[] { "m_CastShadows" },
+                    ["lightProbeUsage"] = new[] { "m_LightProbeUsage" },
+                    ["reflectionProbeUsage"] = new[] { "m_ReflectionProbeUsage" },
+                    ["enabled"] = new[] { "m_Enabled" },
                 },
-                ["UnityEngine.Light"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.Light"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["color"] = "m_Color",
-                    ["intensity"] = "m_Intensity",
-                    ["range"] = "m_Range",
-                    ["type"] = "m_Type",
-                    ["bounceIntensity"] = "m_BounceIntensity",
-                    ["shadows"] = "m_Shadows",
-                    ["shadowStrength"] = "m_Shadows.m_Strength",
+                    ["color"] = new[] { "m_Color" },
+                    ["intensity"] = new[] { "m_Intensity" },
+                    ["range"] = new[] { "m_Range" },
+                    ["type"] = new[] { "m_Type" },
+                    ["bounceIntensity"] = new[] { "m_BounceIntensity" },
+                    ["shadows"] = new[] { "m_Shadows" },
+                    ["shadowStrength"] = new[] { "m_Shadows.m_Strength" },
                 },
-                ["UnityEngine.Camera"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                ["UnityEngine.Camera"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["fieldOfView"] = "field of view",
-                    ["field of view"] = "field of view",
-                    ["near"] = "near clip plane",
-                    ["nearClipPlane"] = "near clip plane",
-                    ["near clip plane"] = "near clip plane",
-                    ["far"] = "far clip plane",
-                    ["farClipPlane"] = "far clip plane",
-                    ["far clip plane"] = "far clip plane",
-                    ["backgroundColor"] = "m_BackGroundColor",
-                    ["clearFlags"] = "m_ClearFlags",
-                    ["depth"] = "m_Depth",
-                    ["cullingMask"] = "m_CullingMask",
-                    ["orthographic"] = "orthographic",
-                    ["orthographicSize"] = "orthographic size",
-                    ["orthographic size"] = "orthographic size",
+                    ["fieldOfView"] = new[] { "field of view" },
+                    ["field of view"] = new[] { "field of view" },
+                    ["near"] = new[] { "near clip plane" },
+                    ["nearClipPlane"] = new[] { "near clip plane" },
+                    ["near clip plane"] = new[] { "near clip plane" },
+                    ["far"] = new[] { "far clip plane" },
+                    ["farClipPlane"] = new[] { "far clip plane" },
+                    ["far clip plane"] = new[] { "far clip plane" },
+                    ["backgroundColor"] = new[] { "m_BackGroundColor" },
+                    ["clearFlags"] = new[] { "m_ClearFlags" },
+                    ["depth"] = new[] { "m_Depth" },
+                    ["cullingMask"] = new[] { "m_CullingMask" },
+                    ["orthographic"] = new[] { "orthographic" },
+                    ["orthographicSize"] = new[] { "orthographic size" },
+                    ["orthographic size"] = new[] { "orthographic size" },
                 },
             };
 
-        internal static bool TryGetCanonicalPath(Type componentType, string key, out string canonicalPath)
+        internal static bool TryGetCanonicalPaths(Type componentType, string key, out IReadOnlyList<string> canonicalPaths)
         {
             if (componentType == null)
             {
@@ -112,28 +113,28 @@ namespace UnityCli.Protocol
                     continue;
                 }
 
-                if (_aliasesByTypeName.TryGetValue(fullName, out IReadOnlyDictionary<string, string>? aliases)
-                    && aliases.TryGetValue(key, out string? resolvedPath)
-                    && resolvedPath != null)
+                if (_aliasesByTypeName.TryGetValue(fullName, out IReadOnlyDictionary<string, IReadOnlyList<string>>? aliases)
+                    && aliases.TryGetValue(key, out IReadOnlyList<string>? resolvedPaths)
+                    && resolvedPaths != null)
                 {
-                    canonicalPath = resolvedPath;
+                    canonicalPaths = resolvedPaths;
                     return true;
                 }
 
                 if (string.Equals(fullName, "UnityEngine.Renderer", StringComparison.Ordinal)
-                    && TryGetRendererMaterialElementPath(key, out canonicalPath))
+                    && TryGetRendererMaterialElementPath(key, out canonicalPaths))
                 {
                     return true;
                 }
             }
 
-            canonicalPath = string.Empty;
+            canonicalPaths = Array.Empty<string>();
             return false;
         }
 
-        private static bool TryGetRendererMaterialElementPath(string key, out string canonicalPath)
+        private static bool TryGetRendererMaterialElementPath(string key, out IReadOnlyList<string> canonicalPaths)
         {
-            canonicalPath = string.Empty;
+            canonicalPaths = Array.Empty<string>();
 
             int openBracketIndex = key.IndexOf('[');
             if (openBracketIndex <= 0 || key[key.Length - 1] != ']')
@@ -168,7 +169,7 @@ namespace UnityCli.Protocol
                 return false;
             }
 
-            canonicalPath = "m_Materials.Array.data[" + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]";
+            canonicalPaths = new[] { "m_Materials.Array.data[" + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]" };
             return true;
         }
     }

@@ -5,7 +5,8 @@ namespace UnityCli.Cli.Tests
     public sealed class FriendlyKeyAliasCatalogTests
     {
         [Theory]
-        [InlineData(typeof(UnityEngine.Rigidbody), "damping", "m_Drag")]
+        [InlineData(typeof(UnityEngine.Rigidbody), "damping", "m_Drag,m_LinearDamping")]
+        [InlineData(typeof(UnityEngine.Rigidbody), "angularDamping", "m_AngularDrag,m_AngularDamping")]
         [InlineData(typeof(UnityEngine.Rigidbody), "collisionDetectionMode", "m_CollisionDetection")]
         [InlineData(typeof(UnityEngine.BoxCollider), "size", "m_Size")]
         [InlineData(typeof(UnityEngine.SphereCollider), "radius", "m_Radius")]
@@ -19,39 +20,39 @@ namespace UnityCli.Cli.Tests
         [InlineData(typeof(UnityEngine.Camera), "nearClipPlane", "near clip plane")]
         [InlineData(typeof(UnityEngine.Camera), "backgroundColor", "m_BackGroundColor")]
         [InlineData(typeof(UnityEngine.Camera), "orthographicSize", "orthographic size")]
-        public void TryGetCanonicalPath_ReturnsExpectedPath(Type componentType, string key, string expectedPath)
+        public void TryGetCanonicalPaths_ReturnsExpectedPaths(Type componentType, string key, string expectedPathsCsv)
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(componentType, key, out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(componentType, key, out IReadOnlyList<string> canonicalPaths);
 
             Assert.True(found);
-            Assert.Equal(expectedPath, canonicalPath);
+            Assert.Equal(expectedPathsCsv.Split(','), canonicalPaths);
         }
 
         [Fact]
-        public void TryGetCanonicalPath_UsesCaseInsensitiveKeyComparison()
+        public void TryGetCanonicalPaths_UsesCaseInsensitiveKeyComparison()
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.Rigidbody), "ISKINEMATIC", out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.Rigidbody), "ISKINEMATIC", out IReadOnlyList<string> canonicalPaths);
 
             Assert.True(found);
-            Assert.Equal("m_IsKinematic", canonicalPath);
+            Assert.Equal(new[] { "m_IsKinematic" }, canonicalPaths);
         }
 
         [Fact]
-        public void TryGetCanonicalPath_WalksBaseTypeChain()
+        public void TryGetCanonicalPaths_WalksBaseTypeChain()
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.BoxCollider), "isTrigger", out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.BoxCollider), "isTrigger", out IReadOnlyList<string> canonicalPaths);
 
             Assert.True(found);
-            Assert.Equal("m_IsTrigger", canonicalPath);
+            Assert.Equal(new[] { "m_IsTrigger" }, canonicalPaths);
         }
 
         [Fact]
-        public void TryGetCanonicalPath_ExpandsRendererMaterialArrayAliases()
+        public void TryGetCanonicalPaths_ExpandsRendererMaterialArrayAliases()
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.MeshRenderer), "sharedMaterial[3]", out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.MeshRenderer), "sharedMaterial[3]", out IReadOnlyList<string> canonicalPaths);
 
             Assert.True(found);
-            Assert.Equal("m_Materials.Array.data[3]", canonicalPath);
+            Assert.Equal(new[] { "m_Materials.Array.data[3]" }, canonicalPaths);
         }
 
         [Theory]
@@ -59,30 +60,30 @@ namespace UnityCli.Cli.Tests
         [InlineData("materials[ 0]")]
         [InlineData("materials[00]")]
         [InlineData("materials[1 ]")]
-        public void TryGetCanonicalPath_ReturnsFalseForInvalidRendererMaterialArrayIndexAliases(string key)
+        public void TryGetCanonicalPaths_ReturnsFalseForInvalidRendererMaterialArrayIndexAliases(string key)
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.MeshRenderer), key, out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.MeshRenderer), key, out IReadOnlyList<string> canonicalPaths);
 
             Assert.False(found);
-            Assert.Equal(string.Empty, canonicalPath);
+            Assert.Empty(canonicalPaths);
         }
 
         [Fact]
-        public void TryGetCanonicalPath_ExpandsRendererMaterialArrayAliasesWithCanonicalIndexText()
+        public void TryGetCanonicalPaths_ExpandsRendererMaterialArrayAliasesWithCanonicalIndexText()
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.MeshRenderer), "materials[42]", out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.MeshRenderer), "materials[42]", out IReadOnlyList<string> canonicalPaths);
 
             Assert.True(found);
-            Assert.Equal("m_Materials.Array.data[42]", canonicalPath);
+            Assert.Equal(new[] { "m_Materials.Array.data[42]" }, canonicalPaths);
         }
 
         [Fact]
-        public void TryGetCanonicalPath_ReturnsFalseForUnregisteredKey()
+        public void TryGetCanonicalPaths_ReturnsFalseForUnregisteredKey()
         {
-            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPath(typeof(UnityEngine.Rigidbody), "unknownKey", out string canonicalPath);
+            bool found = FriendlyKeyAliasCatalog.TryGetCanonicalPaths(typeof(UnityEngine.Rigidbody), "unknownKey", out IReadOnlyList<string> canonicalPaths);
 
             Assert.False(found);
-            Assert.Equal(string.Empty, canonicalPath);
+            Assert.Empty(canonicalPaths);
         }
     }
 }

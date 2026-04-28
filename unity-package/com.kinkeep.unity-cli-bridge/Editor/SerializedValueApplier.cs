@@ -36,19 +36,19 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
             foreach (JProperty property in values.Properties())
             {
-                SerializedProperty? serializedProperty = FindPropertyWithFallback(serializedObject, component.GetType(), property.Name, out string? attemptedAliasPath);
+                SerializedProperty? serializedProperty = FindPropertyWithFallback(serializedObject, component.GetType(), property.Name, out IReadOnlyList<string>? attemptedAliasPaths);
                 if (serializedProperty == null)
                 {
                     string fallbackKey = "m_" + ToPascalCase(property.Name);
-                    if (attemptedAliasPath != null)
+                    if (attemptedAliasPaths != null)
                     {
                         throw new CommandFailureException(
                             "COMPONENT_VALUE_KEY_INVALID",
                             "serialized field를 찾지 못했습니다: "
                             + property.Name
-                            + " (시도한 키: alias='"
-                            + attemptedAliasPath
-                            + "', '"
+                            + " (시도한 키: alias="
+                            + FormatAliasPathList(attemptedAliasPaths)
+                            + ", '"
                             + property.Name
                             + "', '"
                             + fallbackKey
@@ -124,17 +124,20 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 : char.ToUpperInvariant(key[0]) + key.Substring(1);
         }
 
-        private static SerializedProperty? FindPropertyWithFallback(SerializedObject serializedObject, Type componentType, string key, out string? attemptedAliasPath)
+        private static SerializedProperty? FindPropertyWithFallback(SerializedObject serializedObject, Type componentType, string key, out IReadOnlyList<string>? attemptedAliasPaths)
         {
-            attemptedAliasPath = null;
+            attemptedAliasPaths = null;
 
-            if (FriendlyKeyAliasCatalog.TryGetCanonicalPath(componentType, key, out string aliasPath))
+            if (FriendlyKeyAliasCatalog.TryGetCanonicalPaths(componentType, key, out IReadOnlyList<string> aliasPaths))
             {
-                attemptedAliasPath = aliasPath;
-                SerializedProperty aliasMatch = serializedObject.FindProperty(aliasPath);
-                if (aliasMatch != null)
+                attemptedAliasPaths = aliasPaths;
+                for (int i = 0; i < aliasPaths.Count; i++)
                 {
-                    return aliasMatch;
+                    SerializedProperty aliasMatch = serializedObject.FindProperty(aliasPaths[i]);
+                    if (aliasMatch != null)
+                    {
+                        return aliasMatch;
+                    }
                 }
             }
 
@@ -145,6 +148,27 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             return serializedObject.FindProperty("m_" + ToPascalCase(key));
+        }
+
+        private static string FormatAliasPathList(IReadOnlyList<string> aliasPaths)
+        {
+            var builder = new System.Text.StringBuilder();
+            builder.Append('[');
+
+            for (int i = 0; i < aliasPaths.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(", ");
+                }
+
+                builder.Append('\'');
+                builder.Append(aliasPaths[i]);
+                builder.Append('\'');
+            }
+
+            builder.Append(']');
+            return builder.ToString();
         }
 
         private static string BuildUnsupportedSerializedPropertyTypeMessage(SerializedProperty property, string? propertyPath = null)
