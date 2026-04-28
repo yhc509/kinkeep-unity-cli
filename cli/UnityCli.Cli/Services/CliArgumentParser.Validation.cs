@@ -54,6 +54,30 @@ public static partial class CliArgumentParser
         return tokens.Dequeue();
     }
 
+    private static string RequireJsonValue(Queue<string> tokens, string option)
+    {
+        if (tokens.Count == 0 || tokens.Peek().StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new CliUsageException($"{option} 옵션은 JSON 값이 필요합니다.");
+        }
+
+        string value = tokens.Dequeue();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new CliUsageException($"{option} 옵션은 JSON 값이 필요합니다.");
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return value;
+        }
+        catch (JsonException exception)
+        {
+            throw new CliUsageException($"{option} 값은 올바른 JSON이어야 합니다. " + exception.Message);
+        }
+    }
+
     private static string RequireAssetPath(string value, string option, bool allowPackages = false)
     {
         try

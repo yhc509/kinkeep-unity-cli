@@ -14,6 +14,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 {
     internal sealed class ExecuteCodeHandler
     {
+        private const string ArgsJsonPlaceholder = "/*__PUC_ARGS_JSON__*/";
         private const string UserCodePlaceholder = "/*__PUC_USER_CODE__*/";
         private const string WrapperTemplate = @"
 using System;
@@ -32,6 +33,7 @@ public static class PucExecuteWrapper
         System.Console.SetOut(__writer);
         try
         {
+            string __pucArgsJson = /*__PUC_ARGS_JSON__*/;
             /*__PUC_USER_CODE__*/
         }
         finally
@@ -57,7 +59,7 @@ public static class PucExecuteWrapper
 
             try
             {
-                string wrappedCode = BuildWrappedCode(args.code);
+                string wrappedCode = BuildWrappedCode(args.code, args.argumentsJson);
                 Assembly assembly = CompileCode(wrappedCode);
                 Type? wrapperType = assembly.GetType("PucExecuteWrapper");
                 if (wrapperType == null)
@@ -120,17 +122,20 @@ public static class PucExecuteWrapper
             }
         }
 
-        private static string BuildWrappedCode(string userCode)
+        private static string BuildWrappedCode(string userCode, string? argumentsJson)
         {
             string templateBody = UsingDirectiveUtility.StripUsingDirectives(WrapperTemplate, out string[] templateUsings);
             string userCodeBody = UsingDirectiveUtility.StripUsingDirectives(userCode, out string[] userUsings);
             string[] mergedUsings = MergeUsingDirectives(templateUsings, userUsings);
             string usingBlock = string.Join(Environment.NewLine, mergedUsings);
+            string effectiveArgumentsJson = string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson;
 
             return usingBlock
                 + Environment.NewLine
                 + Environment.NewLine
-                + templateBody.Replace(UserCodePlaceholder, userCodeBody);
+                + templateBody
+                    .Replace(ArgsJsonPlaceholder, ExecuteCodeStringLiteral.ToCSharpStringLiteral(effectiveArgumentsJson))
+                    .Replace(UserCodePlaceholder, userCodeBody);
         }
 
         private static string[] MergeUsingDirectives(IEnumerable<string> templateUsings, IEnumerable<string> userUsings)

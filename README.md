@@ -101,6 +101,7 @@ unity-cli screenshot --path /tmp/shot.png  # Game View capture (default), or --v
 unity-cli read-console --type error        # Check for errors after any operation
 unity-cli execute-menu --list "GameObject" # Browse Unity menus
 unity-cli execute --code "Debug.Log(1);" --force  # Run arbitrary C# (escape hatch)
+unity-cli execute --code "Debug.Log(__pucArgsJson);" --args '{"k":"v"}' --force
 ```
 
 ### Assets

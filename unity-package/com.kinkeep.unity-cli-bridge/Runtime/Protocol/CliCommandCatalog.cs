@@ -154,14 +154,14 @@ namespace UnityCli.Protocol
                 }),
             new CliCommandDescriptor(
                 "execute",
-                "execute (--code <csharp> | --file <path>) --force",
-                "Executes arbitrary C# code in the running editor context; always requires --force.",
+                "execute (--code <csharp> | --file <path>) [--args <json>] --force",
+                "Executes arbitrary C# code in the running editor context with optional JSON arguments; always requires --force.",
                 CliCommandGroup.EditorControl,
                 ProtocolConstants.CommandExecuteCode,
                 canUseLocal: false,
                 canUseLive: true,
                 isAllowedWhileBusy: false,
-                notes: new[] { "Live-only.", "Always requires --force as a safety gate.", "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한)." }),
+                notes: new[] { "Live-only.", "Always requires --force as a safety gate.", "--args JSON은 사용자 코드에서 __pucArgsJson 문자열 변수로 읽을 수 있습니다.", "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한)." }),
             new CliCommandDescriptor(
                 "custom",
                 "custom <command-name> [--json <args>]",

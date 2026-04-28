@@ -53,6 +53,7 @@ ucli status --project "$PROJECT" --output compact
 - 메뉴 실행: `execute-menu`
 - 메뉴 조회: `execute-menu --list`
 - scene 전환: `scene open`
+- 코드 실행 인자: `ucli execute --project "$PROJECT" --code 'Debug.Log(__pucArgsJson);' --args '{"k":"v"}' --force --output compact`
 
 live 편집이 필요한 명령은 에디터가 켜져 있고 busy 상태가 아닐 때 우선 실행한다.
 
