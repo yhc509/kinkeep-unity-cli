@@ -16,6 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify UPM .meta files
+        run: scripts/check-unity-meta.sh
+
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
