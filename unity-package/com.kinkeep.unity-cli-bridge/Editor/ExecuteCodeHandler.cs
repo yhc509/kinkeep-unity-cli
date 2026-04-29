@@ -27,10 +27,10 @@ public static class PucExecuteWrapper
 {
     public static string Execute()
     {
-        var __sb = new System.Text.StringBuilder();
-        var __origOut = System.Console.Out;
-        var __writer = new System.IO.StringWriter(__sb);
-        System.Console.SetOut(__writer);
+        var __puc_internal_sb = new System.Text.StringBuilder();
+        var __puc_internal_origOut = System.Console.Out;
+        var __puc_internal_writer = new System.IO.StringWriter(__puc_internal_sb);
+        System.Console.SetOut(__puc_internal_writer);
         try
         {
             string __pucArgsJson = /*__PUC_ARGS_JSON__*/;
@@ -38,10 +38,10 @@ public static class PucExecuteWrapper
         }
         finally
         {
-            System.Console.SetOut(__origOut);
+            System.Console.SetOut(__puc_internal_origOut);
         }
 
-        return __sb.ToString();
+        return __puc_internal_sb.ToString();
     }
 }";
         public bool CanHandle(string command)
@@ -129,13 +129,23 @@ public static class PucExecuteWrapper
             string[] mergedUsings = MergeUsingDirectives(templateUsings, userUsings);
             string usingBlock = string.Join(Environment.NewLine, mergedUsings);
             string effectiveArgumentsJson = string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson;
+            string wrappedUserCode = string.Join(
+                Environment.NewLine,
+                "#line 1 \"user-code\"",
+                userCodeBody,
+                "#line default");
+            string built = templateBody
+                .Replace(ArgsJsonPlaceholder, ExecuteCodeStringLiteral.ToCSharpStringLiteral(effectiveArgumentsJson))
+                .Replace("            " + UserCodePlaceholder, wrappedUserCode);
 
-            return usingBlock
-                + Environment.NewLine
-                + Environment.NewLine
-                + templateBody
-                    .Replace(ArgsJsonPlaceholder, ExecuteCodeStringLiteral.ToCSharpStringLiteral(effectiveArgumentsJson))
-                    .Replace(UserCodePlaceholder, userCodeBody);
+            if (built.Contains(UserCodePlaceholder) || built.Contains(ArgsJsonPlaceholder))
+            {
+                throw new CommandFailureException(
+                    "EXECUTE_FAILED",
+                    "wrapper template placeholder가 치환되지 않았습니다. 템플릿 들여쓰기가 변경되었는지 확인하세요.");
+            }
+
+            return usingBlock + Environment.NewLine + Environment.NewLine + built;
         }
 
         private static string[] MergeUsingDirectives(IEnumerable<string> templateUsings, IEnumerable<string> userUsings)
@@ -170,6 +180,8 @@ public static class PucExecuteWrapper
             {
                 GenerateInMemory = true,
                 GenerateExecutable = false,
+                IncludeDebugInformation = false,
+                TempFiles = new TempFileCollection(System.IO.Path.GetTempPath(), keepFiles: false),
             };
 
             var referencedAssemblies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

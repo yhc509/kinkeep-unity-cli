@@ -161,7 +161,15 @@ namespace UnityCli.Protocol
                 canUseLocal: false,
                 canUseLive: true,
                 isAllowedWhileBusy: false,
-                notes: new[] { "Live-only.", "Always requires --force as a safety gate.", "--args JSON은 사용자 코드에서 __pucArgsJson 문자열 변수로 읽을 수 있습니다.", "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한)." }),
+                notes: new[]
+                {
+                    "Live-only.",
+                    "Always requires --force as a safety gate.",
+                    "--args JSON은 사용자 코드에서 __pucArgsJson 문자열 변수로 읽을 수 있습니다.",
+                    "wrapper 예약 prefix `__puc_internal_*` 변수는 사용자 코드에서 선언하지 마세요.",
+                    "--args 값에는 secret/credential을 넣지 마세요. CodeDOM 컴파일 중 OS temp에 .cs 파일이 잠시 생성될 수 있습니다.",
+                    "C# 5.0 이하 문법만 지원합니다 (CodeDOM 제한).",
+                }),
             new CliCommandDescriptor(
                 "custom",
                 "custom <command-name> [--json <args>]",
