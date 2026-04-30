@@ -172,4 +172,4 @@ Runtime extension providers can add more rows to `asset types`, but they are not
 - [Architecture](architecture.md)
 - [Scene Spec](scene-spec.md)
 - [Prefab Spec](prefab-spec.md)
-- [Unity Package README](../unity-package/com.kinkeep.unity-cli-bridge/README.md)
+- [Unity Package README](../unity-package/com.yhc509.unity-cli-bridge/README.md)
