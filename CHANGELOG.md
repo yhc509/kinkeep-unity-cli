@@ -33,7 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `screenshot` response now includes 4 metadata fields — `screenWidth`, `screenHeight`, `coordinateOrigin`, `imageOrigin` — so AI agents can determine the `qa tap` coordinate system from the screenshot response alone (#21).
 
 ### Changed
-- AI skills installer in `Unity CLI Bridge > CLI Manager` now writes to the user's global skills directory (`~/.claude/skills/`, `~/.codex/skills/`) instead of `{ProjectRoot}/.claude/skills/` and `{ProjectRoot}/.agents/skills/`; the project-local `.claude/skills/unity-cli-operator` symlink was removed (#23).
+- AI skills installer in `Window > Unity CLI Manager` now writes to the user's global skills directory (`~/.claude/skills/`, `~/.codex/skills/`) instead of `{ProjectRoot}/.claude/skills/` and `{ProjectRoot}/.agents/skills/`; the project-local `.claude/skills/unity-cli-operator` symlink was removed (#23).
 - Rewrote the `unity-cli-operator` skill so agents stop bypassing it and detouring through `Unity -batchmode` headless runs or searching for a (nonexistent) Unity MCP server: `SKILL.md` description rewritten as a forward-firing trigger and a "진입 규칙" section added; `agents/openai.yaml` populated with `short_description` and `default_prompt` rules (#24).
 - Bridge package author changed from `yhjang` to `yhc509` (#22).
 
@@ -56,8 +56,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Component operations for scenes and prefabs: list, add, and remove components from the CLI (`scene list-components`, `scene add-component`, `scene remove-component`, `prefab list-components`, `prefab add-component`, and `prefab remove-component`) (#6).
-- An AI skill installer in `Unity CLI Bridge > CLI Manager` for Claude Code and Codex (#8).
-- Latest GitHub release version display in `Unity CLI Bridge > CLI Manager` to simplify update checks (#9).
+- An AI skill installer in `Window > Unity CLI Manager` for Claude Code and Codex (#8).
+- Latest GitHub release version display in `Window > Unity CLI Manager` to simplify update checks (#9).
 - `SerializedValueApplier` support for `AnimationCurve` (with `preWrapMode`/`postWrapMode`), `Gradient`, `ManagedReference` (`[SerializeReference]`), and `Hash128` property types — enabling inspect/patch for virtually all Unity built-in components.
 
 ### Changed

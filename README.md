@@ -55,7 +55,7 @@ The bridge starts automatically when the Editor opens. No configuration needed.
 
 **Option A: From Unity Editor** (recommended)
 
-Open `Unity CLI Bridge > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.unity-cli-bridge/unity-cli/`.
+Open `Window > Unity CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.unity-cli-bridge/unity-cli/`.
 
 **Option B: Manual download**
 
@@ -72,7 +72,7 @@ Extract and add the binary to your PATH.
 
 ### 3. Install AI Agent Skill
 
-In the Unity Editor, open `Unity CLI Bridge > CLI Manager`. Select your AI tool (Claude Code or Codex) from the dropdown and click **Install Skill**.
+In the Unity Editor, open `Window > Unity CLI Manager`. Select your AI tool (Claude Code or Codex) from the dropdown and click **Install Skill**.
 
 | Tool | Install Path |
 |------|-------------|
@@ -245,7 +245,7 @@ docs/                          Generated CLI reference, specs
 
 The `unity-cli-bridge` skill teaches AI agents how to use the CLI safely: pick the right command, verify with `read-console`, follow inspect-before-patch patterns.
 
-Install from **Unity CLI Bridge > CLI Manager** in the Unity Editor — select your AI tool and click **Install Skill**. Supports Claude Code and Codex.
+Install from **Window > Unity CLI Manager** in the Unity Editor — select your AI tool and click **Install Skill**. Supports Claude Code and Codex.
 
 ## Development
 

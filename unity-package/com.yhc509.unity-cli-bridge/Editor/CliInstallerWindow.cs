@@ -8,7 +8,7 @@ namespace UnityCliBridge.Bridge.Editor
     public sealed class CliInstallerWindow : EditorWindow
     {
         private const string WindowTitle = "CLI Manager";
-        private const string OpenWindowMenuItemPath = "Unity CLI Bridge/CLI Manager";
+        private const string OpenWindowMenuItemPath = "Window/Unity CLI Manager";
         private static readonly Vector2 WindowMinSize = new Vector2(420f, 340f);
         private static GUIStyle? _updateAvailableLabelStyle;
 
