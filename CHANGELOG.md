@@ -9,13 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.1.8] - 2026-04-30
 
 ### Changed
-- Renamed all internal identifiers from the `KinKeep` / `kinkeep-unity-cli` brand to `UnityCliBridge` / `unity-cli-bridge`. C# namespaces, the UPM package id (`com.yhc509.unity-cli-bridge`), the solution file (`UnityCliBridge.sln`), the EditorPrefs prefix (`UnityCliBridge.CLI.*`), the install directory (`~/.unity-cli-bridge`), and the GitHub URL all changed (#34).
-- Moved the Editor menu entry from `Unity CLI Bridge > CLI Manager` to `Window > Unity CLI Manager` to match Unity's standard menu location (#34).
+- Renamed package and internal identifiers (#34). C# namespaces are now under `UnityCliBridge.Bridge.*`, the UPM package id is `com.yhc509.unity-cli-bridge`, the solution file is `UnityCliBridge.sln`, EditorPrefs use the `UnityCliBridge.CLI.*` prefix, the install directory is `~/.unity-cli-bridge`, and the GitHub URL changed.
+- Moved the Editor menu entry to `Window > Unity CLI Manager` to match Unity's standard menu location (#34).
 - Hardened `execute --args` wrapper compilation by isolating internal wrapper variables behind the reserved `__puc_internal_*` prefix, reporting user-code compile errors from `user-code`, and disabling debug/temp file retention for CodeDOM.
 
 ### Notes
 - `execute --args` values should not contain secrets or credentials because CodeDOM may briefly create temporary `.cs` files under the OS temp directory; debug/temp retention settings reduce retained artifacts but do not fully prevent transient compiler files.
-- No migration path is retained for the previous `~/.kinkeep` install location. Reinstall the CLI through `Window > Unity CLI Manager` after upgrading.
+- The install directory changed; previous install locations from earlier versions are not migrated. Remove any old install manually and reinstall the CLI through `Window > Unity CLI Manager`.
 
 ## [0.1.7] - 2026-04-28
 
