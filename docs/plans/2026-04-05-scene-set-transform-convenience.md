@@ -88,11 +88,11 @@ Switch README and live IPC scenarios to the active-scene `scene set-transform` s
 
 **Step 1: Build**
 
-Run: `dotnet build KinKeepUnityCli.sln -c Debug`
+Run: `dotnet build UnityCliBridge.sln -c Debug`
 
 **Step 2: Test**
 
-Run: `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test KinKeepUnityCli.sln`
+Run: `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test UnityCliBridge.sln`
 
 **Step 3: Check docs**
 

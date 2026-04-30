@@ -250,8 +250,8 @@ Install from **Unity CLI Bridge > CLI Manager** in the Unity Editor — select y
 ## Development
 
 ```bash
-dotnet build KinKeepUnityCli.sln -c Debug
-dotnet test KinKeepUnityCli.sln
+dotnet build UnityCliBridge.sln -c Debug
+dotnet test UnityCliBridge.sln
 dotnet run --project cli/UnityCli.DocGen -- --check   # Verify docs match code
 ```
 

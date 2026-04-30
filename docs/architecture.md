@@ -33,7 +33,7 @@
 
 ## Repository Layout
 
-- `KinKeepUnityCli.sln`: solution root for the CLI, protocol project, DocGen, and tests
+- `UnityCliBridge.sln`: solution root for the CLI, protocol project, DocGen, and tests
 - `cli/UnityCli.Cli`: user-facing CLI
 - `cli/UnityCli.Protocol`: protocol models shared by the CLI and Unity package
 - `unity-package/com.yhc509.unity-cli-bridge`: UPM package
