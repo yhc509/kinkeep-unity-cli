@@ -104,6 +104,8 @@ unity-cli execute --code "Debug.Log(1);" --force  # Run arbitrary C# (escape hat
 unity-cli execute --code "Debug.Log(__pucArgsJson);" --args '{"k":"v"}' --force
 ```
 
+`execute --args` exposes the supplied JSON as `__pucArgsJson`; do not declare variables with the reserved `__puc_internal_*` prefix in user code. Avoid putting secrets or credentials in `--args`, because CodeDOM compilation can briefly create temporary `.cs` files under the OS temp directory.
+
 ### Assets
 
 ```bash

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Hardened `execute-code` wrapper compilation by isolating internal wrapper variables behind the reserved `__puc_internal_*` prefix, reporting user-code compile errors from `user-code`, and disabling debug/temp file retention for CodeDOM.
+- Documented that `execute --args` values should not contain secrets or credentials because CodeDOM may briefly create temporary `.cs` files under the OS temp directory; debug/temp retention settings reduce retained artifacts but do not fully prevent transient compiler files.
+
 ## [0.1.7] - 2026-04-28
 
 ### Added
