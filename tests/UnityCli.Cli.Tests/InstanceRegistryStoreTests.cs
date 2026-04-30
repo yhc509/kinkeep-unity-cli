@@ -40,7 +40,7 @@ public sealed class InstanceRegistryStoreTests
                 new InstanceRecord
                 {
                     projectRoot = projectRoot,
-                    projectName = "KinKeep",
+                    projectName = "UnityCliBridge",
                     projectHash = projectHash,
                     pipeName = ProtocolConstants.BuildPipeName(projectHash),
                     state = "idle",
@@ -49,7 +49,7 @@ public sealed class InstanceRegistryStoreTests
             ],
         };
 
-        var target = store.ResolveOrCreateTarget(registry, "kinkeep");
+        var target = store.ResolveOrCreateTarget(registry, "unityclibridge");
 
         Assert.Equal(ProtocolConstants.GetCanonicalPath(projectRoot), target.projectRoot);
         Assert.Equal(projectHash, target.projectHash);
@@ -71,7 +71,7 @@ public sealed class InstanceRegistryStoreTests
                 new InstanceRecord
                 {
                     projectRoot = projectRoot,
-                    projectName = "KinKeep",
+                    projectName = "UnityCliBridge",
                     projectHash = ProtocolConstants.ComputeProjectHash(projectRoot),
                     pipeName = ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(projectRoot)),
                     state = "idle",
@@ -80,7 +80,7 @@ public sealed class InstanceRegistryStoreTests
             ],
         };
 
-        var resolved = store.ResolveProjectRootOverride(registry, "kinkeep");
+        var resolved = store.ResolveProjectRootOverride(registry, "unityclibridge");
 
         Assert.Equal(ProtocolConstants.GetCanonicalPath(projectRoot), resolved);
     }
@@ -89,7 +89,7 @@ public sealed class InstanceRegistryStoreTests
     public void ResolveProjectRootOverride_PathTakesPrecedenceOverRegisteredProjectName()
     {
         using var temp = new TempDirectory();
-        var pathProjectRoot = Path.Combine(temp.Path, "KinKeep");
+        var pathProjectRoot = Path.Combine(temp.Path, "UnityCliBridge");
         var registeredProjectRoot = Path.Combine(temp.Path, "RegisteredProject");
         Directory.CreateDirectory(pathProjectRoot);
         Directory.CreateDirectory(registeredProjectRoot);
@@ -102,7 +102,7 @@ public sealed class InstanceRegistryStoreTests
                 new InstanceRecord
                 {
                     projectRoot = registeredProjectRoot,
-                    projectName = "KinKeep",
+                    projectName = "UnityCliBridge",
                     projectHash = ProtocolConstants.ComputeProjectHash(registeredProjectRoot),
                     pipeName = ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(registeredProjectRoot)),
                     state = "idle",
@@ -116,7 +116,7 @@ public sealed class InstanceRegistryStoreTests
         try
         {
             Environment.CurrentDirectory = temp.Path;
-            var resolved = store.ResolveProjectRootOverride(registry, "KinKeep");
+            var resolved = store.ResolveProjectRootOverride(registry, "UnityCliBridge");
 
             Assert.Equal(ProtocolConstants.GetCanonicalPath(pathProjectRoot), resolved);
         }
@@ -143,7 +143,7 @@ public sealed class InstanceRegistryStoreTests
                 new InstanceRecord
                 {
                     projectRoot = firstProjectRoot,
-                    projectName = "KinKeep",
+                    projectName = "UnityCliBridge",
                     projectHash = ProtocolConstants.ComputeProjectHash(firstProjectRoot),
                     pipeName = ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(firstProjectRoot)),
                     state = "idle",
@@ -152,7 +152,7 @@ public sealed class InstanceRegistryStoreTests
                 new InstanceRecord
                 {
                     projectRoot = secondProjectRoot,
-                    projectName = "kinkeep",
+                    projectName = "unityclibridge",
                     projectHash = ProtocolConstants.ComputeProjectHash(secondProjectRoot),
                     pipeName = ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(secondProjectRoot)),
                     state = "idle",
@@ -161,7 +161,7 @@ public sealed class InstanceRegistryStoreTests
             ],
         };
 
-        var exception = Assert.Throws<CliUsageException>(() => store.ResolveProjectRootOverride(registry, "KinKeep"));
+        var exception = Assert.Throws<CliUsageException>(() => store.ResolveProjectRootOverride(registry, "UnityCliBridge"));
 
         Assert.Contains("중복되어", exception.Message);
         Assert.Contains(ProtocolConstants.GetCanonicalPath(firstProjectRoot), exception.Message);
@@ -175,10 +175,10 @@ public sealed class InstanceRegistryStoreTests
         var store = new InstanceRegistryStore(Path.Combine(temp.Path, "instances.json"));
         var registry = new InstanceRegistry();
 
-        var exception = Assert.Throws<CliUsageException>(() => store.ResolveProjectRootOverride(registry, "KinKeep"));
+        var exception = Assert.Throws<CliUsageException>(() => store.ResolveProjectRootOverride(registry, "UnityCliBridge"));
 
         Assert.Equal(
-            "'KinKeep' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
+            "'UnityCliBridge' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
             exception.Message);
     }
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-KinKeep Unity CLI controls the Unity Editor from the command line without manual server startup. This mono-repo contains a .NET 9 CLI, the `com.kinkeep.unity-cli-bridge` Unity UPM package, and shared protocol models.
+Unity CLI Bridge controls the Unity Editor from the command line without manual server startup. This mono-repo contains a .NET 9 CLI, the `com.yhc509.unity-cli-bridge` Unity UPM package, and shared protocol models.
 
 The CLI is **live IPC only**. Unity commands require a running Editor with the bridge active.
 
@@ -12,13 +12,13 @@ The CLI is **live IPC only**. Unity commands require a running Editor with the b
 
 ```bash
 # Build
-dotnet build KinKeepUnityCli.sln -c Debug
+dotnet build UnityCliBridge.sln -c Debug
 
 # Run all tests
-dotnet test KinKeepUnityCli.sln
+dotnet test UnityCliBridge.sln
 
 # Run a single test
-dotnet test KinKeepUnityCli.sln --filter "FullyQualifiedName~ClassName.MethodName"
+dotnet test UnityCliBridge.sln --filter "FullyQualifiedName~ClassName.MethodName"
 
 # Publish macOS arm64 binary
 ./scripts/publish-osx-arm64.sh    # → dist/unity-cli/unity-cli
@@ -33,7 +33,7 @@ dotnet run --project cli/UnityCli.DocGen -- --write
 ## Architecture
 
 ```
-KinKeepUnityCli.sln          Solution root for CLI, protocol, DocGen, and tests
+UnityCliBridge.sln          Solution root for CLI, protocol, DocGen, and tests
 
 cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
   ├── CliApp.cs              Entry point; handles local status/instances/doctor flows and routes Unity work to IPC
@@ -45,9 +45,9 @@ cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
   │   └── InstanceRegistryStore  Per-project instance tracking
   └── Models/ParsedCommand   CommandKind variants + envelope builder
 
-cli/UnityCli.Protocol/       Shared protocol project compiling linked files from unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/
+cli/UnityCli.Protocol/       Shared protocol project compiling linked files from unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/
 
-unity-package/com.kinkeep.unity-cli-bridge/
+unity-package/com.yhc509.unity-cli-bridge/
   ├── Editor/
   │   ├── BridgeHost.cs       Bridge bootstrap, registry registration, IPC listener, handler orchestration
   │   ├── AssetCommandHandler.cs  Asset CRUD operations and asset metadata
@@ -86,7 +86,7 @@ unity-package/com.kinkeep.unity-cli-bridge/
 tests/UnityCli.Cli.Tests/    xUnit tests
 ```
 
-**Protocol sharing:** `cli/UnityCli.Protocol/` compiles the same `.cs` files from `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/` via `<Compile Include>` links in the `.csproj`. Changes to protocol files affect both the CLI and the Unity package.
+**Protocol sharing:** `cli/UnityCli.Protocol/` compiles the same `.cs` files from `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/` via `<Compile Include>` links in the `.csproj`. Changes to protocol files affect both the CLI and the Unity package.
 
 ## Key Conventions
 
@@ -117,6 +117,6 @@ tests/UnityCli.Cli.Tests/    xUnit tests
 
 ## Verification After Changes
 
-- CLI code changes → `dotnet build KinKeepUnityCli.sln -c Debug`
-- Test changes → `dotnet test KinKeepUnityCli.sln`
+- CLI code changes → `dotnet build UnityCliBridge.sln -c Debug`
+- Test changes → `dotnet test UnityCliBridge.sln`
 - Unity integration changes → test live IPC flows with an actual Unity project

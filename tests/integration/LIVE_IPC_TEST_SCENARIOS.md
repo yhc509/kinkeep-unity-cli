@@ -1,6 +1,6 @@
 # Live IPC Test Scenarios
 
-`KinKeep Unity CLI`의 현재 명령 표면을 기준으로 작성한 수동 검증 시나리오 모음이다. 목표는 `수동 서버 실행 없이 Unity Editor를 CLI로 제어`한다는 저장소 목표를 실제 Unity 프로젝트에서 다시 확인하는 것이다.
+`Unity CLI Bridge`의 현재 명령 표면을 기준으로 작성한 수동 검증 시나리오 모음이다. 목표는 `수동 서버 실행 없이 Unity Editor를 CLI로 제어`한다는 저장소 목표를 실제 Unity 프로젝트에서 다시 확인하는 것이다.
 
 ## 공통 사전 조건
 
@@ -680,7 +680,7 @@ EOF
 mkdir -p /tmp/unity-cli-live-package
 cat >/tmp/unity-cli-live-package/package.json <<'EOF'
 {
-  "name": "com.kinkeep.liveipc.fixture",
+  "name": "com.yhc509.liveipc.fixture",
   "version": "0.0.1",
   "displayName": "Unity CLI Live IPC Fixture"
 }
@@ -691,7 +691,7 @@ EOF
 ```
 
 - 기대 결과: local package가 manifest에 추가된다.
-- 확인 방법: `added: true`와 `package list` 결과에 `com.kinkeep.liveipc.fixture`가 있는지 확인한다.
+- 확인 방법: `added: true`와 `package list` 결과에 `com.yhc509.liveipc.fixture`가 있는지 확인한다.
 
 ### PACKAGE-004 `package remove --force`
 
@@ -699,7 +699,7 @@ EOF
 - 실행 명령:
 
 ```bash
-"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" package remove --name com.kinkeep.liveipc.fixture --force
+"$UNITY_CLI" --project "$UNITY_PROJECT_PATH" package remove --name com.yhc509.liveipc.fixture --force
 "$UNITY_CLI" --project "$UNITY_PROJECT_PATH" package list
 ```
 

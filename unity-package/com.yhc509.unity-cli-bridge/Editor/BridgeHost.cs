@@ -1,0 +1,951 @@
+#nullable enable
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Pipes;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityCli.Protocol;
+using UnityEditor;
+using UnityEditor.Compilation;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace UnityCliBridge.Bridge.Editor
+{
+    [InitializeOnLoad]
+    internal static class BridgeBootstrap
+    {
+        private static readonly BridgeHost _host;
+
+        static BridgeBootstrap()
+        {
+            _host = new BridgeHost();
+            _host.Start();
+        }
+    }
+
+    internal sealed class BridgeHost : IDisposable
+    {
+        private static readonly UTF8Encoding _utf8WithoutBomEncoding = new UTF8Encoding(false);
+        private static readonly IComparer<InstanceRecord> _instanceRecordComparer = new InstanceRecordProjectNameComparer();
+        private readonly ConcurrentQueue<PendingRequest> _pendingRequests = new ConcurrentQueue<PendingRequest>();
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly string[] _capabilities;
+        private readonly string _projectRoot;
+        private readonly string _projectName;
+        private readonly string _projectHash;
+        private readonly string _pipeName;
+        private readonly string _registryFilePath;
+        private readonly AssetCommandHandler _assetCommandHandler;
+        private readonly SceneCommandHandler _sceneCommandHandler;
+        private readonly PrefabCommandHandler _prefabCommandHandler;
+        private readonly ScreenshotCommandHandler _screenshotCommandHandler;
+        private readonly ExecuteCodeHandler _executeCodeHandler;
+        private readonly CustomCommandHandler _customCommandHandler;
+        private readonly PackageCommandHandler _packageCommandHandler;
+        private readonly MaterialCommandHandler _materialCommandHandler;
+        private readonly QaCommandHandler _qaCommandHandler;
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        private Socket? _unixListener;
+#endif
+        private double _lastHeartbeatTime;
+        private bool _originalRunInBackground;
+        private bool _isStarted;
+        private bool _isDisposed;
+        private bool _isInstanceRegistered;
+        private volatile bool _isListenerReady;
+
+        public BridgeHost()
+        {
+            _projectRoot = ProtocolConstants.GetCanonicalPath(Path.Combine(Application.dataPath, ".."));
+            _projectName = Path.GetFileName(_projectRoot);
+            _projectHash = ProtocolConstants.ComputeProjectHash(_projectRoot);
+            _pipeName = ProtocolConstants.BuildPipeName(_projectHash);
+            _registryFilePath = RegistryPathUtility.GetRegistryFilePath();
+            _capabilities = ProtocolHelpers.GetSupportedCommands();
+            _assetCommandHandler = new AssetCommandHandler();
+            _sceneCommandHandler = new SceneCommandHandler();
+            _prefabCommandHandler = new PrefabCommandHandler();
+            _screenshotCommandHandler = new ScreenshotCommandHandler();
+            _executeCodeHandler = new ExecuteCodeHandler();
+            _customCommandHandler = new CustomCommandHandler();
+            _packageCommandHandler = new PackageCommandHandler();
+            _materialCommandHandler = new MaterialCommandHandler();
+            _qaCommandHandler = new QaCommandHandler();
+        }
+
+        public void Start()
+        {
+            if (_isStarted || Application.isBatchMode)
+            {
+                return;
+            }
+
+            _isStarted = true;
+            ConsoleLogBuffer.Start();
+            _lastHeartbeatTime = EditorApplication.timeSinceStartup;
+            StartListener();
+
+            EditorApplication.update += OnEditorUpdate;
+            EditorApplication.quitting += OnEditorQuitting;
+            AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+            EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.quitting -= OnEditorQuitting;
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+
+            try
+            {
+                _cancellationTokenSource.Cancel();
+            }
+            catch
+            {
+            }
+
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+            DisposeUnixListener();
+#endif
+            ConsoleLogBuffer.Stop();
+            RemoveInstance();
+            CleanupSocketFile();
+            _cancellationTokenSource.Dispose();
+        }
+
+        private void StartListener()
+        {
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+            // Unity 6+ / non-Unity: use raw Unix domain sockets for non-Windows.
+            if (Path.DirectorySeparatorChar != '\\')
+            {
+                StartUnixSocketListener();
+                return;
+            }
+#endif
+            // Unity 2021-2023 (Mono): NamedPipeServerStream on non-Windows creates a Unix
+            // domain socket at the exact _pipeName path, so the CLI's UnixDomainSocketEndPoint
+            // connection works transparently. Verified on Unity 2021.3.57f2 + macOS (Mono).
+            StartNamedPipeListener();
+        }
+
+        private async void StartNamedPipeListener()
+        {
+            try
+            {
+                await RunNamedPipeLoopAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("named pipe listener", exception);
+            }
+        }
+
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        private async void StartUnixSocketListener()
+        {
+            try
+            {
+                await RunUnixSocketLoopAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("unix socket listener", exception);
+            }
+        }
+#endif
+
+        private async Task RunNamedPipeLoopAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                NamedPipeServerStream? server = null;
+
+                try
+                {
+                    // Allow one active client handler and one pending listener during reconnect races.
+                    server = new NamedPipeServerStream(
+                        _pipeName,
+                        PipeDirection.InOut,
+                        2,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+                    _isListenerReady = true;
+                    await server.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
+                    HandleNamedPipeClient(server, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    server?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    ReportBackgroundException("named pipe accept", exception);
+                    server?.Dispose();
+                }
+            }
+        }
+
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        private async Task RunUnixSocketLoopAsync(CancellationToken cancellationToken)
+        {
+            CleanupSocketFile();
+
+            Socket listener;
+
+            try
+            {
+                listener = await CreateUnixSocketListenerAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("unix socket listener", exception);
+                return;
+            }
+
+            _unixListener = listener;
+            _isListenerReady = true;
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    Socket client = await listener.AcceptAsync().ConfigureAwait(false);
+                    HandleSocketClient(client, cancellationToken);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("unix socket accept", exception);
+            }
+            finally
+            {
+                if (ReferenceEquals(_unixListener, listener))
+                {
+                    _unixListener = null;
+                }
+
+                listener.Dispose();
+                CleanupSocketFile();
+            }
+        }
+
+        private Task<Socket> CreateUnixSocketListenerAsync(CancellationToken cancellationToken)
+        {
+            return Task.Run(delegate
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Bind/Listen are synchronous and can briefly stall editor startup if they stay on the main thread.
+                var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                try
+                {
+                    listener.Bind(new UnixDomainSocketEndPoint(_pipeName));
+                    listener.Listen(8);
+                    return listener;
+                }
+                catch
+                {
+                    listener.Dispose();
+                    throw;
+                }
+            }, cancellationToken);
+        }
+#endif
+
+        private async void HandleNamedPipeClient(NamedPipeServerStream server, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleStreamClientAsync(server, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                ReportBackgroundException("named pipe client", exception);
+            }
+        }
+
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        private async void HandleSocketClient(Socket client, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HandleSocketClientAsync(client, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    client.Dispose();
+                }
+                catch
+                {
+                }
+
+                ReportBackgroundException("unix socket client", exception);
+            }
+        }
+
+        private Task HandleSocketClientAsync(Socket client, CancellationToken cancellationToken)
+        {
+            return HandleStreamClientAsync(new NetworkStream(client, true), cancellationToken);
+        }
+#endif
+
+        private async Task HandleStreamClientAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            using (stream)
+            using (var writer = new StreamWriter(stream, _utf8WithoutBomEncoding, 1024, true))
+            using (var reader = new StreamReader(stream, Encoding.UTF8, false, 1024, true))
+            {
+                string? line = await reader.ReadLineAsync().ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    return;
+                }
+
+                CommandEnvelope? command = ProtocolJson.Deserialize<CommandEnvelope>(line);
+                if (command == null || string.IsNullOrWhiteSpace(command.command))
+                {
+                    string requestId = command != null && !string.IsNullOrWhiteSpace(command.requestId)
+                        ? command.requestId
+                        : Guid.NewGuid().ToString("N");
+                    var error = ResponseEnvelope.Failure(
+                        requestId,
+                        _projectHash,
+                        "INVALID_COMMAND",
+                        "command payload를 해석하지 못했습니다.",
+                        false,
+                        0,
+                        ProtocolConstants.TransportLive,
+                        line);
+                    await WriteResponseAsync(writer, error);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(command.requestId))
+                {
+                    command.requestId = Guid.NewGuid().ToString("N");
+                }
+
+                var pending = new PendingRequest(command);
+                _pendingRequests.Enqueue(pending);
+
+                using (cancellationToken.Register(CancelPendingRequest, pending))
+                {
+                    ResponseEnvelope response;
+                    try
+                    {
+                        response = await pending.Completion.Task.ConfigureAwait(false);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        response = ResponseEnvelope.Failure(
+                            command.requestId,
+                            _projectHash,
+                            "REQUEST_CANCELLED",
+                            "요청 처리 중 브리지가 종료되었습니다.",
+                            true,
+                            0,
+                            ProtocolConstants.TransportLive,
+                            null);
+                    }
+
+                    await WriteResponseAsync(writer, response).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private static void CancelPendingRequest(object state)
+        {
+            PendingRequest pending = state as PendingRequest;
+            if (pending == null)
+            {
+                return;
+            }
+
+            pending.Completion.TrySetCanceled();
+        }
+
+        private static async Task WriteResponseAsync(StreamWriter writer, ResponseEnvelope response)
+        {
+            await writer.WriteLineAsync(ProtocolJson.Serialize(response)).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
+        }
+
+        private void OnEditorUpdate()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            if (!_isInstanceRegistered && _isListenerReady)
+            {
+                RegisterInstance();
+                _isInstanceRegistered = true;
+                _lastHeartbeatTime = EditorApplication.timeSinceStartup;
+            }
+            else if (_isInstanceRegistered
+                && EditorApplication.timeSinceStartup - _lastHeartbeatTime >= ProtocolConstants.RegistryHeartbeatSeconds)
+            {
+                RegisterInstance();
+                _lastHeartbeatTime = EditorApplication.timeSinceStartup;
+            }
+
+            while (_pendingRequests.TryDequeue(out PendingRequest pending))
+            {
+                if (pending.Completion.Task.IsCompleted)
+                {
+                    continue;
+                }
+
+                if (_qaCommandHandler.CanHandle(pending.Command.command) && _qaCommandHandler.IsDeferred(pending.Command.command, pending.Command.argumentsJson))
+                {
+                    StartDeferredQaRequest(pending);
+                    continue;
+                }
+
+                ResponseEnvelope response = HandleCommand(pending.Command);
+                pending.Completion.TrySetResult(response);
+            }
+        }
+
+        private void StartDeferredQaRequest(PendingRequest pending)
+        {
+            CommandEnvelope command = pending.Command;
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                if (IsBusyEditorCommand(command.command))
+                {
+                    stopwatch.Stop();
+                    pending.Completion.TrySetResult(BuildBusyResponse(command, stopwatch.ElapsedMilliseconds));
+                    return;
+                }
+
+                _qaCommandHandler.StartDeferred(command.command, command.argumentsJson, pending.Completion, _projectHash);
+            }
+            catch (CommandFailureException exception)
+            {
+                stopwatch.Stop();
+                pending.Completion.TrySetResult(ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    exception.ErrorCode,
+                    exception.Message,
+                    exception.IsRetryable,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.Details));
+            }
+            catch (Exception exception)
+            {
+                stopwatch.Stop();
+                pending.Completion.TrySetResult(ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    "COMMAND_FAILED",
+                    exception.Message,
+                    false,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.ToString()));
+            }
+        }
+
+        private void OnEditorQuitting()
+        {
+            Dispose();
+        }
+
+        private void OnBeforeAssemblyReload()
+        {
+            Dispose();
+        }
+
+        private ResponseEnvelope HandleCommand(CommandEnvelope command)
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                if (IsBusyEditorCommand(command.command))
+                {
+                    stopwatch.Stop();
+                    return BuildBusyResponse(command, stopwatch.ElapsedMilliseconds);
+                }
+
+                string dataJson;
+                if (_assetCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _assetCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_sceneCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _sceneCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_prefabCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _prefabCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_screenshotCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _screenshotCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_executeCodeHandler.CanHandle(command.command))
+                {
+                    dataJson = _executeCodeHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_customCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _customCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_materialCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _materialCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_qaCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _qaCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else if (_packageCommandHandler.CanHandle(command.command))
+                {
+                    dataJson = _packageCommandHandler.Handle(command.command, command.argumentsJson);
+                }
+                else
+                {
+                    switch (command.command)
+                    {
+                        case ProtocolConstants.CommandPing:
+                            dataJson = ProtocolJson.Serialize(new PingPayload
+                            {
+                                message = "pong",
+                                timestampUtc = DateTimeOffset.UtcNow.ToString("O"),
+                            });
+                            break;
+                        case ProtocolConstants.CommandStatus:
+                            dataJson = BuildStatusJson();
+                            break;
+                        case ProtocolConstants.CommandRefresh:
+                            AssetDatabase.Refresh();
+                            dataJson = ProtocolJson.Serialize(new MessagePayload { message = "AssetDatabase.Refresh 완료" });
+                            break;
+                        case ProtocolConstants.CommandCompile:
+                            CompilationPipeline.RequestScriptCompilation();
+                            dataJson = ProtocolJson.Serialize(new MessagePayload { message = "script compilation 요청 완료" });
+                            break;
+                        case ProtocolConstants.CommandPlay:
+                            EditorApplication.isPaused = false;
+                            EditorApplication.isPlaying = true;
+                            _originalRunInBackground = UnityEngine.Application.runInBackground;
+                            UnityEngine.Application.runInBackground = true;
+                            dataJson = ProtocolJson.Serialize(new PlayStatePayload { isPlaying = true });
+                            break;
+                        case ProtocolConstants.CommandPause:
+                            EditorApplication.isPaused = true;
+                            dataJson = ProtocolJson.Serialize(new PauseStatePayload { isPaused = true });
+                            break;
+                        case ProtocolConstants.CommandStop:
+                            EditorApplication.isPlaying = false;
+                            EditorApplication.isPaused = false;
+                            UnityEngine.Application.runInBackground = _originalRunInBackground;
+                            dataJson = ProtocolJson.Serialize(new StopStatePayload
+                            {
+                                isPlaying = false,
+                                isPaused = false,
+                            });
+                            break;
+                        case ProtocolConstants.CommandExecuteMenu:
+                            dataJson = HandleExecuteMenu(command.argumentsJson);
+                            break;
+                        case ProtocolConstants.CommandReadConsole:
+                            dataJson = HandleReadConsole(command.argumentsJson);
+                            break;
+                        default:
+                            throw new InvalidOperationException("지원하지 않는 명령입니다: " + command.command);
+                    }
+                }
+
+                stopwatch.Stop();
+                return ResponseEnvelope.Success(
+                    command.requestId,
+                    _projectHash,
+                    dataJson,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive);
+            }
+            catch (CommandFailureException exception)
+            {
+                stopwatch.Stop();
+                return ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    exception.ErrorCode,
+                    exception.Message,
+                    exception.IsRetryable,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.Details);
+            }
+            catch (Exception exception)
+            {
+                stopwatch.Stop();
+                return ResponseEnvelope.Failure(
+                    command.requestId,
+                    _projectHash,
+                    "COMMAND_FAILED",
+                    exception.Message,
+                    false,
+                    stopwatch.ElapsedMilliseconds,
+                    ProtocolConstants.TransportLive,
+                    exception.ToString());
+            }
+        }
+
+        private bool IsBusyEditorCommand(string command)
+        {
+            if (!EditorApplication.isCompiling && !EditorApplication.isUpdating)
+            {
+                return false;
+            }
+
+            return !ProtocolHelpers.IsCommandAllowedWhileBusy(command);
+        }
+
+        private ResponseEnvelope BuildBusyResponse(CommandEnvelope command, long durationMs)
+        {
+            return ResponseEnvelope.Failure(
+                command.requestId,
+                _projectHash,
+                ProtocolConstants.BusyErrorCode,
+                "Unity가 compile/update 중이라 지금 명령을 처리할 수 없습니다.",
+                true,
+                durationMs,
+                ProtocolConstants.TransportLive,
+                null);
+        }
+
+        private string BuildStatusJson()
+        {
+            return ProtocolJson.Serialize(new StatusPayload
+            {
+                projectRoot = _projectRoot,
+                projectHash = _projectHash,
+                projectName = _projectName,
+                unityVersion = Application.unityVersion,
+                isPlaying = EditorApplication.isPlaying,
+                isPaused = EditorApplication.isPaused,
+                isCompiling = EditorApplication.isCompiling,
+                isUpdating = EditorApplication.isUpdating,
+                activeScenePath = EditorSceneManager.GetActiveScene().path,
+                pipeName = _pipeName,
+            });
+        }
+
+        private string HandleExecuteMenu(string argumentsJson)
+        {
+            ExecuteMenuArgs args = ProtocolJson.Deserialize<ExecuteMenuArgs>(argumentsJson) ?? new ExecuteMenuArgs();
+            if (args.list)
+            {
+                if (!string.IsNullOrWhiteSpace(args.path))
+                {
+                    throw new CommandFailureException("INVALID_ARGS", "execute-menu에서는 path와 list를 동시에 지정할 수 없습니다.");
+                }
+
+                return ListMenuItems(args.prefix);
+            }
+
+            if (string.IsNullOrWhiteSpace(args.path))
+            {
+                throw new CommandFailureException("INVALID_ARGS", "execute-menu에는 path가 필요합니다.");
+            }
+
+            bool isExecuted = EditorApplication.ExecuteMenuItem(args.path);
+            return ProtocolJson.Serialize(new ExecuteMenuPayload
+            {
+                path = args.path,
+                executed = isExecuted,
+                menus = Array.Empty<string>(),
+            });
+        }
+
+        private static string ListMenuItems(string? prefix)
+        {
+            if (string.IsNullOrWhiteSpace(prefix))
+            {
+                throw new CommandFailureException("INVALID_ARGS", "execute-menu --list에는 prefix가 필요합니다.");
+            }
+
+            Type? unsupportedType = typeof(EditorApplication).Assembly.GetType("UnityEditor.Unsupported");
+            if (unsupportedType == null)
+            {
+                throw new CommandFailureException("MENU_LIST_UNAVAILABLE", "UnityEditor.Unsupported 타입을 찾지 못했습니다.");
+            }
+
+            MethodInfo? getSubmenus = unsupportedType.GetMethod(
+                "GetSubmenus",
+                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            if (getSubmenus is null)
+            {
+                throw new CommandFailureException("MENU_LIST_UNAVAILABLE", "UnityEditor.Unsupported.GetSubmenus API를 찾지 못했습니다.");
+            }
+
+            string[] menus = getSubmenus.Invoke(null, new object[] { prefix }) as string[] ?? Array.Empty<string>();
+            return ProtocolJson.Serialize(new ExecuteMenuPayload
+            {
+                prefix = prefix,
+                menus = menus,
+            });
+        }
+
+        private string HandleReadConsole(string argumentsJson)
+        {
+            ReadConsoleArgs args = ProtocolJson.Deserialize<ReadConsoleArgs>(argumentsJson) ?? new ReadConsoleArgs();
+            int limit = args.limit <= 0 ? ProtocolConstants.DefaultConsoleLimit : args.limit;
+            ConsoleLogEntry[] entries = ConsoleLogBuffer.Read(limit, args.type);
+            return ProtocolJson.Serialize(new ReadConsolePayload { entries = entries });
+        }
+
+        private void RegisterInstance()
+        {
+            UpdateRegistrySafely(delegate(InstanceRegistry registry)
+            {
+                InstanceRecord[] existingRecords = registry.instances ?? Array.Empty<InstanceRecord>();
+                var updatedRecords = new InstanceRecord[existingRecords.Length + 1];
+                int updatedCount = 0;
+                for (int i = 0; i < existingRecords.Length; i++)
+                {
+                    InstanceRecord record = existingRecords[i];
+                    if (string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    updatedRecords[updatedCount] = record;
+                    updatedCount++;
+                }
+
+                updatedRecords[updatedCount] = BuildInstanceRecord();
+                updatedCount++;
+                if (updatedCount != updatedRecords.Length)
+                {
+                    Array.Resize(ref updatedRecords, updatedCount);
+                }
+
+                Array.Sort(updatedRecords, 0, updatedRecords.Length, _instanceRecordComparer);
+                registry.instances = updatedRecords;
+
+                InstanceRecord? activeRecord = null;
+                if (!string.IsNullOrWhiteSpace(registry.activeProjectHash))
+                {
+                    for (int i = 0; i < registry.instances.Length; i++)
+                    {
+                        InstanceRecord record = registry.instances[i];
+                        if (string.Equals(record.projectHash, registry.activeProjectHash, StringComparison.OrdinalIgnoreCase))
+                        {
+                            activeRecord = record;
+                            break;
+                        }
+                    }
+                }
+
+                bool isCurrentProjectPromotionNeeded = activeRecord == null
+                    || string.Equals(activeRecord.state, "offline", StringComparison.OrdinalIgnoreCase)
+                    || activeRecord.editorProcessId <= 0;
+
+                if (isCurrentProjectPromotionNeeded)
+                {
+                    registry.activeProjectHash = _projectHash;
+                }
+
+                return registry;
+            });
+        }
+
+        private void RemoveInstance()
+        {
+            UpdateRegistrySafely(delegate(InstanceRegistry registry)
+            {
+                InstanceRecord[] existingRecords = registry.instances ?? Array.Empty<InstanceRecord>();
+                var remainingRecords = new InstanceRecord[existingRecords.Length];
+                int remainingCount = 0;
+                for (int i = 0; i < existingRecords.Length; i++)
+                {
+                    InstanceRecord record = existingRecords[i];
+                    if (string.Equals(record.projectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    remainingRecords[remainingCount] = record;
+                    remainingCount++;
+                }
+
+                if (remainingCount != remainingRecords.Length)
+                {
+                    Array.Resize(ref remainingRecords, remainingCount);
+                }
+
+                registry.instances = remainingRecords;
+
+                if (string.Equals(registry.activeProjectHash, _projectHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    registry.activeProjectHash = registry.instances.Length > 0 ? registry.instances[0].projectHash : null;
+                }
+
+                return registry;
+            });
+        }
+
+        private InstanceRecord BuildInstanceRecord()
+        {
+            return new InstanceRecord
+            {
+                projectRoot = _projectRoot,
+                projectName = _projectName,
+                projectHash = _projectHash,
+                pipeName = _pipeName,
+                editorProcessId = Process.GetCurrentProcess().Id,
+                unityVersion = Application.unityVersion,
+                state = BuildStateLabel(),
+                lastSeenUtc = DateTimeOffset.UtcNow.ToString("O"),
+                capabilities = (string[])_capabilities.Clone(),
+            };
+        }
+
+        private string BuildStateLabel()
+        {
+            if (EditorApplication.isCompiling)
+            {
+                return "compiling";
+            }
+
+            if (EditorApplication.isUpdating)
+            {
+                return "updating";
+            }
+
+            if (EditorApplication.isPlaying)
+            {
+                return "playing";
+            }
+
+            return "idle";
+        }
+
+        private void UpdateRegistrySafely(Func<InstanceRegistry, InstanceRegistry> update)
+        {
+            try
+            {
+                InstanceRegistryFile.Update(_registryFilePath, update);
+            }
+            catch (Exception exception)
+            {
+                UnityEngine.Debug.LogWarning(string.Format("Unity CLI bridge registry 갱신 실패: {0}", exception));
+            }
+        }
+
+        private void CleanupSocketFile()
+        {
+            if (Path.DirectorySeparatorChar != '\\' && File.Exists(_pipeName))
+            {
+                try
+                {
+                    File.Delete(_pipeName);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+#if !UNITY_5_3_OR_NEWER || UNITY_6000_0_OR_NEWER
+        private void DisposeUnixListener()
+        {
+            if (_unixListener == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _unixListener.Dispose();
+            }
+            catch
+            {
+            }
+
+            _unixListener = null;
+        }
+#endif
+
+        private void ReportBackgroundException(string operation, Exception exception)
+        {
+            if (_isDisposed || exception is OperationCanceledException)
+            {
+                return;
+            }
+
+            UnityEngine.Debug.LogWarning(string.Format("Unity CLI bridge {0} 실패: {1}", operation, exception));
+        }
+
+        private sealed class PendingRequest
+        {
+            public PendingRequest(CommandEnvelope command)
+            {
+                Command = command;
+                Completion = new TaskCompletionSource<ResponseEnvelope>(
+                    command.requestId,
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            public CommandEnvelope Command { get; private set; }
+            public TaskCompletionSource<ResponseEnvelope> Completion { get; private set; }
+        }
+
+        private sealed class InstanceRecordProjectNameComparer : IComparer<InstanceRecord>
+        {
+            public int Compare(InstanceRecord x, InstanceRecord y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return 0;
+                }
+
+                if (x == null)
+                {
+                    return -1;
+                }
+
+                if (y == null)
+                {
+                    return 1;
+                }
+
+                return StringComparer.OrdinalIgnoreCase.Compare(x.projectName, y.projectName);
+            }
+        }
+    }
+}

@@ -2,10 +2,10 @@
 
 ## Summary
 
-`kinkeep-unity-cli` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
+`unity-cli-bridge` is a mono-repo for controlling the Unity Editor from the command line without manual server startup. Its public surface has three parts.
 
 - `cli/`: the .NET CLI that receives user commands and routes them to live IPC
-- `unity-package/com.kinkeep.unity-cli-bridge/`: the bridge package that starts automatically inside the Unity Editor
+- `unity-package/com.yhc509.unity-cli-bridge/`: the bridge package that starts automatically inside the Unity Editor
 - `tools/skills/unity-cli-operator/`: the Codex skill that keeps `unity-cli` usage consistent
 
 ## Runtime Flow
@@ -33,15 +33,15 @@
 
 ## Repository Layout
 
-- `KinKeepUnityCli.sln`: solution root for the CLI, protocol project, DocGen, and tests
+- `UnityCliBridge.sln`: solution root for the CLI, protocol project, DocGen, and tests
 - `cli/UnityCli.Cli`: user-facing CLI
 - `cli/UnityCli.Protocol`: protocol models shared by the CLI and Unity package
-- `unity-package/com.kinkeep.unity-cli-bridge`: UPM package
+- `unity-package/com.yhc509.unity-cli-bridge`: UPM package
 - `tools/skills/unity-cli-operator`: Codex skill
 
 ## Editor Bridge Layout
 
-Inside `unity-package/com.kinkeep.unity-cli-bridge/Editor`, the bridge is split by responsibility.
+Inside `unity-package/com.yhc509.unity-cli-bridge/Editor`, the bridge is split by responsibility.
 
 - `BridgeHost.cs` bootstraps the bridge, registers the live instance, opens the IPC listener, and wires command handlers together
 - `AssetCommandHandler.cs` covers asset CRUD and metadata flows
@@ -54,7 +54,7 @@ Inside `unity-package/com.kinkeep.unity-cli-bridge/Editor`, the bridge is split 
 
 ## Shared Protocol Layout
 
-`cli/UnityCli.Protocol` compiles linked source files from `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol`, so the CLI and the Unity package stay on the same request/response contracts.
+`cli/UnityCli.Protocol` compiles linked source files from `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol`, so the CLI and the Unity package stay on the same request/response contracts.
 
 - `CliCommandCatalog.cs`: command descriptors
 - `CommandModels.cs`: request/response envelopes

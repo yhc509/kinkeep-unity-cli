@@ -22,7 +22,7 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Run tests
-        run: dotnet test KinKeepUnityCli.sln
+        run: dotnet test UnityCliBridge.sln
 
       - name: Publish osx-arm64 build
         run: ./scripts/publish-osx-arm64.sh
@@ -50,7 +50,7 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Run tests
-        run: dotnet test KinKeepUnityCli.sln
+        run: dotnet test UnityCliBridge.sln
 
       - name: Publish win-x64 build
         shell: bash

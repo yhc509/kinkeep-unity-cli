@@ -187,7 +187,7 @@ public sealed class CliAppTests
     [Fact]
     public async Task RunAsync_JsonProjectOverride_ProjectName_WhenRegistryDoesNotMatch_ReturnsUsageError()
     {
-        const string projectOverride = "KinKeep";
+        const string projectOverride = "UnityCliBridge";
         var result = await InvokeAsync(["--json", "--project", projectOverride, "compile"], registryContents: "{\"instances\":[]}");
 
         Assert.Equal(2, result.ExitCode);
@@ -196,7 +196,7 @@ public sealed class CliAppTests
         var response = ParseResponse(result.Stdout);
         Assert.Equal("CLI_USAGE", response.error?.code);
         Assert.Equal(
-            "'KinKeep' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
+            "'UnityCliBridge' is not a registered project name or a valid directory path. Run 'unity-cli instances list' to see registered projects.",
             response.error?.message);
     }
 
@@ -225,10 +225,10 @@ public sealed class CliAppTests
         string secondProjectRoot = CreateUnityProject(projects.Path, "SampleProjectB");
         string registryContents =
             $$"""
-            {"instances":[{"projectRoot":"{{firstProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{ProtocolConstants.ComputeProjectHash(firstProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(firstProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]},{"projectRoot":"{{secondProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{ProtocolConstants.ComputeProjectHash(secondProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(secondProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":5678,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            {"instances":[{"projectRoot":"{{firstProjectRoot.Replace("\\", "\\\\")}}","projectName":"UnityCliBridge","projectHash":"{{ProtocolConstants.ComputeProjectHash(firstProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(firstProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]},{"projectRoot":"{{secondProjectRoot.Replace("\\", "\\\\")}}","projectName":"UnityCliBridge","projectHash":"{{ProtocolConstants.ComputeProjectHash(secondProjectRoot)}}","pipeName":"{{ProtocolConstants.BuildPipeName(ProtocolConstants.ComputeProjectHash(secondProjectRoot)).Replace("\\", "\\\\")}}","editorProcessId":5678,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
             """;
 
-        var result = await InvokeAsync(["--json", "--project", "KinKeep", "compile"], registryContents: registryContents);
+        var result = await InvokeAsync(["--json", "--project", "UnityCliBridge", "compile"], registryContents: registryContents);
 
         Assert.Equal(2, result.ExitCode);
         Assert.Equal(string.Empty, result.Stderr);
@@ -244,17 +244,17 @@ public sealed class CliAppTests
     public async Task RunAsync_JsonProjectOverride_PathTakesPrecedenceOverRegisteredProjectName()
     {
         using var projects = new TempDirectory();
-        string pathProjectRoot = CreateUnityProject(projects.Path, "KinKeep");
+        string pathProjectRoot = CreateUnityProject(projects.Path, "UnityCliBridge");
         string registeredProjectRoot = CreateUnityProject(projects.Path, "RegisteredProject");
         string pathProjectHash = ProtocolConstants.ComputeProjectHash(pathProjectRoot);
         string registeredProjectHash = ProtocolConstants.ComputeProjectHash(registeredProjectRoot);
         string registryContents =
             $$"""
-            {"instances":[{"projectRoot":"{{registeredProjectRoot.Replace("\\", "\\\\")}}","projectName":"KinKeep","projectHash":"{{registeredProjectHash}}","pipeName":"{{ProtocolConstants.BuildPipeName(registeredProjectHash).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
+            {"instances":[{"projectRoot":"{{registeredProjectRoot.Replace("\\", "\\\\")}}","projectName":"UnityCliBridge","projectHash":"{{registeredProjectHash}}","pipeName":"{{ProtocolConstants.BuildPipeName(registeredProjectHash).Replace("\\", "\\\\")}}","editorProcessId":1234,"unityVersion":"6000.3.10f1","state":"idle","lastSeenUtc":"2026-04-02T03:19:16.4545650+00:00","capabilities":[]}]}
             """;
 
         var result = await InvokeAsync(
-            ["--json", "--project", "KinKeep", "compile"],
+            ["--json", "--project", "UnityCliBridge", "compile"],
             registryContents: registryContents,
             currentDirectory: projects.Path);
 

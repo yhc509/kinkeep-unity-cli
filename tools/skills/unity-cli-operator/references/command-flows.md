@@ -16,10 +16,10 @@
 PROJECT="$(pwd -P)"
 
 # unity-cli 레포에서 개발/테스트 중이라면
-PROJECT="kinkeep-unity-cli-sample"
+PROJECT="unity-cli-bridge-sample"
 
 # 특정 프로젝트를 지정하려면 (이름 또는 경로)
-PROJECT="kinkeep-hd2d-tilemap-sample"
+PROJECT="unity-cli-bridge-hd2d-tilemap-sample"
 ```
 
 여러 프로젝트가 동시에 열려 있을 때 확인:

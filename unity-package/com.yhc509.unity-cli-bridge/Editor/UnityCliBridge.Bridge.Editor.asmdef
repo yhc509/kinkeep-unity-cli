@@ -1,0 +1,28 @@
+{
+  "name": "UnityCliBridge.Bridge.Editor",
+  "rootNamespace": "UnityCliBridge.Bridge.Editor",
+  "references": [
+    "UnityCliBridge.Bridge.Runtime",
+    "UnityEditor.TestRunner",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.inputsystem",
+      "expression": "",
+      "define": "ENABLE_INPUT_SYSTEM"
+    }
+  ],
+  "noEngineReferences": false
+}

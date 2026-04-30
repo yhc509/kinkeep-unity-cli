@@ -32,9 +32,9 @@ Map `CommandKind.SceneSetTransform` to a new protocol command and serialize dedi
 ### Task 2: Add protocol support
 
 **Files:**
-- Modify: `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/ProtocolConstants.cs`
-- Modify: `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/CommandModels.cs`
-- Modify: `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/CliCommandCatalog.cs`
+- Modify: `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/ProtocolConstants.cs`
+- Modify: `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/CommandModels.cs`
+- Modify: `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/CliCommandCatalog.cs`
 
 **Step 1: Add the protocol command constant**
 
@@ -51,7 +51,7 @@ Update synopsis and notes so DocGen reflects the active-scene `--node` workflow.
 ### Task 3: Implement the bridge handler
 
 **Files:**
-- Modify: `unity-package/com.kinkeep.unity-cli-bridge/Editor/SceneCommandHandler.cs`
+- Modify: `unity-package/com.yhc509.unity-cli-bridge/Editor/SceneCommandHandler.cs`
 
 **Step 1: Route the new protocol command**
 
@@ -88,11 +88,11 @@ Switch README and live IPC scenarios to the active-scene `scene set-transform` s
 
 **Step 1: Build**
 
-Run: `dotnet build KinKeepUnityCli.sln -c Debug`
+Run: `dotnet build UnityCliBridge.sln -c Debug`
 
 **Step 2: Test**
 
-Run: `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test KinKeepUnityCli.sln`
+Run: `/opt/homebrew/Cellar/dotnet/9.0.112/libexec/dotnet test UnityCliBridge.sln`
 
 **Step 3: Check docs**
 

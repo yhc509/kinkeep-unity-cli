@@ -150,7 +150,7 @@ public static class CliReferenceDocumentRenderer
         builder.AppendLine("- [Architecture](architecture.md)");
         builder.AppendLine("- [Scene Spec](scene-spec.md)");
         builder.AppendLine("- [Prefab Spec](prefab-spec.md)");
-        builder.AppendLine("- [Unity Package README](../unity-package/com.kinkeep.unity-cli-bridge/README.md)");
+        builder.AppendLine("- [Unity Package README](../unity-package/com.yhc509.unity-cli-bridge/README.md)");
         builder.AppendLine();
     }
 
