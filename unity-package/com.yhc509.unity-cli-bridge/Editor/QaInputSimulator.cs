@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     /// <summary>
     /// Simulates QA input through Unity Input System devices.

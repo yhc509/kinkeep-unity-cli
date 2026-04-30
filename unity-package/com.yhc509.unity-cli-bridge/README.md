@@ -1,6 +1,6 @@
-# KinKeep Unity CLI Bridge
+# Unity CLI Bridge
 
-`com.kinkeep.unity-cli-bridge` is the bridge package that lets `unity-cli` control a running Unity Editor over local IPC. Its key advantage is simple operation: no manual server startup, no per-project ports, and project-aware attachment by default.
+`com.yhc509.unity-cli-bridge` is the bridge package that lets `unity-cli` control a running Unity Editor over local IPC. Its key advantage is simple operation: no manual server startup, no per-project ports, and project-aware attachment by default.
 
 ## Requirements
 
@@ -28,23 +28,23 @@ In practice, this means the package can expose Unity as a project-aware automati
 
 ## Install
 
-This package lives inside the `kinkeep-unity-cli` mono-repo.
+This package lives inside the `unity-cli-bridge` mono-repo.
 
-For local development, add a file reference to `unity-package/com.kinkeep.unity-cli-bridge` in your Unity project's `Packages/manifest.json`.
+For local development, add a file reference to `unity-package/com.yhc509.unity-cli-bridge` in your Unity project's `Packages/manifest.json`.
 
 For Git-based installation, use the package path inside the repository.
 
 ```json
 {
   "dependencies": {
-    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
+    "com.yhc509.unity-cli-bridge": "https://github.com/yhc509/unity-cli-bridge.git?path=/unity-package/com.yhc509.unity-cli-bridge#main"
   }
 }
 ```
 
-If you are migrating from the old package, update the dependency key in `Packages/manifest.json` from `com.puc.bridge` to `com.kinkeep.unity-cli-bridge`. If your Unity project references the bridge asmdefs directly, also rename `PUC.Editor` / `PUC.Runtime` references to `KinKeep.UnityCli.Bridge.Editor` / `KinKeep.UnityCli.Bridge.Runtime`.
+If you are migrating from the old package, update the dependency key in `Packages/manifest.json` from `com.puc.bridge` to `com.yhc509.unity-cli-bridge`. If your Unity project references the bridge asmdefs directly, also rename `PUC.Editor` / `PUC.Runtime` references to `UnityCliBridge.Bridge.Editor` / `UnityCliBridge.Bridge.Runtime`.
 
-The CLI executable and Codex skill are not included in the UPM package payload. If you want the full `kinkeep-unity-cli` workflow, clone the mono-repo locally and use:
+The CLI executable and Codex skill are not included in the UPM package payload. If you want the full `unity-cli-bridge` workflow, clone the mono-repo locally and use:
 
 - `cli/` for the `unity-cli` executable
 - `tools/skills/unity-cli-operator/` for the Codex skill

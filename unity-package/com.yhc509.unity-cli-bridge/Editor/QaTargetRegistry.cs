@@ -2,12 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using KinKeep.UnityCli.Bridge;
+using UnityCliBridge.Bridge;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     /// <summary>
     /// Scans loaded scenes for fields marked with [QaTarget] and caches the resolved GameObject targets.

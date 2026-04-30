@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal static class InspectorJsonWriterUtility
     {

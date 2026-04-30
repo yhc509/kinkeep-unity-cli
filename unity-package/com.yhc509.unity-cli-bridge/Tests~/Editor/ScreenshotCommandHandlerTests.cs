@@ -4,7 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace KinKeep.UnityCli.Bridge.Editor.Tests
+namespace UnityCliBridge.Bridge.Editor.Tests
 {
     public sealed class ScreenshotCommandHandlerTests
     {

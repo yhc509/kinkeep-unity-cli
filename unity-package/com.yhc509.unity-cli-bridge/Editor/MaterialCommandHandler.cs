@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using ShaderPropertyType = UnityEngine.Rendering.ShaderPropertyType;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class MaterialCommandHandler
     {

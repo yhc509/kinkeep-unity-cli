@@ -1,4 +1,4 @@
-# kinkeep-unity-cli
+# unity-cli-bridge
 
 Control the Unity Editor from the command line. No manual server startup, no port management — the bridge starts when the Editor opens, and the CLI finds the right project automatically.
 
@@ -10,7 +10,7 @@ Most Unity automation tools fall into two camps:
 
 **Dynamic code execution** sends raw C# to Unity and reads results from Debug.Log. Infinitely flexible, but the LLM must generate correct C# every time, and reading results requires a second call.
 
-**kinkeep-unity-cli takes a third path: declarative commands over direct IPC.**
+**unity-cli-bridge takes a third path: declarative commands over direct IPC.**
 
 ```
 CLI ──── local IPC ──── Unity Editor (bridge)
@@ -23,7 +23,7 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 - **Structured results in stdout.** No polling, no log scraping, no file reads. Every command returns JSON immediately.
 - **Fail fast, fail loud.** Invalid options get a clear error. Unrecognized patch keys return warnings instead of silent success.
 
-> See [Benchmark: 3-Way Comparison](https://github.com/yhc509/kinkeep-unity-cli/wiki/Benchmark-Unity-Editor-CLI-Tool-Comparison) for measured results against two other approaches on the same scenario.
+> See [Benchmark: 3-Way Comparison](https://github.com/yhc509/unity-cli-bridge/wiki/Benchmark-Unity-Editor-CLI-Tool-Comparison) for measured results against two other approaches on the same scenario.
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ CLI ──── local IPC ──── Unity Editor (bridge)
 In Unity, open Package Manager and choose **Add package from git URL**. Paste:
 
 ```
-https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main
+https://github.com/yhc509/unity-cli-bridge.git?path=/unity-package/com.yhc509.unity-cli-bridge#main
 ```
 
 **Option B: Edit `Packages/manifest.json` manually**
@@ -44,7 +44,7 @@ Add the following to your `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.kinkeep.unity-cli-bridge": "https://github.com/yhc509/kinkeep-unity-cli.git?path=/unity-package/com.kinkeep.unity-cli-bridge#main"
+    "com.yhc509.unity-cli-bridge": "https://github.com/yhc509/unity-cli-bridge.git?path=/unity-package/com.yhc509.unity-cli-bridge#main"
   }
 }
 ```
@@ -55,11 +55,11 @@ The bridge starts automatically when the Editor opens. No configuration needed.
 
 **Option A: From Unity Editor** (recommended)
 
-Open `KinKeep > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.kinkeep/unity-cli/`.
+Open `Unity CLI Bridge > CLI Manager` in the Editor menu. Click **Install CLI** — the correct binary is downloaded automatically to `~/.unity-cli-bridge/unity-cli/`.
 
 **Option B: Manual download**
 
-Download from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/releases):
+Download from [GitHub Releases](https://github.com/yhc509/unity-cli-bridge/releases):
 
 | Platform | File |
 |----------|------|
@@ -68,16 +68,16 @@ Download from [GitHub Releases](https://github.com/yhc509/kinkeep-unity-cli/rele
 
 Extract and add the binary to your PATH.
 
-> **Tip:** A short, fixed install path (`~/.kinkeep/unity-cli/`) saves tokens when AI agents invoke the CLI repeatedly — every character in the path is repeated on each call.
+> **Tip:** A short, fixed install path (`~/.unity-cli-bridge/unity-cli/`) saves tokens when AI agents invoke the CLI repeatedly — every character in the path is repeated on each call.
 
 ### 3. Install AI Agent Skill
 
-In the Unity Editor, open `KinKeep > CLI Manager`. Select your AI tool (Claude Code or Codex) from the dropdown and click **Install Skill**.
+In the Unity Editor, open `Unity CLI Bridge > CLI Manager`. Select your AI tool (Claude Code or Codex) from the dropdown and click **Install Skill**.
 
 | Tool | Install Path |
 |------|-------------|
-| Claude Code | `~/.claude/skills/kinkeep-unity-cli/` |
-| Codex | `~/.codex/skills/kinkeep-unity-cli/` |
+| Claude Code | `~/.claude/skills/unity-cli-bridge/` |
+| Codex | `~/.codex/skills/unity-cli-bridge/` |
 
 The skill teaches AI agents how to pick the right commands, run them safely, and verify results with `read-console`.
 
@@ -194,7 +194,7 @@ unity-cli qa key --key space
 unity-cli qa wait-until --scene GameScene --timeout 5000
 ```
 
-`screenshot` responses include both image size (`width`/`height`) and live input metadata (`screenWidth`/`screenHeight`, `imageOrigin=top-left`, `coordinateOrigin=bottom-left`). `qa tap` takes screenshot image coordinates as-is, reuses the last successful `screenshot` dimensions when `--screenshot-width`/`--screenshot-height` are omitted, and lets the bridge handle Y-flip plus resolution scaling into Unity screen space. See [qa-testing.md](tools/skills/kinkeep-unity-cli/references/qa-testing.md) for the coordinate workflow.
+`screenshot` responses include both image size (`width`/`height`) and live input metadata (`screenWidth`/`screenHeight`, `imageOrigin=top-left`, `coordinateOrigin=bottom-left`). `qa tap` takes screenshot image coordinates as-is, reuses the last successful `screenshot` dimensions when `--screenshot-width`/`--screenshot-height` are omitted, and lets the bridge handle Y-flip plus resolution scaling into Unity screen space. See [qa-testing.md](tools/skills/unity-cli-operator/references/qa-testing.md) for the coordinate workflow.
 
 ## Token Optimization
 
@@ -217,7 +217,7 @@ unity-cli scene inspect --path ... --max-depth 2
 ```
 cli/UnityCli.Cli/              CLI executable (.NET 9, macOS arm64 + Windows x64)
 cli/UnityCli.Protocol/         Shared protocol (linked from Unity package)
-unity-package/                 com.kinkeep.unity-cli-bridge (UPM package)
+unity-package/                 com.yhc509.unity-cli-bridge (UPM package)
 tools/skills/unity-cli-operator/   AI agent skill (dev copy; end-users install via CLI Manager)
 tests/                         xUnit CLI tests + live IPC test scenarios
 docs/                          Generated CLI reference, specs
@@ -238,14 +238,14 @@ docs/                          Generated CLI reference, specs
 - [Architecture](docs/architecture.md)
 - [Scene Spec](docs/scene-spec.md)
 - [Prefab Spec](docs/prefab-spec.md)
-- [Benchmark](https://github.com/yhc509/kinkeep-unity-cli/wiki/Benchmark-Unity-Editor-CLI-Tool-Comparison)
-- [Unity Package](unity-package/com.kinkeep.unity-cli-bridge/README.md)
+- [Benchmark](https://github.com/yhc509/unity-cli-bridge/wiki/Benchmark-Unity-Editor-CLI-Tool-Comparison)
+- [Unity Package](unity-package/com.yhc509.unity-cli-bridge/README.md)
 
 ## AI Agent Skill
 
-The `kinkeep-unity-cli` skill teaches AI agents how to use the CLI safely: pick the right command, verify with `read-console`, follow inspect-before-patch patterns.
+The `unity-cli-bridge` skill teaches AI agents how to use the CLI safely: pick the right command, verify with `read-console`, follow inspect-before-patch patterns.
 
-Install from **KinKeep > CLI Manager** in the Unity Editor — select your AI tool and click **Install Skill**. Supports Claude Code and Codex.
+Install from **Unity CLI Bridge > CLI Manager** in the Unity Editor — select your AI tool and click **Install Skill**. Supports Claude Code and Codex.
 
 ## Development
 

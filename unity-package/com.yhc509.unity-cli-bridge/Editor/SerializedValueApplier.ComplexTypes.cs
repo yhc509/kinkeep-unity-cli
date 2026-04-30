@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal static partial class SerializedValueApplier
     {

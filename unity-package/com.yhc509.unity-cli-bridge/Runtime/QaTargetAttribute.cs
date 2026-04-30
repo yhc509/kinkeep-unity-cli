@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 
-namespace KinKeep.UnityCli.Bridge
+namespace UnityCliBridge.Bridge
 {
     /// <summary>
     /// Marks a serialized field as a QA test target, discoverable by the CLI qa commands.

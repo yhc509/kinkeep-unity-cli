@@ -1,8 +1,8 @@
 {
-  "name": "KinKeep.UnityCli.Bridge.Editor",
-  "rootNamespace": "KinKeep.UnityCli.Bridge.Editor",
+  "name": "UnityCliBridge.Bridge.Editor",
+  "rootNamespace": "UnityCliBridge.Bridge.Editor",
   "references": [
-    "KinKeep.UnityCli.Bridge.Runtime",
+    "UnityCliBridge.Bridge.Runtime",
     "UnityEditor.TestRunner",
     "Unity.InputSystem"
   ],

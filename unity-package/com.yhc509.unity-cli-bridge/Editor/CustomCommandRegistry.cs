@@ -5,7 +5,7 @@ using System.Reflection;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class CustomCommandRegistry
     {
@@ -75,13 +75,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[KinKeep] 어셈블리 스캔 실패: {assembly.FullName} - {ex.Message}");
+                    Debug.LogWarning($"[UnityCliBridge] 어셈블리 스캔 실패: {assembly.FullName} - {ex.Message}");
                 }
             }
 
             if (_commands.Count > 0)
             {
-                Debug.Log($"[KinKeep] 커스텀 명령 {_commands.Count}개 등록됨: {string.Join(", ", GetRegisteredNames())}");
+                Debug.Log($"[UnityCliBridge] 커스텀 명령 {_commands.Count}개 등록됨: {string.Join(", ", GetRegisteredNames())}");
             }
         }
 
@@ -118,7 +118,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     ParameterInfo[] parameters = method.GetParameters();
                     if (string.IsNullOrWhiteSpace(attr.Name))
                     {
-                        Debug.LogWarning($"[KinKeep] {type.FullName}.{method.Name}의 [PucCommand] 이름이 비어 있습니다.");
+                        Debug.LogWarning($"[UnityCliBridge] {type.FullName}.{method.Name}의 [PucCommand] 이름이 비어 있습니다.");
                         continue;
                     }
 
@@ -126,13 +126,13 @@ namespace KinKeep.UnityCli.Bridge.Editor
                         || parameters[0].ParameterType != typeof(string)
                         || method.ReturnType != typeof(string))
                     {
-                        Debug.LogWarning($"[KinKeep] [PucCommand(\"{attr.Name}\")] 메서드 {type.FullName}.{method.Name}의 시그니처가 올바르지 않습니다. static string Method(string argumentsJson)이어야 합니다.");
+                        Debug.LogWarning($"[UnityCliBridge] [PucCommand(\"{attr.Name}\")] 메서드 {type.FullName}.{method.Name}의 시그니처가 올바르지 않습니다. static string Method(string argumentsJson)이어야 합니다.");
                         continue;
                     }
 
                     if (_commands.ContainsKey(attr.Name))
                     {
-                        Debug.LogWarning($"[KinKeep] 중복된 커스텀 명령 이름: {attr.Name}");
+                        Debug.LogWarning($"[UnityCliBridge] 중복된 커스텀 명령 이름: {attr.Name}");
                         continue;
                     }
 

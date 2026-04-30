@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using PackageManagerInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     public enum CliInstallStatus
     {
@@ -19,16 +19,16 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
     public static class CliInstallerState
     {
-        private const string InstalledVersionEditorPrefsKey = "KinKeep.CLI.InstalledVersion";
-        private const string LatestReleaseVersionKey = "KinKeep.CLI.LatestReleaseVersion";
-        private const string LatestReleaseCheckTimeKey = "KinKeep.CLI.LatestReleaseCheckTime";
+        private const string InstalledVersionEditorPrefsKey = "UnityCliBridge.CLI.InstalledVersion";
+        private const string LatestReleaseVersionKey = "UnityCliBridge.CLI.LatestReleaseVersion";
+        private const string LatestReleaseCheckTimeKey = "UnityCliBridge.CLI.LatestReleaseCheckTime";
         private const string PackageJsonFileName = "package.json";
-        private const string RepositoryUrl = "https://github.com/yhc509/kinkeep-unity-cli";
-        private const string GitHubApiLatestReleaseUrl = "https://api.github.com/repos/yhc509/kinkeep-unity-cli/releases/latest";
-        private const string GitHubApiUserAgent = "kinkeep-unity-cli";
+        private const string RepositoryUrl = "https://github.com/yhc509/unity-cli-bridge";
+        private const string GitHubApiLatestReleaseUrl = "https://api.github.com/repos/yhc509/unity-cli-bridge/releases/latest";
+        private const string GitHubApiUserAgent = "unity-cli-bridge";
         private const string ReleaseDownloadUrlPattern = RepositoryUrl + "/releases/download/v{0}/unity-cli-{1}.{2}";
         private const string ReleasePageUrlPattern = RepositoryUrl + "/releases/tag/v{0}";
-        private const string InstallRootDirectoryName = ".kinkeep";
+        private const string InstallRootDirectoryName = ".unity-cli-bridge";
         private const string InstallDirectoryName = "unity-cli";
         private const string MacExecutableName = "unity-cli";
         private const string WindowsExecutableName = "unity-cli.exe";

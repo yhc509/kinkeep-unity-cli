@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using UnityCli.Protocol;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     public interface IAssetCreateProvider
     {

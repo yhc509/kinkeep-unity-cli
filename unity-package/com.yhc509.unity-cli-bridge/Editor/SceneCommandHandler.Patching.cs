@@ -6,7 +6,7 @@ using UnityCli.Protocol;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed partial class SceneCommandHandler
     {

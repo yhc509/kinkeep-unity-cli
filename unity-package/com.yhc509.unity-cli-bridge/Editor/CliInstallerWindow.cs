@@ -3,12 +3,12 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     public sealed class CliInstallerWindow : EditorWindow
     {
         private const string WindowTitle = "CLI Manager";
-        private const string OpenWindowMenuItemPath = "KinKeep/CLI Manager";
+        private const string OpenWindowMenuItemPath = "Unity CLI Bridge/CLI Manager";
         private static readonly Vector2 WindowMinSize = new Vector2(420f, 340f);
         private static GUIStyle? _updateAvailableLabelStyle;
 
@@ -425,9 +425,9 @@ namespace KinKeep.UnityCli.Bridge.Editor
             switch (Application.platform)
             {
                 case RuntimePlatform.OSXEditor:
-                    return "export PATH=\"$HOME/.kinkeep/unity-cli:$PATH\"";
+                    return "export PATH=\"$HOME/.unity-cli-bridge/unity-cli:$PATH\"";
                 case RuntimePlatform.WindowsEditor:
-                    return "$env:Path = \"$env:USERPROFILE\\.kinkeep\\unity-cli;$env:Path\"";
+                    return "$env:Path = \"$env:USERPROFILE\\.unity-cli-bridge\\unity-cli;$env:Path\"";
                 default:
                     throw new PlatformNotSupportedException("CLI Installer only supports macOS arm64 and Windows x64 editors.");
             }

@@ -25,9 +25,9 @@
 - `screenshot` response now includes 4 metadata fields — `screenWidth`, `screenHeight`, `coordinateOrigin`, `imageOrigin` — so callers can derive the `qa tap` coordinate system from a single screenshot response.
 
 ### Changed
-- AI skills installer in `KinKeep > CLI Manager` writes to the user's global skills directory (`~/.claude/skills/`, `~/.codex/skills/`) instead of the project root.
+- AI skills installer in `Unity CLI Bridge > CLI Manager` writes to the user's global skills directory (`~/.claude/skills/`, `~/.codex/skills/`) instead of the project root.
 - Bundled `unity-cli-operator` skill rewritten to actively trigger on Unity tasks and explicitly close off `Unity -batchmode`/MCP detour paths.
-- Package author changed from `yhjang` to `KinKeep`.
+- Package author changed from `yhjang` to `yhc509`.
 
 ## [0.1.4] - 2026-04-08
 

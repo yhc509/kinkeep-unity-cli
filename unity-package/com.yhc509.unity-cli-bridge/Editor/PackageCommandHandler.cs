@@ -6,7 +6,7 @@ using UnityCli.Protocol;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class PackageCommandHandler
     {

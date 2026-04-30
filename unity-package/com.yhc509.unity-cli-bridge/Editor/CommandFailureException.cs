@@ -1,6 +1,6 @@
 using System;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class CommandFailureException : Exception
     {

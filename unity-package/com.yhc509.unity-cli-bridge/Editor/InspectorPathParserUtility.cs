@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal static class InspectorPathParserUtility
     {

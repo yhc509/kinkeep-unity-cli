@@ -1,8 +1,8 @@
 {
-  "name": "KinKeep.UnityCli.Bridge.Editor.Tests",
-  "rootNamespace": "KinKeep.UnityCli.Bridge.Editor.Tests",
+  "name": "UnityCliBridge.Bridge.Editor.Tests",
+  "rootNamespace": "UnityCliBridge.Bridge.Editor.Tests",
   "references": [
-    "KinKeep.UnityCli.Bridge.Editor",
+    "UnityCliBridge.Bridge.Editor",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

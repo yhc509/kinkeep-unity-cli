@@ -6,7 +6,7 @@ using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class ScreenshotCommandHandler
     {
@@ -232,7 +232,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             if (width > capturedTexture.width || height > capturedTexture.height)
             {
                 UnityEngine.Debug.LogWarning(
-                    $"[KinKeep] Play Mode Game View screenshot requested {width}x{height}, but the capture only returned the native Game View size {capturedTexture.width}x{capturedTexture.height}. Saving the native capture without upscaling.");
+                    $"[UnityCliBridge] Play Mode Game View screenshot requested {width}x{height}, but the capture only returned the native Game View size {capturedTexture.width}x{capturedTexture.height}. Saving the native capture without upscaling.");
                 return (capturedTexture.width, capturedTexture.height, false);
             }
 
@@ -247,7 +247,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             }
 
             UnityEngine.Debug.LogWarning(
-                $"[KinKeep] Play Mode Game View screenshot produced an unusually small image {capturedTexture.width}x{capturedTexture.height}. Game View focus may not have settled before capture. Current Game View window size is {(int)gameViewWindow.position.width}x{(int)gameViewWindow.position.height}.");
+                $"[UnityCliBridge] Play Mode Game View screenshot produced an unusually small image {capturedTexture.width}x{capturedTexture.height}. Game View focus may not have settled before capture. Current Game View window size is {(int)gameViewWindow.position.width}x{(int)gameViewWindow.position.height}.");
         }
 
         private static Texture2D? TryCaptureGameViewRenderTexture(EditorWindow gameViewWindow)
@@ -281,7 +281,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
                     }
 
                     UnityEngine.Debug.LogWarning(
-                        $"[KinKeep] Failed to capture the Game View render texture directly. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
+                        $"[UnityCliBridge] Failed to capture the Game View render texture directly. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
                     return null;
                 }
                 finally
@@ -292,7 +292,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
             catch (Exception exception)
             {
                 UnityEngine.Debug.LogWarning(
-                    $"[KinKeep] Failed to inspect the Game View render texture. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
+                    $"[UnityCliBridge] Failed to inspect the Game View render texture. Falling back to ScreenCapture.CaptureScreenshotAsTexture(). {exception.GetType().Name}: {exception.Message}");
                 return null;
             }
         }

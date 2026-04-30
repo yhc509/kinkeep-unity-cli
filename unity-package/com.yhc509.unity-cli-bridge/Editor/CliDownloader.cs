@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     public static class CliDownloader
     {
@@ -276,12 +276,12 @@ namespace KinKeep.UnityCli.Bridge.Editor
                 throw new InvalidOperationException("Could not determine archive extension from download URL: " + url);
             }
 
-            return Path.Combine(Path.GetTempPath(), "kinkeep-unity-cli-" + Guid.NewGuid().ToString("N") + fileExtension);
+            return Path.Combine(Path.GetTempPath(), "unity-cli-bridge-" + Guid.NewGuid().ToString("N") + fileExtension);
         }
 
         private static string CreateTemporaryDirectory()
         {
-            string tempDirectory = Path.Combine(Path.GetTempPath(), "kinkeep-unity-cli-" + Guid.NewGuid().ToString("N"));
+            string tempDirectory = Path.Combine(Path.GetTempPath(), "unity-cli-bridge-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDirectory);
             return tempDirectory;
         }

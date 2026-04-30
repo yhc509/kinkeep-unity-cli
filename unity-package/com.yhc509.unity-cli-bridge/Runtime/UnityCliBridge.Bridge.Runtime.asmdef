@@ -1,5 +1,5 @@
 {
-  "name": "KinKeep.UnityCli.Bridge.Runtime",
+  "name": "UnityCliBridge.Bridge.Runtime",
   "rootNamespace": "UnityCli.Protocol",
   "references": [],
   "includePlatforms": [],

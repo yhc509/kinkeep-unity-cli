@@ -4,7 +4,7 @@ using UnityCli.Protocol;
 using UnityEditor;
 using UnityEngine;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class AssetCreateHandler
     {

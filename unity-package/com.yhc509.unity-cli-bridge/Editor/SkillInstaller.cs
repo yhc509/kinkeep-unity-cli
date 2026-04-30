@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using PackageManagerInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal enum SkillTarget
     {
@@ -17,7 +17,7 @@ namespace KinKeep.UnityCli.Bridge.Editor
 
     internal static class SkillInstaller
     {
-        private const string SkillName = "kinkeep-unity-cli";
+        private const string SkillName = "unity-cli-bridge";
         private const string AgentsDirectoryName = "agents";
         private const string MetaFileExtension = ".meta";
 

@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityCli.Protocol;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal static partial class SerializedValueApplier
     {

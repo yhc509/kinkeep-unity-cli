@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-KinKeep Unity CLI controls the Unity Editor from the command line without manual server startup. This mono-repo contains a .NET 9 CLI, the `com.kinkeep.unity-cli-bridge` Unity UPM package, and shared protocol models.
+Unity CLI Bridge controls the Unity Editor from the command line without manual server startup. This mono-repo contains a .NET 9 CLI, the `com.yhc509.unity-cli-bridge` Unity UPM package, and shared protocol models.
 
 The CLI is **live IPC only**. Unity commands require a running Editor with the bridge active.
 
@@ -45,9 +45,9 @@ cli/UnityCli.Cli/           CLI executable (.NET 9, osx-arm64 + win-x64)
   │   └── InstanceRegistryStore  Per-project instance tracking
   └── Models/ParsedCommand   CommandKind variants + envelope builder
 
-cli/UnityCli.Protocol/       Shared protocol project compiling linked files from unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/
+cli/UnityCli.Protocol/       Shared protocol project compiling linked files from unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/
 
-unity-package/com.kinkeep.unity-cli-bridge/
+unity-package/com.yhc509.unity-cli-bridge/
   ├── Editor/
   │   ├── BridgeHost.cs       Bridge bootstrap, registry registration, IPC listener, handler orchestration
   │   ├── AssetCommandHandler.cs  Asset CRUD operations and asset metadata
@@ -80,7 +80,7 @@ unity-package/com.kinkeep.unity-cli-bridge/
 tests/UnityCli.Cli.Tests/    xUnit tests
 ```
 
-**Protocol sharing:** `cli/UnityCli.Protocol/` compiles the same `.cs` files from `unity-package/com.kinkeep.unity-cli-bridge/Runtime/Protocol/` via `<Compile Include>` links in the `.csproj`. Changes to protocol files affect both the CLI and the Unity package.
+**Protocol sharing:** `cli/UnityCli.Protocol/` compiles the same `.cs` files from `unity-package/com.yhc509.unity-cli-bridge/Runtime/Protocol/` via `<Compile Include>` links in the `.csproj`. Changes to protocol files affect both the CLI and the Unity package.
 
 ## Key Conventions
 

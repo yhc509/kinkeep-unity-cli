@@ -1,10 +1,10 @@
 {
-  "name": "com.kinkeep.unity-cli-bridge",
-  "displayName": "KinKeep Unity CLI Bridge",
+  "name": "com.yhc509.unity-cli-bridge",
+  "displayName": "Unity CLI Bridge",
   "version": "0.1.7",
   "unity": "2021.3",
   "description": "Project-aware Unity Editor bridge for CLI control without manual servers or per-project ports.",
   "author": {
-    "name": "KinKeep"
+    "name": "yhc509"
   }
 }

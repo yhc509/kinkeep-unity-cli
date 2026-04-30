@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityCli.Protocol;
 using UnityEditor;
 
-namespace KinKeep.UnityCli.Bridge.Editor
+namespace UnityCliBridge.Bridge.Editor
 {
     internal sealed class AssetCommandHandler
     {
